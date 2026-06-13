@@ -1,0 +1,14 @@
+{
+  "mappings": {
+    "fku/org/example/fku/mixin/LivingEntityMixin": {
+      "handleEntityEvent": "Lnet/minecraft/world/entity/LivingEntity;m_7822_(B)V"
+    }
+  },
+  "data": {
+    "searge": {
+      "fku/org/example/fku/mixin/LivingEntityMixin": {
+        "handleEntityEvent": "Lnet/minecraft/world/entity/LivingEntity;m_7822_(B)V"
+      }
+    }
+  }
+}

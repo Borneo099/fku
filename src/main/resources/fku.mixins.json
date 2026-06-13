@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "fku.org.example.fku.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "fku.refmap.json",
+  "mixins": [
+    "LivingEntityMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

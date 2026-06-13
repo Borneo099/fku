@@ -1,0 +1,29 @@
+
+["GUI Settings"]
+	#视觉面板X坐标
+	#Range: > 0
+	visual_x_pos = 387
+	#视觉面板Y坐标
+	#Range: > 0
+	visual_y_pos = 107
+	#GUI窗口Y坐标
+	#Range: > 0
+	gui_y_pos = 105
+	#自动丢面板X坐标
+	#Range: > 0
+	auto_drop_panel_x_pos = 671
+	#打开GUI的按键名称，默认为右Shift
+	gui_open_key = "key.keyboard.right.shift"
+	#自动丢面板Y坐标
+	#Range: > 0
+	auto_drop_panel_y_pos = 237
+	#GUI窗口X坐标
+	#Range: > 0
+	gui_x_pos = 82
+	#工具面板X坐标
+	#Range: > 0
+	tool_x_pos = 516
+	#工具面板Y坐标
+	#Range: > 0
+	tool_y_pos = 106
+

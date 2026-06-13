@@ -1,0 +1,12 @@
+# This is an example mods.toml file for your mod.
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All rights reserved"
+
+[[mods]]
+modId="fku"
+version="1.0.0"
+displayName="Fku Mod"
+logoFile=""
+description="A simple ClickGUI mod"
+# ... 其他项可以留空或填写
