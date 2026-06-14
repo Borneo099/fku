@@ -1,6 +1,6 @@
 package fku.org.example.fku;
 
-import fku.org.example.fku.config.FkuConfig; // 导入我们的配置类
+import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.config.HealthTagConfig;
 import fku.org.example.fku.config.MovementConfig;
 import com.mojang.logging.LogUtils;
