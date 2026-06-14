@@ -21,7 +21,7 @@ import java.util.List;
 
 @Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoDropPanel {
-    private static final int PANEL_WIDTH = 100;
+    private static final int PANEL_WIDTH = 112;  // 增加宽度以容纳6个物品
     private static final int PANEL_HEIGHT = 188;
     private static final int ICON_SIZE = 16;
     private static final int ICONS_PER_ROW = 6;
@@ -128,13 +128,17 @@ public class AutoDropPanel {
         int maxOffset = Math.max(0, blacklist.size() - maxVisibleItems);
         if (scrollOffset > maxOffset) scrollOffset = maxOffset;
 
+        // 计算物品区域总宽度，确保居中对齐
+        int itemsWidth = ICONS_PER_ROW * ICON_SIZE + (ICONS_PER_ROW - 1) * ICON_SPACING;
+        int startX = x + (PANEL_WIDTH - 8 - itemsWidth) / 2;  // 8 = 左右边距各4
+        
         int drawnCount = 0;
         for (int i = scrollOffset; i < blacklist.size() && drawnCount < maxVisibleItems; i++) {
             String itemId = blacklist.get(i);
             int row = drawnCount / ICONS_PER_ROW;
             int col = drawnCount % ICONS_PER_ROW;
             
-            int itemX = x + col * (ICON_SIZE + ICON_SPACING);
+            int itemX = startX + col * (ICON_SIZE + ICON_SPACING);
             int itemY = y + row * (ICON_SIZE + ICON_SPACING);
 
             Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
@@ -200,7 +204,11 @@ public class AutoDropPanel {
             mouseY >= panelY + ITEMS_START_Y && mouseY <= panelY + PANEL_HEIGHT) {
             
             if (event.getButton() == 1) {
-                int relX = (int) (mouseX - panelX - 4);
+                // 计算物品区域起始位置（与drawItems保持一致）
+                int itemsWidth = ICONS_PER_ROW * ICON_SIZE + (ICONS_PER_ROW - 1) * ICON_SPACING;
+                int startX = panelX + 4 + (PANEL_WIDTH - 8 - itemsWidth) / 2;
+                
+                int relX = (int) (mouseX - startX);
                 int relY = (int) (mouseY - panelY - ITEMS_START_Y);
 
                 int col = relX / (ICON_SIZE + ICON_SPACING);

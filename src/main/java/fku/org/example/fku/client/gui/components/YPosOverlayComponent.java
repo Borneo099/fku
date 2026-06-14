@@ -15,11 +15,13 @@ public class YPosOverlayComponent extends ToggleComponent {
 
     @Override
     protected void toggle() {
-        MovementConfig.getInstance().yPosOverlayEnabled = !MovementConfig.getInstance().yPosOverlayEnabled;
+        // 使用 setter 方法，自动保存配置
+        MovementConfig.getInstance().setYPosOverlayEnabled(!MovementConfig.getInstance().yPosOverlayEnabled);
     }
 
     @Override
     protected void saveConfig() {
+        // 现在通过 setter 自动保存，这里可以留空或者仍然调用 save() 确保安全
         MovementConfig.save();
     }
 }

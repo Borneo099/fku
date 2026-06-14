@@ -16,8 +16,8 @@ public class MovementPanel extends GuiPanel {
 
     @Override
     protected void savePosition() {
-        MovementConfig.getInstance().guiX = this.x;
-        MovementConfig.getInstance().guiY = this.y;
-        MovementConfig.save();
+        // 使用 setter 方法，自动保存配置
+        MovementConfig.getInstance().setGuiX(this.x);
+        MovementConfig.getInstance().setGuiY(this.y);
     }
 }

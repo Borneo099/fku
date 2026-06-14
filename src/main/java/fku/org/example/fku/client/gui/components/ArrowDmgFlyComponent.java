@@ -15,7 +15,7 @@ public class ArrowDmgFlyComponent extends ToggleComponent {
 
     @Override
     protected void toggle() {
-        MovementConfig.getInstance().arrowDmgFlyEnabled = !MovementConfig.getInstance().arrowDmgFlyEnabled;
+        MovementConfig.getInstance().setArrowDmgFlyEnabled(!MovementConfig.getInstance().arrowDmgFlyEnabled);
     }
 
     @Override

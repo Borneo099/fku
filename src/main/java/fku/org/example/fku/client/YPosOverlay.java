@@ -23,8 +23,8 @@ public class YPosOverlay {
 
     public static void toggle() {
         MovementConfig config = MovementConfig.getInstance();
-        config.yPosOverlayEnabled = !config.yPosOverlayEnabled;
-        MovementConfig.save();
+        // 使用 setter 方法，自动保存配置
+        config.setYPosOverlayEnabled(!config.yPosOverlayEnabled);
         
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
