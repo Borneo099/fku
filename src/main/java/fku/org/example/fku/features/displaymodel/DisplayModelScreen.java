@@ -41,6 +41,7 @@ public class DisplayModelScreen extends Screen {
     private EditBox entitySpacingInput;
     private Button summonButton;
     private Button saveButton;
+    private Button cancelButton;
 
     private String statusMessage = "";
     private int statusColor = 0xFFFFFF;
@@ -61,9 +62,15 @@ public class DisplayModelScreen extends Screen {
             if (!manager.isRunning() && summonButton != null) {
                 summonButton.setMessage(Component.literal("召唤模型"));
                 summonButton.active = true;
+                if (cancelButton != null) {
+                    cancelButton.active = false;
+                }
             } else if (manager.isRunning() && summonButton != null) {
                 summonButton.setMessage(Component.literal("放置中 " + manager.getCurrentIndex() + "/" + manager.getTotalCount()));
                 summonButton.active = false;
+                if (cancelButton != null) {
+                    cancelButton.active = true;
+                }
             }
         });
     }
@@ -112,6 +119,18 @@ public class DisplayModelScreen extends Screen {
                 .bounds(width / 2 - 100, y + HEIGHT - 30, 90, 20).build();
         addRenderableWidget(summonButton);
 
+        // ---- 中止按钮 ----
+        cancelButton = Button.builder(Component.literal("中止"), btn -> {
+                    manager.stop();
+                    setStatusMessage("§c已中止", 0xFF5555);
+                    summonButton.setMessage(Component.literal("召唤模型"));
+                    summonButton.active = true;
+                    cancelButton.active = false;
+                })
+                .bounds(width / 2 + 10, y + HEIGHT - 30, 50, 20).build();
+        cancelButton.active = false; // 初始禁用
+        addRenderableWidget(cancelButton);
+
         if (manager.isRunning()) {
             summonButton.setMessage(Component.literal("放置中..."));
             summonButton.active = false;
@@ -136,6 +155,9 @@ public class DisplayModelScreen extends Screen {
             summonButton.setMessage(Component.literal(
                     "放置中 " + manager.getCurrentIndex() + "/" + manager.getTotalCount()));
             summonButton.active = false;
+            cancelButton.active = true;
+        } else {
+            cancelButton.active = false;
         }
     }
 
