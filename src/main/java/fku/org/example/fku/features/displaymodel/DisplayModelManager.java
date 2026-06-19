@@ -138,9 +138,9 @@ public class DisplayModelManager {
         this.selectedSlot = player.getInventory().selected;
 
         // ★ 直接使用传入的参数（不读 config 单例）
-        this.syncWaitTicks = Math.max(1, placeDelayMs / 50);
-        this.placeWaitTicks = Math.max(1, placeDelayMs / 50);
-        this.interDelayTicks = Math.max(1, generationDelayMs / 50);
+        this.syncWaitTicks = Math.max(0, placeDelayMs / 50);
+        this.placeWaitTicks = Math.max(0, placeDelayMs / 50);
+        this.interDelayTicks = Math.max(0, generationDelayMs / 50);
         this.tickCounter = 0;
 
         this.running = true;

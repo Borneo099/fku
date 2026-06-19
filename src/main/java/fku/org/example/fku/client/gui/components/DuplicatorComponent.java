@@ -14,7 +14,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public class DuplicatorComponent extends GuiComponent {
 
     public DuplicatorComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "复制工具");
+        super(x, y, width, height, "三叉戟复制");
     }
 
     private boolean isEnabled() {
@@ -23,9 +23,7 @@ public class DuplicatorComponent extends GuiComponent {
 
     private void toggle() {
         DuplicatorConfig cfg = DuplicatorConfig.getInstance();
-        boolean newState = !cfg.enableTrident;
-        cfg.enableTrident = newState;
-        cfg.enableArrow = newState;
+        cfg.enableTrident = !cfg.enableTrident;
         DuplicatorConfig.save();
     }
 
@@ -38,7 +36,7 @@ public class DuplicatorComponent extends GuiComponent {
 
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        String displayStr = "复制工具: " + (enabled ? "ON" : "OFF");
+        String displayStr = "三叉戟复制: " + (enabled ? "ON" : "OFF");
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
     }

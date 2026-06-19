@@ -83,14 +83,14 @@ public class DisplayModelScreen extends Screen {
         placeDelayInput = new EditBox(font, x + 95, y + 78, 60, 16, Component.literal(""));
         placeDelayInput.setValue(String.valueOf((int) config.placeDelay));
         placeDelayInput.setMaxLength(5);
-        placeDelayInput.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Integer.parseInt(s) <= 5000));
+        placeDelayInput.setFilter(s -> s.matches("\\d*"));
         addWidget(placeDelayInput);
 
         // ---- 生成间隔（ms）----
         generationDelayInput = new EditBox(font, x + 255, y + 78, 60, 16, Component.literal(""));
         generationDelayInput.setValue(String.valueOf((int) config.generationDelay));
         generationDelayInput.setMaxLength(5);
-        generationDelayInput.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Integer.parseInt(s) <= 5000));
+        generationDelayInput.setFilter(s -> s.matches("\\d*"));
         addWidget(generationDelayInput);
 
         // ---- 实体间距（格）----
@@ -170,12 +170,12 @@ public class DisplayModelScreen extends Screen {
 
         try {
             String v = placeDelayInput.getValue();
-            if (!v.isEmpty()) placeDelayMs = Math.max(50, Math.min(5000, Integer.parseInt(v)));
+            if (!v.isEmpty()) placeDelayMs = Integer.parseInt(v);
         } catch (NumberFormatException ignored) {}
 
         try {
             String v = generationDelayInput.getValue();
-            if (!v.isEmpty()) generationDelayMs = Math.max(50, Math.min(5000, Integer.parseInt(v)));
+            if (!v.isEmpty()) generationDelayMs = Integer.parseInt(v);
         } catch (NumberFormatException ignored) {}
 
         try {
@@ -218,18 +218,12 @@ public class DisplayModelScreen extends Screen {
     private void saveInputsToConfig() {
         try {
             String val = placeDelayInput.getValue();
-            if (!val.isEmpty()) {
-                int p = Integer.parseInt(val);
-                if (p >= 50 && p <= 5000) config.setPlaceDelay(p);
-            }
+            if (!val.isEmpty()) config.setPlaceDelay(Double.parseDouble(val));
         } catch (NumberFormatException ignored) {}
 
         try {
             String val = generationDelayInput.getValue();
-            if (!val.isEmpty()) {
-                int p = Integer.parseInt(val);
-                if (p >= 50 && p <= 5000) config.setGenerationDelay(p);
-            }
+            if (!val.isEmpty()) config.setGenerationDelay(Double.parseDouble(val));
         } catch (NumberFormatException ignored) {}
 
         try {

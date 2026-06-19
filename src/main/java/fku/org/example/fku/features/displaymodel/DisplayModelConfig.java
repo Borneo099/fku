@@ -84,12 +84,12 @@ public class DisplayModelConfig {
     // ============ Setter方法（自动保存） ============
     
     public void setPlaceDelay(double value) {
-        this.placeDelay = Math.max(50, Math.min(5000, value));
+        this.placeDelay = Math.max(0, Math.min(5000, value));
         save();
     }
-    
+
     public void setGenerationDelay(double value) {
-        this.generationDelay = Math.max(50, Math.min(5000, value));
+        this.generationDelay = Math.max(0, Math.min(5000, value));
         save();
     }
     

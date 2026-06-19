@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * 复制工具配置界面
+ * 三叉戟复制配置界面
  *
  * 配置项：
  *   - 复制延迟（tick）：两次复制循环的间隔
@@ -32,7 +32,7 @@ public class DuplicatorConfigScreen extends Screen {
     private final DuplicatorConfig config;
 
     public DuplicatorConfigScreen() {
-        super(Component.literal("复制工具配置"));
+        super(Component.literal("三叉戟复制配置"));
         this.config = DuplicatorConfig.getInstance();
     }
 

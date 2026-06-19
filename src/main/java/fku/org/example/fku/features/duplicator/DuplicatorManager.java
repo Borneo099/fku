@@ -8,9 +8,6 @@ import static net.minecraft.core.Direction.DOWN;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.ClickType;
-import net.minecraft.world.item.ArrowItem;
-import net.minecraft.world.item.BowItem;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -20,18 +17,17 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
- * 三叉戟/箭矢复制工具 — 状态机管理器
+ * 三叉戟复制工具 — 状态机管理器
  *
  * 核心原理（SPIGOT-5608 + Killetx/TridentDupe）：
- *   三叉戟：useItem → SWAP 合成格 slot 3↔热栏0（主手物品移到合成格）
- *            → 服务端更新物品实例 → RELEASE（旧实例消失→不消耗）
- *   箭矢：  bow useItem（弓留在主手蓄力）
- *            → 从热栏/主背包找到箭矢→ SWAP/PICKUP 移到合成格
- *            → 服务端更新箭矢实例 → RELEASE（旧箭矢实例消失→不消耗）
+ *   useItem() 蓄力 → SWAP 合成格 slot 3 ↔ 热栏0（主手三叉戟移到合成格）
+ *   → 服务端 setStorageContents 更新物品实例 → RELEASE_USE_ITEM
+ *   → 旧三叉戟实例消失，不消耗耐久
  *
  * 参考：
  *   - Killletx/TridentDupe: https://github.com/Killetx/TridentDupe
  *   - SPIGOT-5608: setStorageContents → 物品实例变更
+ *   - 实测确认箭复制产生幽灵物品，无实际意义，已移除
  */
 public class DuplicatorManager {
 
@@ -79,7 +75,7 @@ public class DuplicatorManager {
         if (player == null || mc.level == null) return;
 
         DuplicatorConfig cfg = getConfig();
-        if (!cfg.enableTrident && !cfg.enableArrow) {
+        if (!cfg.enableTrident) {
             phase = Phase.IDLE;
             return;
         }
@@ -88,7 +84,7 @@ public class DuplicatorManager {
             case IDLE -> { tickCounter = 0; phase = Phase.ARMING; }
 
             case ARMING -> {
-                int slot = findBestWeaponSlot(player, cfg);
+                int slot = findBestWeaponSlot(player);
                 if (slot == -1) {
                     tickCounter++;
                     if (tickCounter >= 20) { phase = Phase.IDLE; tickCounter = 0; }
@@ -115,39 +111,32 @@ public class DuplicatorManager {
 
             case DUPING -> {
                 try {
-                    ItemStack usingItem = player.getUseItem();
-                    boolean isTrident = usingItem.getItem() instanceof TridentItem;
-                    boolean isBow     = usingItem.getItem() instanceof BowItem;
+                    // ★ SWAP 合成格 slot 3 ↔ 热栏[0]，移出主手三叉戟
+                    mc.gameMode.handleInventoryMouseClick(
+                            player.containerMenu.containerId,
+                            3, 0, ClickType.SWAP, player);
 
-                    if (isTrident) {
-                        // ★ 三叉戟：SWAP 合成格 slot 3 ↔ 热栏[0]，移出主手
+                    if (cfg.dropTridents) {
+                        // 复制品在热栏[8]，自动丢出
                         mc.gameMode.handleInventoryMouseClick(
                                 player.containerMenu.containerId,
-                                3, 0, ClickType.SWAP, player);
-                        if (cfg.dropTridents) {
-                            mc.gameMode.handleInventoryMouseClick(
-                                    player.containerMenu.containerId,
-                                    44, 0, ClickType.THROW, player);
-                        }
-                    } else if (isBow) {
-                        // ★ 箭矢：弓不移出主手，只移动箭矢到合成格
-                        moveArrowToCraftingGrid(mc, player);
+                                44, 0, ClickType.THROW, player);
                     }
 
-                    // RELEASE — 服务端找不到原物品实例 → 不消耗
+                    // RELEASE — 服务端找不到原三叉戟实例 → 不消耗
                     mc.getConnection().send(new ServerboundPlayerActionPacket(
                             ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM,
                             BlockPos.ZERO, DOWN, 0));
 
                     consecutiveFails = 0;
-                    Fku.LOGGER.debug("[Duplicator] 复制完成 (trident={}, bow={})", isTrident, isBow);
+                    Fku.LOGGER.debug("[Duplicator] 复制完成");
                 } catch (Exception e) {
                     consecutiveFails++;
                     Fku.LOGGER.error("[Duplicator] 复制异常: {}", e.getMessage());
                     if (consecutiveFails >= 3) {
                         player.displayClientMessage(
                                 net.minecraft.network.chat.Component.literal(
-                                        "§c[复制工具] 连续失败3次，服务器可能已修复此漏洞"), true);
+                                        "§c[三叉戟复制] 连续失败3次，服务器可能已修复此漏洞"), true);
                         phase = Phase.IDLE;
                         break;
                     }
@@ -163,7 +152,8 @@ public class DuplicatorManager {
         }
     }
 
-    private int findBestWeaponSlot(LocalPlayer player, DuplicatorConfig cfg) {
+    /** 寻找热栏中最高耐久的三叉戟（跳过激流附魔） */
+    private int findBestWeaponSlot(LocalPlayer player) {
         int bestSlot = -1;
         int bestDurability = Integer.MAX_VALUE;
         boolean hasRiptideWarned = false;
@@ -171,27 +161,21 @@ public class DuplicatorManager {
         for (int i = 0; i < 9; i++) {
             var stack = player.getInventory().getItem(i);
             if (stack.isEmpty()) continue;
+            if (!(stack.getItem() instanceof TridentItem)) continue;
 
-            boolean isTrident = cfg.enableTrident && stack.getItem() instanceof TridentItem;
-            boolean isBow     = cfg.enableArrow     && stack.getItem() instanceof BowItem;
-
-            if (isTrident) {
-                int riptide = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.RIPTIDE, stack);
-                if (riptide > 0) {
-                    if (!hasRiptideWarned) {
-                        hasRiptideWarned = true;
-                        player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(
-                                        "§e[复制工具] 激流附魔三叉戟跳过（不适用此复制方式）"), true);
-                    }
-                    continue;
+            int riptide = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.RIPTIDE, stack);
+            if (riptide > 0) {
+                if (!hasRiptideWarned) {
+                    hasRiptideWarned = true;
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal(
+                                    "§e[三叉戟复制] 激流附魔跳过（不适用此复制方式）"), true);
                 }
-                int dur = stack.getMaxDamage() - stack.getDamageValue();
-                if (dur < bestDurability) {
-                    bestDurability = dur;
-                    bestSlot = i;
-                }
-            } else if (isBow && bestSlot == -1) {
+                continue;
+            }
+            int dur = stack.getMaxDamage() - stack.getDamageValue();
+            if (dur < bestDurability) {
+                bestDurability = dur;
                 bestSlot = i;
             }
         }
@@ -199,40 +183,6 @@ public class DuplicatorManager {
     }
 
     private DuplicatorConfig getConfig() { return DuplicatorConfig.getInstance(); }
-
-    // ====================================================================
-    //  moveArrowToCraftingGrid — 箭矢复制专用
-    //  弓留在主手蓄力，只把箭矢移动到合成格 slot 3，触发实例变更
-    // ====================================================================
-    private void moveArrowToCraftingGrid(Minecraft mc, LocalPlayer player) {
-        int cid = player.containerMenu.containerId;
-
-        // 1) 热栏 1-8 优先（热栏 0 是弓）
-        for (int h = 1; h <= 8; h++) {
-            ItemStack stack = player.getInventory().getItem(h);
-            if (!stack.isEmpty() && stack.getItem() instanceof ArrowItem) {
-                // SWAP 合成格 slot 3 ↔ 热栏 h
-                mc.gameMode.handleInventoryMouseClick(cid, 3, h, ClickType.SWAP, player);
-                Fku.LOGGER.debug("[Duplicator] 热栏{}箭矢 SWAP → 合成格", h);
-                return;
-            }
-        }
-
-        // 2) 主背包 9-35
-        for (int invIdx = 9; invIdx < 36; invIdx++) {
-            ItemStack stack = player.getInventory().getItem(invIdx);
-            if (!stack.isEmpty() && stack.getItem() instanceof ArrowItem) {
-                // PICKUP → 光标拿箭矢
-                mc.gameMode.handleInventoryMouseClick(cid, invIdx, 0, ClickType.PICKUP, player);
-                // CLICK → 箭矢放到合成格 3
-                mc.gameMode.handleInventoryMouseClick(cid, 3, 0, ClickType.PICKUP, player);
-                Fku.LOGGER.debug("[Duplicator] 主背包{}箭矢 PICKUP → 合成格", invIdx);
-                return;
-            }
-        }
-
-        Fku.LOGGER.warn("[Duplicator] 未找到箭矢，跳过");
-    }
 
     /** 重置全部状态（断线/异常时调用） */
     public void reset() {
