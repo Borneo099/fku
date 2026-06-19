@@ -1,49 +1,44 @@
 package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.GuiStyleConfig;
-import fku.org.example.fku.features.autodrop.AutoDropConfig;
-import fku.org.example.fku.features.autodrop.AutoDropScreen;
+import fku.org.example.fku.features.duplicator.DuplicatorConfig;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * 自动丢弃开关组件
- * 左键切换开关，右键打开配置菜单
+ * 三叉戟复制开关组件
+ * 左键切换启用/禁用
  */
-public class AutoDropComponent extends GuiComponent {
-    protected String label;
+public class DuplicatorComponent extends GuiComponent {
 
-    public AutoDropComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "自动丢");
-        this.label = "自动丢";
+    public DuplicatorComponent(int x, int y, int width, int height) {
+        super(x, y, width, height, "复制工具");
     }
 
-    protected boolean isEnabled() {
-        return AutoDropConfig.getInstance().enabled;
+    private boolean isEnabled() {
+        return DuplicatorConfig.getInstance().enableTrident;
     }
 
-    protected void toggle() {
-        AutoDropConfig.getInstance().enabled = !AutoDropConfig.getInstance().enabled;
-    }
-
-    protected void saveConfig() {
-        AutoDropConfig.save();
+    private void toggle() {
+        DuplicatorConfig cfg = DuplicatorConfig.getInstance();
+        boolean newState = !cfg.enableTrident;
+        cfg.enableTrident = newState;
+        cfg.enableArrow = newState;
+        DuplicatorConfig.save();
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!visible) return;
-        
+
         GuiStyleConfig config = GuiStyleConfig.getInstance();
         boolean enabled = isEnabled();
 
-        // 绘制圆角背景
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        // 绘制文字
-        String displayStr = label + ": " + (enabled ? "ON" : "OFF");
-        int textColor = enabled ? config.getTextColor() : (0xAAAAAA);
+        String displayStr = "复制工具: " + (enabled ? "ON" : "OFF");
+        int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
     }
 
@@ -52,10 +47,9 @@ public class AutoDropComponent extends GuiComponent {
         if (isHovered(mouseX, mouseY)) {
             if (button == 0) {
                 toggle();
-                saveConfig();
                 return true;
             } else if (button == 1) {
-                Minecraft.getInstance().setScreen(new AutoDropScreen());
+                // 右键可扩展为打开配置界面
                 return true;
             }
         }

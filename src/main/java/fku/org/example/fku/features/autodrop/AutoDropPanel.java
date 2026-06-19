@@ -29,7 +29,7 @@ public class AutoDropPanel {
     private static final int SCROLL_SPEED = 8;
     private static final int ADD_SLOT_SIZE = 18;
     private static final int TITLE_BAR_HEIGHT = 20;
-    private static final int ITEMS_START_Y = 52;
+    private static final int ITEMS_START_Y = 64;  // 增加间距，避免与加号槽位重叠
     private static int scrollOffset = 0;
     
     // 拖拽状态

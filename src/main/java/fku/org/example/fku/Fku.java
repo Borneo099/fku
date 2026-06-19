@@ -3,6 +3,8 @@ package fku.org.example.fku;
 import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.config.HealthTagConfig;
 import fku.org.example.fku.config.MovementConfig;
+import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -34,5 +36,7 @@ public class Fku
         FkuConfig.init();
         HealthTagConfig.load();
         MovementConfig.load();
+        GuiStyleConfig.load();
+        DisplayModelConfig.load();
     }
 }

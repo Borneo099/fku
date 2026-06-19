@@ -29,6 +29,8 @@ public class FkuConfig {
     public static ForgeConfigSpec.IntValue toolYPos;
     public static ForgeConfigSpec.IntValue autoDropPanelXPos;
     public static ForgeConfigSpec.IntValue autoDropPanelYPos;
+    public static ForgeConfigSpec.IntValue entertainmentPanelX;
+    public static ForgeConfigSpec.IntValue entertainmentPanelY;
 
     static {
         BUILDER.push("GUI Settings");
@@ -59,6 +61,12 @@ public class FkuConfig {
         autoDropPanelYPos = BUILDER
                 .comment("自动丢面板Y坐标")
                 .defineInRange("auto_drop_panel_y_pos", 0, 0, Integer.MAX_VALUE);
+        entertainmentPanelX = BUILDER
+                .comment("娱乐面板X坐标")
+                .defineInRange("entertainment_panel_x_pos", 490, 0, Integer.MAX_VALUE);
+        entertainmentPanelY = BUILDER
+                .comment("娱乐面板Y坐标")
+                .defineInRange("entertainment_panel_y_pos", 100, 0, Integer.MAX_VALUE);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

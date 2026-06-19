@@ -1,9 +1,14 @@
 package fku.org.example.fku.client.gui.components;
 
+import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import java.awt.*;
 
+/**
+ * 开关组件基类
+ * 支持圆角、美化效果
+ */
 public abstract class ToggleComponent extends GuiComponent {
 
     protected String label;
@@ -25,16 +30,17 @@ public abstract class ToggleComponent extends GuiComponent {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!visible) return;
+        
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
         boolean enabled = isEnabled();
 
-        // Background color based on state
-        int bgColor = enabled ? new Color(0, 150, 0, 200).getRGB() : new Color(150, 0, 0, 200).getRGB();
-        guiGraphics.fill(x, y, x + width, y + height, bgColor);
-        guiGraphics.renderOutline(x, y, width, height, new Color(200, 200, 200).getRGB());
+        // 绘制圆角背景
+        GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        // Text
+        // 绘制文字
         String displayStr = label + ": " + (enabled ? "ON" : "OFF");
-        guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, 0xFFFFFF);
+        int textColor = enabled ? config.getTextColor() : (0xAAAAAA);
+        guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
     }
 
     @Override
@@ -49,6 +55,6 @@ public abstract class ToggleComponent extends GuiComponent {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return false; // Not used for toggle components
+        return false; // 开关组件不处理按键
     }
 }

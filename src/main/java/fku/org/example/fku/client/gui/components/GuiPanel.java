@@ -1,14 +1,19 @@
 package fku.org.example.fku.client.gui.components;
 
+import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * GUI面板基类
+ * 支持圆角、毛玻璃效果、动画、收放功能
+ */
 public abstract class GuiPanel {
     protected String title;
     protected int x, y, width, height;
@@ -17,6 +22,15 @@ public abstract class GuiPanel {
     protected boolean expanded = true;
     protected final List<GuiComponent> components = new ArrayList<>();
     protected final Minecraft mc = Minecraft.getInstance();
+    
+    // 动画相关
+    protected float animationProgress = 0f;
+    protected float targetHeight;
+    protected float currentHeight;
+    protected long lastAnimationTime = 0;
+    
+    // 收放状态
+    protected boolean collapsed = false;
 
     public GuiPanel(String title, int x, int y, int width, int height) {
         this.title = title;
@@ -24,6 +38,8 @@ public abstract class GuiPanel {
         this.y = y;
         this.width = width;
         this.height = height;
+        this.targetHeight = height;
+        this.currentHeight = 20; // 初始只显示标题栏
         init();
     }
 
@@ -35,31 +51,95 @@ public abstract class GuiPanel {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        int alpha = 200;
-        guiGraphics.fill(x, y, x + width, y + (expanded ? height : 20), new Color(30, 30, 30, alpha).getRGB());
-        guiGraphics.fill(x, y, x + width, y + 20, new Color(0, 102, 204, alpha).getRGB());
-        guiGraphics.drawString(mc.font, title, x + 5, y + 6, 0xFFFFFF);
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
         
-        if (expanded) {
+        // 更新动画
+        updateAnimation();
+        
+        // 计算实际渲染高度
+        int renderHeight = (int) currentHeight;
+        
+        // 绘制阴影
+        if (config.shadowEnabled && !collapsed) {
+            GuiRenderHelper.drawShadow(guiGraphics, x, y, width, renderHeight);
+        }
+        
+        // 绘制标题栏背景
+        GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, width, 20, true);
+        
+        // 绘制标题文字
+        guiGraphics.drawString(mc.font, title, x + 5, y + 6, config.getTextColor());
+        
+        // 绘制收放指示器
+        String indicator = collapsed ? "+" : "-";
+        guiGraphics.drawString(mc.font, indicator, x + width - 12, y + 6, config.getTextColor());
+        
+        // 如果展开且动画完成，绘制内容区域
+        if (!collapsed && animationProgress > 0.5f) {
+            // 绘制内容区域背景
+            int contentHeight = (int) (currentHeight - 20);
+            if (contentHeight > 0) {
+                GuiRenderHelper.drawPanelBackground(guiGraphics, x, y + 20, width, contentHeight, false);
+            }
+            
+            // 绘制组件
             for (GuiComponent component : components) {
-                component.render(guiGraphics, mouseX, mouseY, partialTick);
+                if (component.isVisible()) {
+                    component.render(guiGraphics, mouseX, mouseY, partialTick);
+                }
             }
         }
     }
 
+    /**
+     * 更新动画状态
+     */
+    protected void updateAnimation() {
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
+        
+        if (!config.animationEnabled) {
+            currentHeight = collapsed ? 20 : targetHeight;
+            animationProgress = collapsed ? 0f : 1f;
+            return;
+        }
+        
+        long currentTime = System.currentTimeMillis();
+        long deltaTime = currentTime - lastAnimationTime;
+        lastAnimationTime = currentTime;
+        
+        float target = collapsed ? 20 : targetHeight;
+        float speed = (targetHeight - 20) / (config.animationSpeed / 1000f) * (deltaTime / 1000f);
+        
+        if (currentHeight < target) {
+            currentHeight += speed;
+            if (currentHeight > target) currentHeight = target;
+        } else if (currentHeight > target) {
+            currentHeight -= speed;
+            if (currentHeight < target) currentHeight = target;
+        }
+        
+        // 计算动画进度
+        animationProgress = (currentHeight - 20) / (targetHeight - 20);
+    }
+
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // 点击标题栏区域
         if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + 20) {
             if (button == 0) {
+                // 左键拖拽
                 dragging = true;
                 dragOffsetX = (int) mouseX - x;
                 dragOffsetY = (int) mouseY - y;
                 return true;
             } else if (button == 1) {
-                expanded = !expanded;
+                // 右键收放
+                collapsed = !collapsed;
                 return true;
             }
         }
-        if (expanded) {
+        
+        // 如果展开，处理组件点击
+        if (!collapsed && animationProgress > 0.5f) {
             for (GuiComponent component : components) {
                 if (component.mouseClicked(mouseX, mouseY, button)) return true;
             }
@@ -84,16 +164,23 @@ public abstract class GuiPanel {
     }
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        for (GuiComponent component : components) {
-            if (component.keyPressed(keyCode, scanCode, modifiers)) return true;
+        if (!collapsed) {
+            for (GuiComponent component : components) {
+                if (component.keyPressed(keyCode, scanCode, modifiers)) return true;
+            }
         }
         return false;
     }
 
     protected void updatePositions() {
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
+        int yOffset = 25;
         for (int i = 0; i < components.size(); i++) {
-            components.get(i).updatePosition(this.x, this.y, i);
+            components.get(i).updatePosition(this.x, this.y, yOffset);
+            yOffset += config.componentHeight + config.componentSpacing;
         }
+        // 更新目标高度
+        targetHeight = 20 + yOffset - 20;
     }
 
     protected void clampPosition() {
@@ -102,8 +189,15 @@ public abstract class GuiPanel {
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
         if (this.x + this.width > screenWidth) this.x = screenWidth - this.width;
-        if (this.y + (expanded ? height : 20) > screenHeight) this.y = screenHeight - (expanded ? height : 20);
+        if (this.y + (int) currentHeight > screenHeight) this.y = screenHeight - (int) currentHeight;
     }
 
     protected abstract void savePosition();
+    
+    /**
+     * 获取当前渲染高度
+     */
+    public int getCurrentHeight() {
+        return (int) currentHeight;
+    }
 }

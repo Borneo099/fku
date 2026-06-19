@@ -1,5 +1,8 @@
 package fku.org.example.fku.features.autodrop;
 
+import fku.org.example.fku.client.gui.ClickGuiScreen;
+import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.config.GuiStyleConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -7,8 +10,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
-
+/**
+ * 自动丢弃配置界面
+ */
 public class AutoDropScreen extends Screen {
     private static final int WIDTH = 250;
     private static final int HEIGHT = 150;
@@ -60,14 +64,16 @@ public class AutoDropScreen extends Screen {
 
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;
-
-        Color bgColor = new Color(30, 30, 30, 200);
-        Color borderColor = new Color(60, 60, 60, 200);
         
-        guiGraphics.fill(x, y, x + WIDTH, y + HEIGHT, bgColor.getRGB());
-        guiGraphics.renderOutline(x, y, WIDTH, HEIGHT, borderColor.getRGB());
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
 
-        guiGraphics.drawString(font, "自动丢配置", x + 10, y + 10, 0xFFFFFF);
+        // 绘制圆角背景面板
+        GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, WIDTH, HEIGHT, false);
+
+        // 绘制标题
+        guiGraphics.drawString(font, "自动丢配置", x + 10, y + 10, config.getTextColor());
+        
+        // 绘制标签
         guiGraphics.drawString(font, "重置黑名单", x + 20, y + 35, 0xAAAAAA);
         guiGraphics.drawString(font, "丢弃时产生掉落物实体", x + 20, y + 75, 0xAAAAAA);
 
@@ -77,5 +83,10 @@ public class AutoDropScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.setScreen(new ClickGuiScreen());
     }
 }

@@ -11,6 +11,7 @@ public class ToolPanel extends GuiPanel {
     @Override
     protected void init() {
         addComponent(new AutoDropComponent(0, 0, 110, 25));
+        addComponent(new DuplicatorComponent(0, 0, 110, 25));
     }
 
     @Override

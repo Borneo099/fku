@@ -1,13 +1,14 @@
 package fku.org.example.fku.client.gui.components;
 
-import fku.org.example.fku.client.KeyBindings;
-import fku.org.example.fku.config.FkuConfig;
-import com.mojang.blaze3d.platform.InputConstants;
+import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
-import java.awt.*;
-
+/**
+ * GUI组件基类
+ * 支持圆角、美化效果
+ */
 public class GuiComponent {
 
     protected int x, y, width, height;
@@ -25,9 +26,14 @@ public class GuiComponent {
 
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!visible) return;
-        guiGraphics.fill(x, y, x + width, y + height, new Color(60, 60, 60, 200).getRGB());
-        guiGraphics.renderOutline(x, y, width, height, new Color(150, 150, 150).getRGB());
-        guiGraphics.drawString(Minecraft.getInstance().font, text, x + 5, y + (height - 8) / 2, 0xFFFFFF);
+        
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
+        
+        // 绘制圆角背景
+        GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, false);
+        
+        // 绘制文字
+        guiGraphics.drawString(Minecraft.getInstance().font, text, x + 5, y + (height - 8) / 2, config.getTextColor());
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -41,8 +47,9 @@ public class GuiComponent {
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (listeningForKey) {
-            InputConstants.Key newKey = InputConstants.getKey(keyCode, scanCode);
-            KeyBindings.updateKeyBinding(newKey);
+            com.mojang.blaze3d.platform.InputConstants.Key newKey = 
+                com.mojang.blaze3d.platform.InputConstants.getKey(keyCode, scanCode);
+            fku.org.example.fku.client.KeyBindings.updateKeyBinding(newKey);
             String keyDisplay = newKey.getName();
             this.text = "绑定GUI按键: " + keyDisplay;
             listeningForKey = false;
@@ -56,8 +63,25 @@ public class GuiComponent {
                 mouseY >= this.y && mouseY <= this.y + this.height;
     }
 
-    public void updatePosition(int panelX, int panelY, int index) {
+    /**
+     * 更新组件位置（新版本，支持yOffset参数）
+     * @param panelX 面板X坐标
+     * @param panelY 面板Y坐标
+     * @param yOffset Y偏移量
+     */
+    public void updatePosition(int panelX, int panelY, int yOffset) {
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
         this.x = panelX + 5;
-        this.y = panelY + 25 + (index * (this.height + 5));
+        this.y = panelY + yOffset;
+        this.width = config.panelWidth - 10;
+        this.height = config.componentHeight;
+    }
+    
+    public boolean isVisible() {
+        return visible;
+    }
+    
+    public void setVisible(boolean visible) {
+        this.visible = visible;
     }
 }

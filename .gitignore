@@ -16,6 +16,10 @@ logs/
 .classpath
 .settings/
 .vscode/
+.trae/
+
+# Compiled output
+bin/
 
 # OS
 .DS_Store
