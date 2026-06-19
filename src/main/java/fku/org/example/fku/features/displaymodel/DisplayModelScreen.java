@@ -28,6 +28,7 @@ import java.util.List;
  * 设计思想（实践论）：
  * - 状态机抽离到 DisplayModelManager，关闭 Screen 后仍然继续放置
  * - Screen 只管 UI 布局和事件委托
+ * - 配置保存：仅"保存配置"按钮持久化，激发时直接从输入框读取数值传给 Manager
  */
 public class DisplayModelScreen extends Screen {
 
@@ -39,6 +40,7 @@ public class DisplayModelScreen extends Screen {
     private EditBox generationDelayInput;
     private EditBox entitySpacingInput;
     private Button summonButton;
+    private Button saveButton;
 
     private String statusMessage = "";
     private int statusColor = 0xFFFFFF;
@@ -50,7 +52,6 @@ public class DisplayModelScreen extends Screen {
         super(Component.literal("实体模型展示"));
         this.config = DisplayModelConfig.getInstance();
         this.manager = DisplayModelManager.getInstance();
-        // 注册状态回调
         manager.setOnStatusUpdate(() -> {
             String msg = manager.getStatusMessage();
             if (msg != null && !msg.isEmpty()) {
@@ -76,28 +77,23 @@ public class DisplayModelScreen extends Screen {
         // ---- 指令输入框 ----
         commandInput = new EditBox(font, x + 10, y + 35, WIDTH - 20, 20, Component.literal(""));
         commandInput.setMaxLength(32767);
-        commandInput.setResponder(s -> {
-            if (!manager.isRunning()) {
-                setStatusMessage("", 0xFFFFFF);
-            }
-        });
         addWidget(commandInput);
 
-        // ---- 配置输入框：放置延迟（y+78，在下方留出标签空间）----
+        // ---- 放置延迟（ms）----
         placeDelayInput = new EditBox(font, x + 95, y + 78, 60, 16, Component.literal(""));
         placeDelayInput.setValue(String.valueOf((int) config.placeDelay));
         placeDelayInput.setMaxLength(5);
         placeDelayInput.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Integer.parseInt(s) <= 5000));
         addWidget(placeDelayInput);
 
-        // ---- 配置输入框：生成间隔 ----
+        // ---- 生成间隔（ms）----
         generationDelayInput = new EditBox(font, x + 255, y + 78, 60, 16, Component.literal(""));
         generationDelayInput.setValue(String.valueOf((int) config.generationDelay));
         generationDelayInput.setMaxLength(5);
         generationDelayInput.setFilter(s -> s.matches("\\d*") && (s.isEmpty() || Integer.parseInt(s) <= 5000));
         addWidget(generationDelayInput);
 
-        // ---- 配置输入框：实体间距 ----
+        // ---- 实体间距（格）----
         entitySpacingInput = new EditBox(font, x + 355, y + 78, 55, 16, Component.literal(""));
         entitySpacingInput.setValue(String.valueOf(config.entitySpacing));
         entitySpacingInput.setMaxLength(4);
@@ -105,19 +101,17 @@ public class DisplayModelScreen extends Screen {
         addWidget(entitySpacingInput);
 
         // ---- 保存配置按钮 ----
-        Button saveBtn = Button.builder(Component.literal("保存配置"), btn -> {
-                    forceSaveConfig();
-                    setStatusMessage("§a配置已保存", 0x55FF55);
+        saveButton = Button.builder(Component.literal("保存配置"), btn -> {
+                    saveInputsToConfig();
                 })
                 .bounds(x + WIDTH - 85, y + HEIGHT - 30, 75, 20).build();
-        addRenderableWidget(saveBtn);
+        addRenderableWidget(saveButton);
 
         // ---- 召唤按钮 ----
         summonButton = Button.builder(Component.literal("召唤模型"), btn -> startSummon())
                 .bounds(width / 2 - 100, y + HEIGHT - 30, 90, 20).build();
         addRenderableWidget(summonButton);
 
-        // 如果 Manager 已在运行，同步按钮状态
         if (manager.isRunning()) {
             summonButton.setMessage(Component.literal("放置中..."));
             summonButton.active = false;
@@ -133,10 +127,6 @@ public class DisplayModelScreen extends Screen {
         generationDelayInput.tick();
         entitySpacingInput.tick();
 
-        // 实时保存配置
-        saveConfigFromInputs();
-
-        // 如果 Manager 正在运行，更新按钮状态
         if (manager.isRunning()) {
             String msg = manager.getStatusMessage();
             if (msg != null && !msg.isEmpty()) {
@@ -150,16 +140,13 @@ public class DisplayModelScreen extends Screen {
     }
 
     // ====================================================================
-    //  startSummon — 创造模式检查 + 指令解析 + 委托 Manager
+    //  startSummon — 直接从输入框读取数值，不依赖 config 单例
     // ====================================================================
     private void startSummon() {
         if (manager.isRunning()) {
             setStatusMessage("§e放置正在进行中...", 0xFFFF55);
             return;
         }
-
-        // 强制保存输入框配置
-        forceSaveConfig();
 
         String command = commandInput.getValue().trim();
         if (command.isEmpty()) {
@@ -176,7 +163,27 @@ public class DisplayModelScreen extends Screen {
             return;
         }
 
-        // 解析
+        // ★ 直接从输入框读取数值（不依赖 config 单例）
+        int placeDelayMs = 50;
+        int generationDelayMs = 50;
+        double entitySpacing = 0.5;
+
+        try {
+            String v = placeDelayInput.getValue();
+            if (!v.isEmpty()) placeDelayMs = Math.max(50, Math.min(5000, Integer.parseInt(v)));
+        } catch (NumberFormatException ignored) {}
+
+        try {
+            String v = generationDelayInput.getValue();
+            if (!v.isEmpty()) generationDelayMs = Math.max(50, Math.min(5000, Integer.parseInt(v)));
+        } catch (NumberFormatException ignored) {}
+
+        try {
+            String v = entitySpacingInput.getValue();
+            if (!v.isEmpty()) entitySpacing = Math.max(0, Math.min(10, Double.parseDouble(v)));
+        } catch (NumberFormatException ignored) {}
+
+        // 解析指令
         List<CompoundTag> passengers;
         Vec3 offset;
         try {
@@ -195,9 +202,8 @@ public class DisplayModelScreen extends Screen {
 
         BlockPos fixedPos = player.blockPosition();
 
-        // 委托 Manager
-        manager.start(passengers, offset, fixedPos,
-                config.entitySpacing, (int) config.generationDelay);
+        // ★ 直接传递数值给 Manager
+        manager.start(passengers, offset, fixedPos, entitySpacing, generationDelayMs, placeDelayMs);
 
         if (manager.isRunning()) {
             setStatusMessage("§a开始放置实体，共 " + passengers.size() + " 个...", 0x55FF55);
@@ -207,9 +213,9 @@ public class DisplayModelScreen extends Screen {
     }
 
     // ====================================================================
-    //  配置保存
+    //  saveInputsToConfig — 只有点击"保存配置"按钮时调用
     // ====================================================================
-    private void forceSaveConfig() {
+    private void saveInputsToConfig() {
         try {
             String val = placeDelayInput.getValue();
             if (!val.isEmpty()) {
@@ -233,35 +239,10 @@ public class DisplayModelScreen extends Screen {
                 if (p >= 0 && p <= 10) config.setEntitySpacing(p);
             }
         } catch (NumberFormatException ignored) {}
-    }
 
-    private void saveConfigFromInputs() {
-        try {
-            String val = placeDelayInput.getValue();
-            if (!val.isEmpty()) {
-                int p = Integer.parseInt(val);
-                if (p >= 50 && p <= 5000 && p != (int) config.placeDelay)
-                    config.setPlaceDelay(p);
-            }
-        } catch (NumberFormatException ignored) {}
-
-        try {
-            String val = generationDelayInput.getValue();
-            if (!val.isEmpty()) {
-                int p = Integer.parseInt(val);
-                if (p >= 50 && p <= 5000 && p != (int) config.generationDelay)
-                    config.setGenerationDelay(p);
-            }
-        } catch (NumberFormatException ignored) {}
-
-        try {
-            String val = entitySpacingInput.getValue();
-            if (!val.isEmpty()) {
-                double p = Double.parseDouble(val);
-                if (p >= 0 && p <= 10 && p != config.entitySpacing)
-                    config.setEntitySpacing(p);
-            }
-        } catch (NumberFormatException ignored) {}
+        setStatusMessage("§a配置已保存", 0x55FF55);
+        Fku.LOGGER.info("[DisplayModel] 配置已保存: placeDelay={}, genDelay={}, spacing={}",
+                config.placeDelay, config.generationDelay, config.entitySpacing);
     }
 
     // ====================================================================
@@ -295,7 +276,7 @@ public class DisplayModelScreen extends Screen {
                     x + 14, y + 40, 0x555555);
         }
 
-        guiGraphics.drawString(font, "配置选项（实时修改实时保存）:", x + 10, y + 57, 0x888888);
+        guiGraphics.drawString(font, "配置选项:", x + 10, y + 57, 0x888888);
 
         guiGraphics.drawString(font, "放置延迟(ms):", x + 10, y + 65, 0xAAAAAA);
         placeDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -320,8 +301,6 @@ public class DisplayModelScreen extends Screen {
 
     @Override
     public void onClose() {
-        // 退出前强制保存配置
-        forceSaveConfig();
         this.minecraft.setScreen(new ClickGuiScreen());
     }
 }

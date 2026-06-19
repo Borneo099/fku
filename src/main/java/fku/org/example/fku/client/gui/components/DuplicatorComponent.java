@@ -2,6 +2,7 @@ package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.duplicator.DuplicatorConfig;
+import fku.org.example.fku.features.duplicator.DuplicatorConfigScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -49,7 +50,7 @@ public class DuplicatorComponent extends GuiComponent {
                 toggle();
                 return true;
             } else if (button == 1) {
-                // 右键可扩展为打开配置界面
+                Minecraft.getInstance().setScreen(new DuplicatorConfigScreen());
                 return true;
             }
         }

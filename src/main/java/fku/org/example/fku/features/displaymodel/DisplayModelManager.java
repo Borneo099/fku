@@ -117,7 +117,7 @@ public class DisplayModelManager {
      * 开始放置实体
      */
     public void start(List<CompoundTag> passengers, Vec3 offset, BlockPos playerPos,
-                      double entitySpacing, int generationDelayMs) {
+                      double entitySpacing, int generationDelayMs, int placeDelayMs) {
         if (running) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -137,10 +137,9 @@ public class DisplayModelManager {
         this.originalItem = player.getItemInHand(InteractionHand.MAIN_HAND).copy();
         this.selectedSlot = player.getInventory().selected;
 
-        // ★ 从配置读取延迟参数（而非硬编码），确保修改配置后实时生效
-        DisplayModelConfig cfg = DisplayModelConfig.getInstance();
-        this.syncWaitTicks = Math.max(1, (int)(cfg.placeDelay / 50));
-        this.placeWaitTicks = Math.max(1, (int)(cfg.placeDelay / 50));
+        // ★ 直接使用传入的参数（不读 config 单例）
+        this.syncWaitTicks = Math.max(1, placeDelayMs / 50);
+        this.placeWaitTicks = Math.max(1, placeDelayMs / 50);
         this.interDelayTicks = Math.max(1, generationDelayMs / 50);
         this.tickCounter = 0;
 

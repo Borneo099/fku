@@ -92,4 +92,26 @@ public class DuplicatorConfig {
             e.printStackTrace();
         }
     }
+
+    // ============ Setter方法（自动保存） ============
+
+    public void setDupeDelay(int value) {
+        this.dupeDelay = Math.max(1, Math.min(200, value));
+        save();
+    }
+
+    public void setHoldDuration(int value) {
+        this.holdDuration = Math.max(1, Math.min(200, value));
+        save();
+    }
+
+    public void setDropTridents(boolean value) {
+        this.dropTridents = value;
+        save();
+    }
+
+    public void setDurabilityManagement(boolean value) {
+        this.durabilityManagement = value;
+        save();
+    }
 }

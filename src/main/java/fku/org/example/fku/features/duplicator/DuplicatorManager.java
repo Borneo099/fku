@@ -23,21 +23,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * 三叉戟/箭矢复制工具 — 状态机管理器
  *
  * 核心原理（SPIGOT-5608 + Killetx/TridentDupe）：
+ *   三叉戟：useItem → SWAP 合成格 slot 3↔热栏0（主手物品移到合成格）
+ *            → 服务端更新物品实例 → RELEASE（旧实例消失→不消耗）
+ *   箭矢：  bow useItem（弓留在主手蓄力）
+ *            → 从热栏/主背包找到箭矢→ SWAP/PICKUP 移到合成格
+ *            → 服务端更新箭矢实例 → RELEASE（旧箭矢实例消失→不消耗）
  *
- * 【三叉戟复制】
- *   1. 主动使用物品（useItem）开始蓄力
- *   2. 蓄力后 SWAP 合成格 ↔ 热栏[0]，将三叉戟移出主手
- *   3. 服务端处理后物品实例变更，旧实例无法追踪
- *   4. RELEASE_USE_ITEM → 服务端找不到实例 → 三叉戟不被消耗
- *
- * 【箭矢复制】
- *   1. 弓开始蓄力，箭矢在背包中
- *   2. PICKUP 箭矢 → 合成格 → 取回 → 还原（4次点击刷新实例）
- *   3. RELEASE → 服务端找不到原箭矢实例 → 箭矢不被消耗
- *
- * 参考资料：
+ * 参考：
  *   - Killletx/TridentDupe: https://github.com/Killetx/TridentDupe
- *   - SPIGOT-5608: setStorageContents → 物品实例变更机制
+ *   - SPIGOT-5608: setStorageContents → 物品实例变更
  */
 public class DuplicatorManager {
 
@@ -49,11 +43,11 @@ public class DuplicatorManager {
     private int consecutiveFails = 0;
 
     private enum Phase {
-        IDLE,      // 空闲
-        ARMING,    // 准备蓄力（找物品 → SWAP到slot 0 → useItem）
-        HOLDING,   // 等待蓄力
-        DUPING,    // 执行复制（三叉戟 SWAP / 箭矢 PICKUP + RELEASE）
-        COOLDOWN   // 冷却后下一轮
+        IDLE,
+        ARMING,
+        HOLDING,
+        DUPING,
+        COOLDOWN
     }
 
     private DuplicatorManager() {}
@@ -79,9 +73,6 @@ public class DuplicatorManager {
         reset();
     }
 
-    // ====================================================================
-    //  tick — 主状态机
-    // ====================================================================
     private void tick() {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
@@ -103,7 +94,6 @@ public class DuplicatorManager {
                     if (tickCounter >= 20) { phase = Phase.IDLE; tickCounter = 0; }
                     break;
                 }
-                // 不在热栏0则 SWAP 过去
                 if (slot != 0) {
                     mc.gameMode.handleInventoryMouseClick(
                             player.containerMenu.containerId,
@@ -130,7 +120,7 @@ public class DuplicatorManager {
                     boolean isBow     = usingItem.getItem() instanceof BowItem;
 
                     if (isTrident) {
-                        // ── 三叉戟：SWAP 移出主手 ──
+                        // ★ 三叉戟：SWAP 合成格 slot 3 ↔ 热栏[0]，移出主手
                         mc.gameMode.handleInventoryMouseClick(
                                 player.containerMenu.containerId,
                                 3, 0, ClickType.SWAP, player);
@@ -140,11 +130,11 @@ public class DuplicatorManager {
                                     44, 0, ClickType.THROW, player);
                         }
                     } else if (isBow) {
-                        // ── 弓/箭矢：PICKUP 刷新背包中的箭矢实例 ──
-                        refreshArrowInstance(mc, player);
+                        // ★ 箭矢：弓不移出主手，只移动箭矢到合成格
+                        moveArrowToCraftingGrid(mc, player);
                     }
 
-                    // RELEASE_USE_ITEM — 服务端找不到原实例 → 不消耗
+                    // RELEASE — 服务端找不到原物品实例 → 不消耗
                     mc.getConnection().send(new ServerboundPlayerActionPacket(
                             ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM,
                             BlockPos.ZERO, DOWN, 0));
@@ -173,44 +163,6 @@ public class DuplicatorManager {
         }
     }
 
-    // ====================================================================
-    //  refreshArrowInstance — PICKUP 箭矢 → 合成格 → 回原位（刷新实例）
-    //
-    //  背包布局（InventoryMenu）：
-    //    热栏 (0-8)  → 容器 slot 36-44
-    //    存储 (9-35) → 容器 slot 9-35
-    //  合成格 slot 1：任意非冲突的合成槽
-    //
-    //  操作序列（4次 PICKUP）：
-    //    PICKUP 箭矢slot       → 光标持有箭矢
-    //    PICKUP 合成格slot 1   → 放入合成格
-    //    PICKUP 合成格slot 1   → 从合成格取回
-    //    PICKUP 原slot         → 还原原位
-    // ====================================================================
-    private void refreshArrowInstance(Minecraft mc, LocalPlayer player) {
-        for (int invIdx = 0; invIdx < 36; invIdx++) {
-            ItemStack stack = player.getInventory().getItem(invIdx);
-            if (stack.isEmpty()) continue;
-            if (!(stack.getItem() instanceof ArrowItem)) continue;
-
-            int containerSlot = invIdx < 9 ? 36 + invIdx : invIdx;
-            int containerId = player.containerMenu.containerId;
-
-            mc.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, player);
-            mc.gameMode.handleInventoryMouseClick(containerId, 1,             0, ClickType.PICKUP, player);
-            mc.gameMode.handleInventoryMouseClick(containerId, 1,             0, ClickType.PICKUP, player);
-            mc.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, player);
-
-            Fku.LOGGER.debug("[Duplicator] 箭矢实例已刷新 (invIdx={}, item={})",
-                    invIdx, stack.getItem().getDescriptionId());
-            return; // 只处理第一组箭矢
-        }
-        Fku.LOGGER.warn("[Duplicator] 未找到箭矢，跳过刷新");
-    }
-
-    // ====================================================================
-    //  findBestWeaponSlot — 热栏中找三叉戟/弓，优先高耐久
-    // ====================================================================
     private int findBestWeaponSlot(LocalPlayer player, DuplicatorConfig cfg) {
         int bestSlot = -1;
         int bestDurability = Integer.MAX_VALUE;
@@ -248,9 +200,47 @@ public class DuplicatorManager {
 
     private DuplicatorConfig getConfig() { return DuplicatorConfig.getInstance(); }
 
-    private void reset() {
+    // ====================================================================
+    //  moveArrowToCraftingGrid — 箭矢复制专用
+    //  弓留在主手蓄力，只把箭矢移动到合成格 slot 3，触发实例变更
+    // ====================================================================
+    private void moveArrowToCraftingGrid(Minecraft mc, LocalPlayer player) {
+        int cid = player.containerMenu.containerId;
+
+        // 1) 热栏 1-8 优先（热栏 0 是弓）
+        for (int h = 1; h <= 8; h++) {
+            ItemStack stack = player.getInventory().getItem(h);
+            if (!stack.isEmpty() && stack.getItem() instanceof ArrowItem) {
+                // SWAP 合成格 slot 3 ↔ 热栏 h
+                mc.gameMode.handleInventoryMouseClick(cid, 3, h, ClickType.SWAP, player);
+                Fku.LOGGER.debug("[Duplicator] 热栏{}箭矢 SWAP → 合成格", h);
+                return;
+            }
+        }
+
+        // 2) 主背包 9-35
+        for (int invIdx = 9; invIdx < 36; invIdx++) {
+            ItemStack stack = player.getInventory().getItem(invIdx);
+            if (!stack.isEmpty() && stack.getItem() instanceof ArrowItem) {
+                // PICKUP → 光标拿箭矢
+                mc.gameMode.handleInventoryMouseClick(cid, invIdx, 0, ClickType.PICKUP, player);
+                // CLICK → 箭矢放到合成格 3
+                mc.gameMode.handleInventoryMouseClick(cid, 3, 0, ClickType.PICKUP, player);
+                Fku.LOGGER.debug("[Duplicator] 主背包{}箭矢 PICKUP → 合成格", invIdx);
+                return;
+            }
+        }
+
+        Fku.LOGGER.warn("[Duplicator] 未找到箭矢，跳过");
+    }
+
+    /** 重置全部状态（断线/异常时调用） */
+    public void reset() {
         phase = Phase.IDLE;
         tickCounter = 0;
         consecutiveFails = 0;
     }
+
+    /** 是否正在执行复制循环 */
+    public boolean isRunning() { return phase != Phase.IDLE; }
 }
