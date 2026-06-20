@@ -1,4 +1,4 @@
-package fku.org.example.fku.config;
+package fku.org.example.fku.features.healthtag; /* water */
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -11,20 +11,16 @@ import java.nio.file.Paths;
 public class HealthTagConfig {
     private static File getConfigFile() {
         File configDir = new File(getGameDirectory(), "fku");
-        if (!configDir.exists()) {
-            configDir.mkdirs();
-        }
+        if (!configDir.exists()) configDir.mkdirs();
         return new File(configDir, "healthtag.json");
     }
     
     private static File getGameDirectory() {
         try {
-            // 尝试从 Minecraft 获取游戏目录（仅客户端）
             Class<?> minecraftClass = Class.forName("net.minecraft.client.Minecraft");
             Object minecraft = minecraftClass.getMethod("getInstance").invoke(null);
             return (File) minecraftClass.getField("gameDir").get(minecraft);
         } catch (Exception e) {
-            // 服务端环境或其他情况，返回当前工作目录
             return Paths.get(".").toAbsolutePath().normalize().toFile();
         }
     }
@@ -37,9 +33,7 @@ public class HealthTagConfig {
     private static HealthTagConfig instance;
 
     public static HealthTagConfig getInstance() {
-        if (instance == null) {
-            load();
-        }
+        if (instance == null) load();
         return instance;
     }
 
@@ -58,10 +52,7 @@ public class HealthTagConfig {
     }
 
     public static void save() {
-        if (instance == null) return;
-        
-        File configFile = getConfigFile();
-        try (FileWriter writer = new FileWriter(configFile)) {
+        try (FileWriter writer = new FileWriter(getConfigFile())) {
             GSON.toJson(instance, writer);
         } catch (IOException e) {
             e.printStackTrace();

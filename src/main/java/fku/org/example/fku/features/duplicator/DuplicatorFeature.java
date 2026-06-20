@@ -1,4 +1,4 @@
-package fku.org.example.fku.features.duplicator;
+package fku.org.example.fku.features.duplicator; /* water */
 
 import fku.org.example.fku.Fku;
 import net.minecraftforge.api.distmarker.Dist;

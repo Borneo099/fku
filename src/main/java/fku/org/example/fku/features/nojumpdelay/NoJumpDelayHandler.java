@@ -1,4 +1,4 @@
-package fku.org.example.fku.client;
+package fku.org.example.fku.features.nojumpdelay; /* water */
 
 import fku.org.example.fku.config.MovementConfig;
 import net.minecraft.client.Minecraft;

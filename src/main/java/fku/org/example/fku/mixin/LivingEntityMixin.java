@@ -1,8 +1,8 @@
 package fku.org.example.fku.mixin;
 
 import fku.org.example.fku.api.ILivingEntityGui;
-import fku.org.example.fku.client.HealthTagManager;
-import fku.org.example.fku.config.HealthTagConfig;
+import fku.org.example.fku.features.healthtag.HealthTagManager;
+import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

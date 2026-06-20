@@ -1,4 +1,4 @@
-package fku.org.example.fku.features.autodrop;
+package fku.org.example.fku.features.autodrop; /* water */
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;

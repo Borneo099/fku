@@ -1,4 +1,4 @@
-package fku.org.example.fku.client;
+package fku.org.example.fku.features.healthtag; /* water */
 
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
@@ -28,7 +28,7 @@ public class HealthTagEvents {
 
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post event) {
-        if (HealthTagManager.isEditing()) return; // Don't render here if GUI is open, we'll use ScreenEvent
+        if (HealthTagManager.isEditing()) return;
         
         Minecraft mc = Minecraft.getInstance();
         double mouseX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getWidth();

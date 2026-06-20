@@ -31,6 +31,7 @@ public class FkuConfig {
     public static ForgeConfigSpec.IntValue autoDropPanelYPos;
     public static ForgeConfigSpec.IntValue entertainmentPanelX;
     public static ForgeConfigSpec.IntValue entertainmentPanelY;
+    public static ForgeConfigSpec.BooleanValue disableConnectionTimeout;
 
     static {
         BUILDER.push("GUI Settings");
@@ -66,7 +67,13 @@ public class FkuConfig {
                 .defineInRange("entertainment_panel_x_pos", 490, 0, Integer.MAX_VALUE);
         entertainmentPanelY = BUILDER
                 .comment("娱乐面板Y坐标")
-                .defineInRange("entertainment_panel_y_pos", 100, 0, Integer.MAX_VALUE);
+                .defineInRange("entertainment_panel_y_pos", 490, 0, Integer.MAX_VALUE);
+        BUILDER.pop();
+
+        BUILDER.push("Feature Toggles");
+        disableConnectionTimeout = BUILDER
+                .comment("禁用连接超时检测，开启后断开连接时不会弹出超时提示")
+                .define("disable_connection_timeout", false);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

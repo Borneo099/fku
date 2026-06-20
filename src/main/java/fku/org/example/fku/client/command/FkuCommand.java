@@ -2,7 +2,7 @@ package fku.org.example.fku.client.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import fku.org.example.fku.client.gui.ClickGuiScreen;
-import fku.org.example.fku.config.HealthTagConfig;
+import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import fku.org.example.fku.config.MovementConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;

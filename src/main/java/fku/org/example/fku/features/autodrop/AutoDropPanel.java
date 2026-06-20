@@ -1,4 +1,4 @@
-package fku.org.example.fku.features.autodrop;
+package fku.org.example.fku.features.autodrop; /* water */
 
 import fku.org.example.fku.config.FkuConfig;
 import net.minecraft.client.Minecraft;

@@ -1,10 +1,12 @@
 package fku.org.example.fku;
 
 import fku.org.example.fku.config.FkuConfig;
-import fku.org.example.fku.config.HealthTagConfig;
+import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import fku.org.example.fku.config.MovementConfig;
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
+import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig;
+import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerFeature;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -38,5 +40,7 @@ public class Fku
         MovementConfig.load();
         GuiStyleConfig.load();
         DisplayModelConfig.load();
+        BedrockBreakerConfig.load();
+        BedrockBreakerFeature.init();
     }
 }

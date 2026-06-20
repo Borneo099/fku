@@ -1,6 +1,8 @@
 package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.MovementConfig;
+import fku.org.example.fku.features.nojumpdelay.NoJumpDelayComponent;
+import fku.org.example.fku.features.arrowdmfly.ArrowDmgFlyComponent;
 
 public class MovementPanel extends GuiPanel {
 

@@ -1,4 +1,4 @@
-package fku.org.example.fku.features.autodrop;
+package fku.org.example.fku.features.autodrop; /* water */
 
 // 此类已废弃，添加物品到黑名单现在通过拖拽到黑名单面板的添加槽位完成
 // 保留此类以避免编译错误，实际逻辑已移至 AutoDropPanel.onMouseDrag

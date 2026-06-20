@@ -1,4 +1,4 @@
-package fku.org.example.fku.client;
+package fku.org.example.fku.features.yposoverlay; /* water */
 
 import fku.org.example.fku.config.MovementConfig;
 import net.minecraft.client.Minecraft;
@@ -17,13 +17,11 @@ import java.util.Optional;
 @Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class YPosOverlay {
 
-    // 缓存目标实体，避免每帧遍历过多实体时卡顿（简单优化）
     private static Entity cachedTarget = null;
     private static long lastUpdateTick = -1;
 
     public static void toggle() {
         MovementConfig config = MovementConfig.getInstance();
-        // 使用 setter 方法，自动保存配置
         config.setYPosOverlayEnabled(!config.yPosOverlayEnabled);
         
         Minecraft mc = Minecraft.getInstance();
@@ -43,7 +41,6 @@ public class YPosOverlay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        // 更新目标实体（每 5 tick 更新一次，减少性能压力）
         if (mc.level.getGameTime() != lastUpdateTick) {
             lastUpdateTick = mc.level.getGameTime();
             if (lastUpdateTick % 5 == 0) {
@@ -60,10 +57,10 @@ public class YPosOverlay {
         int color;
         if (Math.abs(targetY - playerY) < 0.5) {
             text = "Y: §a" + String.format("%.1f", targetY);
-            color = 0x00FF00; // 绿色
+            color = 0x00FF00;
         } else {
             text = "Y: " + String.format("%.1f", targetY);
-            color = 0xFFFFFF; // 白色
+            color = 0xFFFFFF;
         }
 
         int screenWidth = mc.getWindow().getGuiScaledWidth();
@@ -71,14 +68,11 @@ public class YPosOverlay {
         int centerX = screenWidth / 2;
         int centerY = screenHeight / 2;
         int textX = centerX - mc.font.width(text) / 2;
-        int textY = centerY + 15; // 准星下方 15 像素
+        int textY = centerY + 15;
 
         event.getGuiGraphics().drawString(mc.font, text, textX, textY, color);
     }
 
-    /**
-     * 射线检测 256 格内最近的实体
-     */
     private static Entity findTargetEntity(Minecraft mc) {
         Entity camera = mc.getCameraEntity();
         if (camera == null) return null;
@@ -87,16 +81,14 @@ public class YPosOverlay {
         Vec3 lookVec = camera.getViewVector(1.0F);
         Vec3 endPoint = eyePos.add(lookVec.scale(256.0));
 
-        // 扩大搜索区域，半径 256 格
         AABB searchArea = camera.getBoundingBox().inflate(256.0);
         List<Entity> entities = mc.level.getEntities(camera, searchArea,
                 e -> e != camera && e.isAlive() && !e.isSpectator());
 
         Entity best = null;
-        double bestDist = 256.0 * 256.0; // 平方距离
+        double bestDist = 256.0 * 256.0;
 
         for (Entity entity : entities) {
-            // 扩大碰撞箱以考虑点击容差
             AABB hitbox = entity.getBoundingBox().inflate(entity.getPickRadius());
             Optional<Vec3> hit = hitbox.clip(eyePos, endPoint);
             if (hit.isPresent()) {

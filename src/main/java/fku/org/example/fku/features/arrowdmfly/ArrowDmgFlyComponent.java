@@ -1,6 +1,7 @@
-package fku.org.example.fku.client.gui.components;
+package fku.org.example.fku.features.arrowdmfly; /* water */
 
 import fku.org.example.fku.config.MovementConfig;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 
 public class ArrowDmgFlyComponent extends ToggleComponent {
 

@@ -1,6 +1,8 @@
 package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.features.healthtag.HealthTagComponent;
+import fku.org.example.fku.features.yposoverlay.YPosOverlayComponent;
 
 public class VisualPanel extends GuiPanel {
 

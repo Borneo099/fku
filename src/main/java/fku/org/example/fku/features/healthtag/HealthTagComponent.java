@@ -1,7 +1,7 @@
-package fku.org.example.fku.client.gui.components;
+package fku.org.example.fku.features.healthtag; /* water */
 
-import fku.org.example.fku.config.HealthTagConfig;
 import net.minecraft.client.Minecraft;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 
 /**
  * HealthTag开关组件
@@ -32,12 +32,10 @@ public class HealthTagComponent extends ToggleComponent {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (isHovered(mouseX, mouseY)) {
             if (button == 0) {
-                // 左键切换开关
                 toggle();
                 saveConfig();
                 return true;
             } else if (button == 1) {
-                // 右键打开配置菜单
                 Minecraft.getInstance().setScreen(new HealthTagConfigScreen());
                 return true;
             }
