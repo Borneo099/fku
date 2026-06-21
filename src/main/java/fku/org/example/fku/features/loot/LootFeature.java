@@ -36,22 +36,26 @@ import java.util.Queue;
 import java.util.Set;
 
 /**
- * 一键取物（Loot Nearby Containers）核心逻辑 —— 状态机
+ * 一键取物（Loot Nearby Containers）核心逻辑 —— 状态机 + 实时扫描
  *
  * ★ 设计思想（矛盾论）：
- *   主要矛盾是「容器扫描的广度 × 取物交互的精确性」。
- *   采用状态机驱动 ClientTickEvent，每 tick 推进一个步骤，
- *   在「不阻塞渲染」的前提下完成多容器序列化交互。
+ *   主要矛盾是「容器检测的实时性 × 取物交互的串行性」。
+ *   → 解法：扫描与取物解耦，扫描由独立定时器实时执行，
+ *     取物由状态机串行推进（OPEN→LOOT→CLOSE→IDLE）。
  *
- * ★ v2.0 关键变更（实践论）：
- *   - 热键改为开关模式：按一次开启持续自动取物，再按关闭
- *   - 已取容器标记：visitedContainers 避免循环
- *   - 背包满提示：首次溢出时客户端消息通知
- *   - 连续扫描：取完一轮后若功能仍启用则自动重扫
+ * ★ v2.1 关键变更：
+ *   - 扫描与状态机解耦：onClientTick 中每 N tick 自动刷新队列
+ *   - 扫描定时器实时检测新容器，状态机专注取物操作
+ *   - IDLE 时队列非空则自动启动，实现「静默持续取物」
+ *   - 即使正在取物，新放在附近的容器也会被加入队列
  *
  * ★ 工作流程：
- *   IDLE -> SCAN -> OPEN -> WAIT_OPEN -> LOOT ->
- *   CLOSE -> WAIT_CLOSE -> SCAN(loop) -> IDLE
+ *   [定时器] refreshContainerQueue (每 N tick)
+ *       ↓ 发现新容器加入队列
+ *   [状态机] IDLE -> OPEN -> WAIT_OPEN -> LOOT ->
+ *            CLOSE -> WAIT_CLOSE -> IDLE
+ *       ↓ 队列非空自动重启
+ *   [热键] 开启→start()，关闭→stop() 清空标记
  */
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
@@ -59,10 +63,9 @@ public class LootFeature {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("FKU-Loot");
 
-    // ════════ 状态枚举 ════════
+    // ════════ 状态枚举（无SCAN：扫描由独立定时器驱动） ════════
     private enum State {
         IDLE,
-        SCAN,
         OPEN,
         WAIT_OPEN,
         LOOT,
@@ -91,18 +94,35 @@ public class LootFeature {
     // ════════ 背包满通知（每轮只提示一次） ════════
     private static boolean overflowNotified = false;
 
+    // ════════ 扫描定时器（每 N tick 刷新容器队列） ════════
+    private static int scanTimer = 0;
+
     // ════════ 热键绑定字段 ════════
     private static boolean waitingKeyBind = false;
     private static Runnable onKeyBoundCallback = null;
 
     // ════════ 外部触发接口 ════════
 
-    /** 开启自动取物 */
+    /** 开启自动取物：立即执行一次扫描并开始处理 */
     public static void start() {
-        if (Minecraft.getInstance().player == null) return;
-        state = State.SCAN;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) { reset("启动失败：玩家或世界为空"); return; }
+
+        // 立即执行首次扫描
+        refreshContainerQueue(mc);
         overflowNotified = false;
-        statusMessage = "一键取物：开始扫描...";
+        scanTimer = 0;
+
+        // 扫描到容器则立即开始处理
+        if (!containerQueue.isEmpty()) {
+            currentContainer = containerQueue.poll();
+            state = State.OPEN;
+            tickCounter = 0;
+            statusMessage = "一键取物：发现 " + (containerQueue.size() + 1) + " 个容器，开始取物";
+        } else {
+            state = State.IDLE;
+            statusMessage = "一键取物：附近无容器，持续扫描中...";
+        }
         LOGGER.info("一键取物启动");
     }
 
@@ -147,7 +167,8 @@ public class LootFeature {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        if (!LootConfig.getInstance().enabled) {
+        LootConfig cfg = LootConfig.getInstance();
+        if (!cfg.enabled) {
             if (state != State.IDLE) {
                 visitedContainers.clear();
                 reset("功能已关闭");
@@ -155,9 +176,23 @@ public class LootFeature {
             return;
         }
 
+        // ── 周期性扫描定时器：每 scanRefreshInterval tick 刷新一次容器队列 ──
+        scanTimer++;
+        if (scanTimer >= cfg.scanRefreshInterval) {
+            scanTimer = 0;
+            refreshContainerQueue(mc);
+        }
+
+        // ── IDLE 时自动启动：只要队列非空就进入 OPEN ──
+        if (state == State.IDLE && !containerQueue.isEmpty()) {
+            currentContainer = containerQueue.poll();
+            state = State.OPEN;
+            tickCounter = 0;
+            statusMessage = "一键取物：检测到新容器，开始取物";
+        }
+
         switch (state) {
             case IDLE -> {}
-            case SCAN -> handleScan(mc);
             case OPEN -> handleOpen(mc);
             case WAIT_OPEN -> handleWaitOpen(mc);
             case LOOT -> handleLoot(mc);
@@ -241,19 +276,21 @@ public class LootFeature {
         }
     }
 
-    // ════════ 各状态 handler ════════
+    // ════════ 扫描刷新（替代原 SCAN 状态） ════════
 
     /**
-     * SCAN：扫描周围容器，跳过已取过的
+     * 刷新容器队列：扫描周围所有容器，将未取过的加入队列
+     *   ★ 由 onClientTick 中的定时器驱动，独立于状态机
+     *   ★ 跳过 visitedContainers 中的坐标
+     *   ★ 已在队列中的坐标不再重复加入
      */
-    private static void handleScan(Minecraft mc) {
+    private static void refreshContainerQueue(Minecraft mc) {
         Level level = mc.level;
-        if (level == null) { reset("世界为空"); return; }
+        if (level == null || mc.player == null) return;
 
         LootConfig config = LootConfig.getInstance();
         BlockPos center = mc.player.blockPosition();
         int radius = config.radius;
-        containerQueue.clear();
 
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -263,22 +300,12 @@ public class LootFeature {
                     if (be instanceof Container && !(be instanceof EnderChestBlockEntity)) {
                         BlockPos immutable = pos.immutable();
                         if (visitedContainers.contains(immutable)) continue;
+                        if (containerQueue.contains(immutable)) continue;
                         containerQueue.add(immutable);
                     }
                 }
             }
         }
-
-        if (containerQueue.isEmpty()) {
-            statusMessage = "一键取物：附近无未取容器";
-            state = State.IDLE;
-            return;
-        }
-
-        statusMessage = "一键取物：发现 " + containerQueue.size() + " 个容器";
-        state = State.OPEN;
-        currentContainer = containerQueue.poll();
-        tickCounter = 0;
     }
 
     private static void handleOpen(Minecraft mc) {
@@ -466,18 +493,11 @@ public class LootFeature {
             tickCounter = 0;
             statusMessage = "一键取物：处理下一个容器... (" + containerQueue.size() + " 剩余)";
         } else {
-            if (config.enabled) {
-                statusMessage = "一键取物：本轮完成，重新扫描...";
-                state = State.SCAN;
-                tickCounter = 0;
-                LOGGER.info("一键取物本轮完成，继续循环扫描");
-            } else {
-                statusMessage = "一键取物：全部完成";
-                state = State.IDLE;
-                LOGGER.info("一键取物完成");
-                mc.player.displayClientMessage(
-                    Component.literal("§6[一键取物] §a全部完成"), false);
-            }
+            // 队列为空 → 回到 IDLE，等待定时器补充新容器
+            statusMessage = "一键取物：本轮完成，等待新容器...";
+            state = State.IDLE;
+            tickCounter = 0;
+            LOGGER.info("一键取物本轮完成，等待定时器扫描新容器");
         }
     }
 
@@ -494,13 +514,9 @@ public class LootFeature {
             state = State.OPEN;
             tickCounter = 0;
         } else {
-            if (LootConfig.getInstance().enabled) {
-                state = State.SCAN;
-                statusMessage = "一键取物：队列为空，重扫";
-            } else {
-                statusMessage = "一键取物：全部完成";
-                state = State.IDLE;
-            }
+            // 队列为空 → 回 IDLE 等定时器补充
+            state = State.IDLE;
+            statusMessage = "一键取物：等待新容器...";
         }
     }
 

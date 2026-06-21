@@ -20,20 +20,22 @@ import org.lwjgl.glfw.GLFW;
 public class LootScreen extends Screen {
 
     private static final int WIDTH = 290;
-    private static final int HEIGHT = 280;
+    private static final int HEIGHT = 320;
 
     // ════════ 行偏移常量 ════════
     private static final int ROW_RADIUS = 35;
     private static final int ROW_CLICK_DELAY = 58;
     private static final int ROW_CONTAINER_DELAY = 81;
-    private static final int ROW_DROP = 104;
-    private static final int ROW_AUTO_CLOSE = 127;
-    private static final int ROW_HOTKEY = 155;
-    private static final int ROW_SAVE = 195;
+    private static final int ROW_SCAN_INTERVAL = 104;
+    private static final int ROW_DROP = 127;
+    private static final int ROW_AUTO_CLOSE = 150;
+    private static final int ROW_HOTKEY = 178;
+    private static final int ROW_SAVE = 220;
 
     private EditBox radiusField;
     private EditBox clickDelayField;
     private EditBox containerDelayField;
+    private EditBox scanIntervalField;
     private Button dropOverflowButton;
     private Button autoCloseButton;
     private Button hotkeyBindButton;
@@ -59,6 +61,8 @@ public class LootScreen extends Screen {
         clickDelayField = createEditBox(cx + 100, cy + ROW_CLICK_DELAY, String.valueOf(cfg.clickDelay), 3);
         // ── 容器间隔 ──
         containerDelayField = createEditBox(cx + 100, cy + ROW_CONTAINER_DELAY, String.valueOf(cfg.containerDelay), 4);
+        // ── 扫描刷新间隔 ──
+        scanIntervalField = createEditBox(cx + 150, cy + ROW_SCAN_INTERVAL, String.valueOf(cfg.scanRefreshInterval), 3);
 
         // ── 背包满丢弃 ──
         dropOverflowButton = Button.builder(
@@ -188,6 +192,7 @@ public class LootScreen extends Screen {
         try { cfg.setRadius(Integer.parseInt(radiusField.getValue())); } catch (NumberFormatException ignored) {}
         try { cfg.setClickDelay(Integer.parseInt(clickDelayField.getValue())); } catch (NumberFormatException ignored) {}
         try { cfg.setContainerDelay(Integer.parseInt(containerDelayField.getValue())); } catch (NumberFormatException ignored) {}
+        try { cfg.setScanRefreshInterval(Integer.parseInt(scanIntervalField.getValue())); } catch (NumberFormatException ignored) {}
         onClose();
     }
 
@@ -204,6 +209,7 @@ public class LootScreen extends Screen {
         guiGraphics.drawString(font, "扫描半径:", cx + 12, cy + ROW_RADIUS + 2, 0xAAAAAA);
         guiGraphics.drawString(font, "物品点击间隔(ms):", cx + 12, cy + ROW_CLICK_DELAY + 2, 0xAAAAAA);
         guiGraphics.drawString(font, "容器间隔(ms):", cx + 12, cy + ROW_CONTAINER_DELAY + 2, 0xAAAAAA);
+        guiGraphics.drawString(font, "刷新间隔(tick):", cx + 66, cy + ROW_SCAN_INTERVAL + 2, 0xAAAAAA);
         guiGraphics.drawString(font, "背包满丢弃:", cx + 100, cy + ROW_DROP + 2, 0xAAAAAA);
         guiGraphics.drawString(font, "自动关闭GUI:", cx + 100, cy + ROW_AUTO_CLOSE + 2, 0xAAAAAA);
 

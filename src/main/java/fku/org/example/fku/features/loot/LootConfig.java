@@ -45,6 +45,9 @@ public class LootConfig {
     /** 取完物品后是否自动关闭容器 GUI */
     public boolean autoCloseGUI = true;
 
+    /** 扫描刷新间隔（tick），每 N tick 重新扫描容器，默认 20 tick = 1 秒 */
+    public int scanRefreshInterval = 20;
+
     /** 热键键码（-1 表示未设置） */
     public int hotkeyKey = -1;
 
@@ -101,6 +104,7 @@ public class LootConfig {
     public void setContainerDelay(int v) { this.containerDelay = Math.max(0, Math.min(2000, v)); save(); }
     public void setDropOverflow(boolean v) { this.dropOverflow = v; save(); }
     public void setAutoCloseGUI(boolean v) { this.autoCloseGUI = v; save(); }
+    public void setScanRefreshInterval(int v) { this.scanRefreshInterval = Math.max(5, Math.min(200, v)); save(); }
     public void setHotkeyKey(int v) { this.hotkeyKey = v; save(); }
     public void setHotkeyName(String v) { this.hotkeyName = v != null ? v : ""; save(); }
 }
