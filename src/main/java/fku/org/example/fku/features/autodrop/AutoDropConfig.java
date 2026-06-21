@@ -17,6 +17,8 @@ public class AutoDropConfig {
 
     public boolean enabled = false;
     public boolean dropAsEntity = true;
+    /** 扫描间隔（tick），越小丢得越快，默认 3 tick ≈ 150ms */
+    public int scanInterval = 3;
     public List<String> blacklist = new ArrayList<>();
 
     private static File getConfigFile() {
@@ -75,6 +77,8 @@ public class AutoDropConfig {
             save();
         }
     }
+
+    public void setScanInterval(int v) { this.scanInterval = Math.max(1, Math.min(20, v)); save(); }
 
     public void removeFromBlacklist(String itemId) {
         blacklist.remove(itemId);

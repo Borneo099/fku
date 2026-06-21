@@ -13,7 +13,6 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoDropHandler {
     private static int tickCounter = 0;
-    private static final int SCAN_INTERVAL = 5;
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -23,7 +22,8 @@ public class AutoDropHandler {
         if (!config.enabled) return;
 
         tickCounter++;
-        if (tickCounter % SCAN_INTERVAL != 0) return;
+        int interval = Math.max(1, Math.min(20, config.scanInterval));
+        if (tickCounter % interval != 0) return;
 
         Player player = event.player;
         if (!(player instanceof LocalPlayer)) return;
