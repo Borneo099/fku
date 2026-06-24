@@ -1,11 +1,29 @@
 {
   "mappings": {
+    "fku/org/example/fku/mixin/ConnectionMixin": {
+      "channelInactive": "Lnet/minecraft/network/Connection;channelInactive(Lio/netty/channel/ChannelHandlerContext;)V",
+      "disconnect": "Lnet/minecraft/network/Connection;m_129507_(Lnet/minecraft/network/chat/Component;)V",
+      "channelActive": "Lnet/minecraft/network/Connection;channelActive(Lio/netty/channel/ChannelHandlerContext;)V",
+      "exceptionCaught": "Lnet/minecraft/network/Connection;exceptionCaught(Lio/netty/channel/ChannelHandlerContext;Ljava/lang/Throwable;)V"
+    },
+    "fku/org/example/fku/mixin/ClientLevelAccessor": {
+      "blockStatePredictionHandler": "f_233599_:Lnet/minecraft/client/multiplayer/prediction/BlockStatePredictionHandler;"
+    },
     "fku/org/example/fku/mixin/LivingEntityMixin": {
       "handleEntityEvent": "Lnet/minecraft/world/entity/LivingEntity;m_7822_(B)V"
     }
   },
   "data": {
     "searge": {
+      "fku/org/example/fku/mixin/ConnectionMixin": {
+        "channelInactive": "Lnet/minecraft/network/Connection;channelInactive(Lio/netty/channel/ChannelHandlerContext;)V",
+        "disconnect": "Lnet/minecraft/network/Connection;m_129507_(Lnet/minecraft/network/chat/Component;)V",
+        "channelActive": "Lnet/minecraft/network/Connection;channelActive(Lio/netty/channel/ChannelHandlerContext;)V",
+        "exceptionCaught": "Lnet/minecraft/network/Connection;exceptionCaught(Lio/netty/channel/ChannelHandlerContext;Ljava/lang/Throwable;)V"
+      },
+      "fku/org/example/fku/mixin/ClientLevelAccessor": {
+        "blockStatePredictionHandler": "f_233599_:Lnet/minecraft/client/multiplayer/prediction/BlockStatePredictionHandler;"
+      },
       "fku/org/example/fku/mixin/LivingEntityMixin": {
         "handleEntityEvent": "Lnet/minecraft/world/entity/LivingEntity;m_7822_(B)V"
       }
