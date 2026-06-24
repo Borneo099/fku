@@ -52,6 +52,18 @@ public class BedrockBreakerConfig {
     /** 触发热键名称（如 key.keyboard.b），空=使用默认 B 键 */
     public String triggerKey = "";
 
+    // ════════ 辅助方块系统（v2.2 新增） ════════
+
+    /** 是否启用辅助方块：当检测不到拉杆放置位置时，自动放置辅助方块提供附着面 */
+    public boolean enableHelperBlocks = true;
+
+    /** 辅助方块ID列表（逗号分隔），优先级从前到后。
+     *  默认使用深板岩圆石、圆石、石头等常见固体方块 */
+    public String helperBlockList = "minecraft:cobbled_deepslate,minecraft:cobblestone,minecraft:stone,minecraft:diorite,minecraft:andesite,minecraft:granite";
+
+    /** 是否清理辅助方块：功能完成时自动移除辅助方块 */
+    public boolean cleanupHelpers = true;
+
     private static File getConfigFile() {
         File configDir = new File(getGameDirectory(), "fku");
         if (!configDir.exists()) configDir.mkdirs();
@@ -106,4 +118,9 @@ public class BedrockBreakerConfig {
     public void setExtendTimeout(int v) { this.extendTimeout = Math.max(5, Math.min(50, v)); save(); }
     public void setLeverBreakTimeout(int v) { this.leverBreakTimeout = Math.max(5, Math.min(100, v)); save(); }
     public void setTriggerKey(String v) { this.triggerKey = v != null ? v : ""; save(); }
+
+    // ════════ 辅助方块 Setter（v2.2） ════════
+    public void setEnableHelperBlocks(boolean v) { this.enableHelperBlocks = v; save(); }
+    public void setHelperBlockList(String v) { this.helperBlockList = v != null ? v : "minecraft:cobbled_deepslate"; save(); }
+    public void setCleanupHelpers(boolean v) { this.cleanupHelpers = v; save(); }
 }

@@ -35,7 +35,7 @@ import org.lwjgl.glfw.GLFW;
 public class BedrockBreakerScreen extends Screen {
 
     private static final int WIDTH = 290;
-    private static final int HEIGHT = 315;
+    private static final int HEIGHT = 375;
 
     // 行Y偏移基准（间距34px，确保提示文字与下一行标签不重叠）
     private static final int ROW_HOTKEY = 30;
@@ -44,14 +44,17 @@ public class BedrockBreakerScreen extends Screen {
     private static final int ROW_MODE = 136;       // 扫描模式+全方块模式按钮
     private static final int ROW_TIMEOUT = 172;    // 双列超时：标签172, 输入框186
     private static final int ROW_LEVER = 208;      // 拉杆超时：标签208, 输入框222
-    private static final int ROW_HINT = 244;       // 使用说明文字
-    private static final int ROW_BUTTON = 280;     // 保存+完成按钮
+    private static final int ROW_HELPER_SWITCH = 236;  // v2.2 辅助方块开关
+    private static final int ROW_HELPER_LIST = 266;    // v2.2 辅助方块列表
+    private static final int ROW_HINT = 310;       // 使用说明文字
+    private static final int ROW_BUTTON = 340;     // 保存+完成按钮
 
     private EditBox targetBlockInput;
     private EditBox replaceBlockInput;
     private EditBox breakTimeoutInput;
     private EditBox extendTimeoutInput;
     private EditBox leverTimeoutInput;
+    private EditBox helperBlockListInput;  // v2.2 辅助方块列表
     private Button hotkeyButton;
     private Button scanModeButton;
     private boolean listeningForKey = false;
@@ -148,7 +151,30 @@ public class BedrockBreakerScreen extends Screen {
         leverTimeoutInput.setFilter(s -> s.matches("\\d*"));
         addRenderableWidget(leverTimeoutInput);
 
-        // ── 行8：底部按钮 ──
+        // ── 行7：辅助方块开关（v2.2 新增） ──
+        addRenderableWidget(Button.builder(
+                Component.literal("辅助方块: " + (cfg.enableHelperBlocks ? "开" : "关")),
+                btn -> {
+                    cfg.setEnableHelperBlocks(!cfg.enableHelperBlocks);
+                    btn.setMessage(Component.literal("辅助方块: " + (cfg.enableHelperBlocks ? "开" : "关")));
+                }
+        ).bounds(cx + 10, cy(ROW_HELPER_SWITCH), 100, 16).build());
+
+        addRenderableWidget(Button.builder(
+                Component.literal("清理辅助块: " + (cfg.cleanupHelpers ? "开" : "关")),
+                btn -> {
+                    cfg.setCleanupHelpers(!cfg.cleanupHelpers);
+                    btn.setMessage(Component.literal("清理辅助块: " + (cfg.cleanupHelpers ? "开" : "关")));
+                }
+        ).bounds(cx + 120, cy(ROW_HELPER_SWITCH), 110, 16).build());
+
+        // ── 行8：辅助方块列表（v2.2 新增） ──
+        helperBlockListInput = new EditBox(font, cx + 68, cy(ROW_HELPER_LIST + 14), 210, 14, Component.literal(""));
+        helperBlockListInput.setValue(cfg.helperBlockList);
+        helperBlockListInput.setMaxLength(128);
+        addRenderableWidget(helperBlockListInput);
+
+        // ── 行9：底部按钮 ──
         addRenderableWidget(Button.builder(
                 Component.literal("保存"),
                 btn -> saveConfig()
@@ -207,6 +233,7 @@ public class BedrockBreakerScreen extends Screen {
         try { cfg.setBreakTimeout(Integer.parseInt(breakTimeoutInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setExtendTimeout(Integer.parseInt(extendTimeoutInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setLeverBreakTimeout(Integer.parseInt(leverTimeoutInput.getValue())); } catch (Exception ignored) {}
+        cfg.setHelperBlockList(helperBlockListInput.getValue());
     }
 
     /** 计算相对于面板顶部的Y坐标 */
@@ -243,7 +270,14 @@ public class BedrockBreakerScreen extends Screen {
         guiGraphics.drawString(font, "拉杆超时:", cx + 10, cy(ROW_LEVER), 0xAAAAAA);
         guiGraphics.drawString(font, "§7(tick)", cx + 110, cy(ROW_LEVER), 0x666666);
 
-        // ── 行7：使用方法 ──
+        // ── 行7：辅助方块（v2.2 新增） ──
+        guiGraphics.drawString(font, "§7| 找不到拉杆位置时自动放置辅助方块", cx + 10, cy(ROW_HELPER_SWITCH + 18), 0x666666);
+
+        // ── 行8：辅助方块列表（v2.2 新增） ──
+        guiGraphics.drawString(font, "辅助方块列表:", cx + 10, cy(ROW_HELPER_LIST), 0xAAAAAA);
+        guiGraphics.drawString(font, "§7(逗号分隔,优先级从前到后)", cx + 10, cy(ROW_HELPER_LIST + 28), 0x666666);
+
+        // ── 行9：使用方法 ──
         guiGraphics.drawString(font, "§7使用方法：看向目标方块按热键（默认 B）", cx + 10, cy(ROW_HINT), 0x888888);
         guiGraphics.drawString(font, "§7需手持活塞和拉杆(快捷栏)，有镐更快", cx + 10, cy(ROW_HINT + 12), 0x888888);
 

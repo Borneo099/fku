@@ -2,6 +2,7 @@ package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelScreen;
+import fku.org.example.fku.features.tpaura.TpAuraComponent;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -20,6 +21,8 @@ public class EntertainmentPanel extends GuiPanel {
         addComponent(new ConfigButtonComponent(0, 0, 110, 20, "实体模型", () -> {
             Minecraft.getInstance().setScreen(new DisplayModelScreen());
         }));
+        // 添加如来神掌/瞬移攻击开关
+        addComponent(new TpAuraComponent(0, 0, 110, 25));
     }
 
     @Override

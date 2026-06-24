@@ -7,6 +7,11 @@ import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerFeature;
+import fku.org.example.fku.features.loot.LootConfig;
+import fku.org.example.fku.features.tpaura.TpAuraFeature;
+import fku.org.example.fku.features.duplicator.DuplicatorFeature;
+import fku.org.example.fku.features.duplicator.DuplicatorConfig;
+import fku.org.example.fku.features.autodrop.AutoDropConfig;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -42,5 +47,15 @@ public class Fku
         DisplayModelConfig.load();
         BedrockBreakerConfig.load();
         BedrockBreakerFeature.init();
+
+        // ★ v2.4 修复：补充所有未初始化的功能（源码存在但未注册到事件总线）
+        LootConfig.load();                  // 一键取物配置
+        TpAuraFeature.init();               // 如来神掌/瞬移攻击
+        DuplicatorConfig.getInstance();     // 三叉戟/箭矢复制（加载配置）
+        DuplicatorFeature.init();           // 三叉戟/箭矢复制（注册事件）
+        AutoDropConfig.getInstance();       // 自动丢弃（加载配置）
+        // ArrowDmgFlyHandler / AutoDropHandler / NoJumpDelayHandler / YPosOverlay / HealthTagEvents
+        // 均使用 @Mod.EventBusSubscriber 注解，已由 Forge 自动注册，无需手动调用
+        LOGGER.info("[Fku] 所有功能模块初始化完成");
     }
 }
