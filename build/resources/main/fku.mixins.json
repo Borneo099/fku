@@ -5,9 +5,12 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "fku.refmap.json",
   "mixins": [
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "ConnectionMixin"
   ],
-  "client": [],
+  "client": [
+    "ClientLevelAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
