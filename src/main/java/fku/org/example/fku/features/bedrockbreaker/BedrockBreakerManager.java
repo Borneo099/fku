@@ -20,7 +20,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.dimension.DimensionType;
@@ -678,6 +683,7 @@ public class BedrockBreakerManager {
             if (direction == pistonDirection) continue;
             if (!mc.level.getBlockState(possibleLeverPos).canBeReplaced()) continue;
             if (!isValidY(possibleLeverPos.getY())) continue;
+            if (isInvalidLeverSupport(bedrockPos)) continue;
 
             BlockHitResult hit = new BlockHitResult(
                     Vec3.atCenterOf(bedrockPos).add(Vec3.atLowerCornerOf(direction.getNormal()).scale(0.5)),
@@ -708,6 +714,7 @@ public class BedrockBreakerManager {
                 BlockPos possibleSupportPos = possibleLeverPos.relative(dir);
                 if (possibleSupportPos.equals(pistonPos)) continue; // 不贴在活塞上
                 if (mc.level.getBlockState(possibleSupportPos).canBeReplaced()) continue;
+                if (isInvalidLeverSupport(possibleSupportPos)) continue; // 无效附着方块跳过
 
                 BlockHitResult hit = new BlockHitResult(
                         Vec3.atCenterOf(possibleSupportPos)
@@ -757,6 +764,7 @@ public class BedrockBreakerManager {
             BlockPos supportPos = pistonPos.relative(lateral);
             if (supportPos.equals(pistonHeadPos)) continue; // 防御性检查
             if (mc.level.getBlockState(supportPos).canBeReplaced()) continue; // 需固体方块
+            if (isInvalidLeverSupport(supportPos)) continue; // 无效附着方块跳过
 
             // 点击 supportPos 的 pistonDirection 面（朝向 candidatePos）
             // 新方块位置 = supportPos.relative(pistonDirection) = candidatePos ✓
@@ -782,6 +790,29 @@ public class BedrockBreakerManager {
     }
 
     // ============ 辅助方法 ============
+
+    /**
+     * 校验拉杆附着方块是否为无效类型
+     *
+     * 无效类型分为两类：
+     *   1. 激活后拉杆会掉落的方块：活塞、粘液活塞、门、活板门
+     *      这些方块被活塞推动或开关状态变化时，附着的拉杆会掉落为物品。
+     *   2. 能放置拉杆但无法激活活塞的方块：半砖、楼梯
+     *      这些方块不是完整固体方块，拉杆放置后无法强充能方块激活活塞。
+     *
+     * @param supportPos 附着方块位置
+     * @return true 如果该方块不能直接放置拉杆（需使用辅助方块方案）
+     */
+    private boolean isInvalidLeverSupport(BlockPos supportPos) {
+        if (mc.level == null) return true;
+        BlockState state = mc.level.getBlockState(supportPos);
+        Block block = state.getBlock();
+        return block instanceof PistonBaseBlock
+                || block instanceof DoorBlock
+                || block instanceof TrapDoorBlock
+                || block instanceof StairBlock
+                || block instanceof SlabBlock;
+    }
 
     /**
      * 校验拉杆放置方向是否匹配指定方向
