@@ -54,7 +54,6 @@ public class BedrockBreakerScreen extends Screen {
     private EditBox breakTimeoutInput;
     private EditBox extendTimeoutInput;
     private EditBox leverTimeoutInput;
-    private EditBox helperBlockListInput;  // v2.2 辅助方块列表
     private Button hotkeyButton;
     private Button scanModeButton;
     private boolean listeningForKey = false;
@@ -168,11 +167,11 @@ public class BedrockBreakerScreen extends Screen {
                 }
         ).bounds(cx + 120, cy(ROW_HELPER_SWITCH), 110, 16).build());
 
-        // ── 行8：辅助方块列表（v2.2 新增） ──
-        helperBlockListInput = new EditBox(font, cx + 68, cy(ROW_HELPER_LIST + 14), 210, 14, Component.literal(""));
-        helperBlockListInput.setValue(cfg.helperBlockList);
-        helperBlockListInput.setMaxLength(128);
-        addRenderableWidget(helperBlockListInput);
+        // ── 行8：辅助方块列表（v2.5 改为按钮，点击打开独立编辑界面） ──
+        addRenderableWidget(Button.builder(
+                Component.literal("编辑辅助方块列表"),
+                btn -> Minecraft.getInstance().setScreen(new HelperBlockListScreen())
+        ).bounds(cx + 68, cy(ROW_HELPER_LIST + 10), 140, 18).build());
 
         // ── 行9：底部按钮 ──
         addRenderableWidget(Button.builder(
@@ -233,7 +232,7 @@ public class BedrockBreakerScreen extends Screen {
         try { cfg.setBreakTimeout(Integer.parseInt(breakTimeoutInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setExtendTimeout(Integer.parseInt(extendTimeoutInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setLeverBreakTimeout(Integer.parseInt(leverTimeoutInput.getValue())); } catch (Exception ignored) {}
-        cfg.setHelperBlockList(helperBlockListInput.getValue());
+        // 辅助方块列表由独立界面 HelperBlockListScreen 保存，此处不再处理
     }
 
     /** 计算相对于面板顶部的Y坐标 */

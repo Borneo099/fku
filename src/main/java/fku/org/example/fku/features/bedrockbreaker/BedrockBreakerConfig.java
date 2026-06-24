@@ -58,8 +58,12 @@ public class BedrockBreakerConfig {
     public boolean enableHelperBlocks = true;
 
     /** 辅助方块ID列表（逗号分隔），优先级从前到后。
-     *  默认使用深板岩圆石、圆石、石头等常见固体方块 */
-    public String helperBlockList = "minecraft:cobbled_deepslate,minecraft:cobblestone,minecraft:stone,minecraft:diorite,minecraft:andesite,minecraft:granite";
+     *  默认使用深板岩圆石、安山岩、花岗岩、闪长岩、下界岩、凝灰岩、
+     *  砂岩、圆石、泥土等常见固体方块 */
+    public String helperBlockList = "minecraft:cobbled_deepslate,minecraft:andesite,minecraft:granite,minecraft:diorite,minecraft:netherrack,minecraft:tuff,minecraft:sandstone,minecraft:cobblestone,minecraft:dirt";
+
+    /** ★ v2.5 新增：辅助方块列表默认值常量，供重置按钮使用 */
+    public static final String DEFAULT_HELPER_BLOCK_LIST = "minecraft:cobbled_deepslate,minecraft:andesite,minecraft:granite,minecraft:diorite,minecraft:netherrack,minecraft:tuff,minecraft:sandstone,minecraft:cobblestone,minecraft:dirt";
 
     /** 是否清理辅助方块：功能完成时自动移除辅助方块 */
     public boolean cleanupHelpers = true;

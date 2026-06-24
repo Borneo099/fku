@@ -678,6 +678,10 @@ public class BedrockBreakerManager {
             if (direction == pistonDirection) continue;
             if (!mc.level.getBlockState(possibleLeverPos).canBeReplaced()) continue;
             if (!isValidY(possibleLeverPos.getY())) continue;
+            // ★ v2.5 优化：基岩作为附着方块时需检查类型
+            //   基岩本身是固体方块可放置拉杆，但若目标方块是活塞/门/楼梯等，
+            //   拉杆放置后会掉落或无法激活活塞，需跳过改用辅助方块方案。
+            if (isInvalidLeverSupport(bedrockPos)) continue;
 
             BlockHitResult hit = new BlockHitResult(
                     Vec3.atCenterOf(bedrockPos).add(Vec3.atLowerCornerOf(direction.getNormal()).scale(0.5)),
@@ -708,6 +712,8 @@ public class BedrockBreakerManager {
                 BlockPos possibleSupportPos = possibleLeverPos.relative(dir);
                 if (possibleSupportPos.equals(pistonPos)) continue; // 不贴在活塞上
                 if (mc.level.getBlockState(possibleSupportPos).canBeReplaced()) continue;
+                // ★ v2.5 优化：附着方块类型检查（活塞/门/楼梯等不可作为拉杆附着面）
+                if (isInvalidLeverSupport(possibleSupportPos)) continue;
 
                 BlockHitResult hit = new BlockHitResult(
                         Vec3.atCenterOf(possibleSupportPos)
@@ -757,6 +763,8 @@ public class BedrockBreakerManager {
             BlockPos supportPos = pistonPos.relative(lateral);
             if (supportPos.equals(pistonHeadPos)) continue; // 防御性检查
             if (mc.level.getBlockState(supportPos).canBeReplaced()) continue; // 需固体方块
+            // ★ v2.5 优化：附着方块类型检查（活塞/门/楼梯等不可作为拉杆附着面）
+            if (isInvalidLeverSupport(supportPos)) continue;
 
             // 点击 supportPos 的 pistonDirection 面（朝向 candidatePos）
             // 新方块位置 = supportPos.relative(pistonDirection) = candidatePos ✓
@@ -793,6 +801,74 @@ public class BedrockBreakerManager {
             default -> state.getValue(LeverBlock.FACE) == AttachFace.WALL
                     && state.getValue(LeverBlock.FACING) == direction;
         };
+    }
+
+    /**
+     * ★ v2.5 新增：判断指定位置的方块是否不适合作为拉杆附着面
+     *
+     *   ★ 矛盾定性：
+     *     拉杆放置后通过强充能附着方块来激活活塞。但部分方块作为附着面会导致：
+     *     1. 活塞/粘液活塞/门/活板门/栅栏门：激活后状态变化，拉杆掉落或无法稳定充能
+     *     2. 半砖/楼梯/墙/玻璃板/铁栏杆等非完整方块：能放置拉杆但无法有效传导红石信号激活活塞
+     *     3. 树叶/玻璃/冰等透明方块：红石信号传导异常
+     *
+     *   ★ 实践路线：
+     *     直接枚举不可用方块类型，简单可靠。
+     *     当所有策略都因附着方块不合法而失败时，tryPlaceHelperBlocks 会自动放置
+     *     辅助方块（固体完整方块）提供合法附着面。
+     *
+     *   @param pos 待检查的方块位置
+     *   @return true 表示该方块不适合作为拉杆附着面（应跳过）
+     */
+    private boolean isInvalidLeverSupport(BlockPos pos) {
+        assert mc.level != null;
+        BlockState state = mc.level.getBlockState(pos);
+        Block block = state.getBlock();
+
+        // 1. 活塞类：激活后状态变化，拉杆掉落
+        if (block == Blocks.PISTON || block == Blocks.STICKY_PISTON
+                || block == Blocks.MOVING_PISTON) {
+            return true;
+        }
+        // 2. 门类：激活后开关，拉杆掉落
+        if (block == Blocks.IRON_DOOR || block == Blocks.OAK_DOOR
+                || block == Blocks.SPRUCE_DOOR || block == Blocks.BIRCH_DOOR
+                || block == Blocks.JUNGLE_DOOR || block == Blocks.ACACIA_DOOR
+                || block == Blocks.DARK_OAK_DOOR || block == Blocks.MANGROVE_DOOR
+                || block == Blocks.CHERRY_DOOR || block == Blocks.BAMBOO_DOOR
+                || block == Blocks.CRIMSON_DOOR || block == Blocks.WARPED_DOOR) {
+            return true;
+        }
+        // 3. 活板门类：激活后开关，拉杆掉落
+        if (block == Blocks.IRON_TRAPDOOR || block == Blocks.OAK_TRAPDOOR
+                || block == Blocks.SPRUCE_TRAPDOOR || block == Blocks.BIRCH_TRAPDOOR
+                || block == Blocks.JUNGLE_TRAPDOOR || block == Blocks.ACACIA_TRAPDOOR
+                || block == Blocks.DARK_OAK_TRAPDOOR || block == Blocks.MANGROVE_TRAPDOOR
+                || block == Blocks.CHERRY_TRAPDOOR || block == Blocks.BAMBOO_TRAPDOOR
+                || block == Blocks.CRIMSON_TRAPDOOR || block == Blocks.WARPED_TRAPDOOR) {
+            return true;
+        }
+        // 4. 栅栏门：激活后开关
+        if (block == Blocks.OAK_FENCE_GATE || block == Blocks.SPRUCE_FENCE_GATE
+                || block == Blocks.BIRCH_FENCE_GATE || block == Blocks.JUNGLE_FENCE_GATE
+                || block == Blocks.ACACIA_FENCE_GATE || block == Blocks.DARK_OAK_FENCE_GATE
+                || block == Blocks.MANGROVE_FENCE_GATE || block == Blocks.CHERRY_FENCE_GATE
+                || block == Blocks.BAMBOO_FENCE_GATE || block == Blocks.CRIMSON_FENCE_GATE
+                || block == Blocks.WARPED_FENCE_GATE) {
+            return true;
+        }
+        // 5. 半砖/楼梯：非完整方块，红石传导异常
+        if (block instanceof net.minecraft.world.level.block.SlabBlock
+                || block instanceof net.minecraft.world.level.block.StairBlock
+                || block instanceof net.minecraft.world.level.block.WallBlock) {
+            return true;
+        }
+        // 6. 透明方块：玻璃、冰、树叶等，红石信号无法有效传导
+        if (!state.isSolidRender(mc.level, pos)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
