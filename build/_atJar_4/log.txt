@@ -5,7 +5,7 @@ Classpath:
 Working directory: /workspace/build/_atJar_4
 Main class: net.minecraftforge.accesstransformer.TransformerProcessor
 ====================================
-2026-06-24 23:26:11,072 main ERROR Could not reconfigure JMX java.lang.NullPointerException: Cannot invoke "jdk.internal.platform.CgroupInfo.getMountPoint()" because "anyController" is null
+2026-06-25 03:21:26,760 main ERROR Could not reconfigure JMX java.lang.NullPointerException: Cannot invoke "jdk.internal.platform.CgroupInfo.getMountPoint()" because "anyController" is null
 	at java.base/jdk.internal.platform.cgroupv2.CgroupV2Subsystem.getInstance(CgroupV2Subsystem.java:81)
 	at java.base/jdk.internal.platform.CgroupSubsystemFactory.create(CgroupSubsystemFactory.java:113)
 	at java.base/jdk.internal.platform.CgroupMetrics.getInstance(CgroupMetrics.java:167)
