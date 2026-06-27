@@ -20,19 +20,27 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -92,6 +100,11 @@ public class BedrockBreakerManager {
     /** 残留活塞清理已过tick数 */
     private int cleanupPistonTicks = 0;
 
+    /** ★ 辅助方块位置列表（v2.2 新增）
+     *  当无法找到拉杆位置时，在目标基岩周围放置辅助方块提供拉杆附着面。
+     *  功能完成后按优先级清理。 */
+    private final List<BlockPos> helperBlockPositions = new ArrayList<>();
+
     private BedrockBreakerManager() {}
 
     // ============ 外部接口（与 CheatUtils 一致）============
@@ -143,12 +156,6 @@ public class BedrockBreakerManager {
             for (int x = playerPos.getX() - range; x <= playerPos.getX() + range; x++) {
                 for (int z = playerPos.getZ() - range; z <= playerPos.getZ() + range; z++) {
                     BlockPos pos = new BlockPos(x, y, z);
-                    // ★ 排除玩家脚下3x3区域（玩家占位两格，两个方块之间也无法放活塞）
-                    int dx = pos.getX() - playerPos.getX();
-                    int dz = pos.getZ() - playerPos.getZ();
-                    boolean inPlayerArea = Math.abs(dx) <= 1 && Math.abs(dz) <= 1
-                            && (pos.getY() == playerPos.getY() - 1);
-                    if (inPlayerArea) continue;
                     if (isValidBlock(pos)) {
                         layerHasTarget = true;
                         layerTargets.add(pos.immutable());
@@ -241,6 +248,7 @@ public class BedrockBreakerManager {
     // ================================================================
     private void handleStart() {
         assert mc.player != null && mc.level != null;
+        BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
 
         // ★ 检测并关闭目标方块上已激活的拉杆
         //   如果目标方块上有被激活的拉杆，会导致破基岩失败。
@@ -261,8 +269,8 @@ public class BedrockBreakerManager {
             }
         }
 
-        int pistonSlot = ensurePistonInHotbar();
-        if (pistonSlot < 0) { reset("背包找不到活塞（普通或粘性）"); return; }
+        int pistonSlot = ensureInHotbar(Items.PISTON);
+        if (pistonSlot < 0) { reset("背包找不到活塞"); return; }
 
         // ★ 只保留上下方向，侧面放置无法稳定生成无头活塞
         pistonDirection = null;
@@ -277,8 +285,19 @@ public class BedrockBreakerManager {
 
         pistonPos = bedrockPos.relative(pistonDirection);
 
-        // 找拉杆位置（含辅助方块策略）
-        if (!findLocationForLever()) { reset("找不到放置拉杆的位置"); return; }
+        // ★ 双重前置检测（v2.2 重构）
+        //   1. 三策略找拉杆位置（基岩六面 → 活塞四周 → 活塞头侧向）
+        //   2. 若失败且启用辅助方块，则自动放置辅助方块提供拉杆附着面
+        //   3. 验证活塞头位置是否可放置
+        if (!findLocationForLever()) {
+            // 尝试辅助方块补救
+            if (cfg.enableHelperBlocks && tryPlaceHelperBlocks()) {
+                // tryPlaceHelperBlocks 内部已调用 findLocationForLever()
+            } else {
+                reset("找不到放置拉杆的位置");
+                return;
+            }
+        }
 
         // 使用 BlockPlacer 生成放置计划
         BlockPlacingMethod method = BlockPlacingMethod.facing(pistonDirection);
@@ -450,8 +469,8 @@ public class BedrockBreakerManager {
     private void handlePlaceReversePiston() {
         assert mc.level != null && mc.player != null;
 
-        int pistonSlot = ensurePistonInHotbar();
-        if (pistonSlot < 0) { reset("背包找不到活塞（反向，普通或粘性）"); return; }
+        int pistonSlot = ensureInHotbar(Items.PISTON);
+        if (pistonSlot < 0) { reset("背包找不到活塞（反向）"); return; }
 
         // ★ 反向活塞放置：点击基岩面（bedrockPos），而非活塞头位置
         //   createPacketPlan 默认点击 pistonPos.relative(pistonDirection)（活塞头位置），
@@ -509,6 +528,17 @@ public class BedrockBreakerManager {
                         }
                     }
                 }
+            }
+
+            // ★ 清理辅助方块（v2.2 新增）：在清理拉杆/活塞前优先清理辅助方块
+            //   清理顺序调整为：辅助方块 → 拉杆 → 活塞 → 活塞头，确保无残留
+            if (cfg.cleanupHelpers && !helperBlockPositions.isEmpty()) {
+                for (BlockPos helperPos : helperBlockPositions) {
+                    if (!mc.level.getBlockState(helperPos).isAir()) {
+                        mineBlock(helperPos);
+                    }
+                }
+                helperBlockPositions.clear();
             }
 
             // 判断是否先清理拉杆
@@ -606,6 +636,21 @@ public class BedrockBreakerManager {
 
             mc.level.destroyBlock(pistonPos, false);
 
+            // ★ 清理活塞头（v2.2 新增）：确保无头活塞的活塞头也被清理
+            //   活塞头位于 pistonPos.relative(pistonDirection)
+            //   使用 destroyBlock 客户端销毁 + mineBlock 服务端包发送
+            BlockPos pistonHeadPos = pistonPos.relative(pistonDirection);
+            if (!mc.level.getBlockState(pistonHeadPos).isAir()) {
+                mc.level.destroyBlock(pistonHeadPos, false);
+                mineBlock(pistonHeadPos);
+            }
+
+            // ★ 二次检测拉杆（v2.3 新增兜底）：
+            //   若拉杆在 BREAK_REMAINING_LEVER 阶段超时跳过，此处兜底清理，确保无残留。
+            if (leverPos != null && mc.level.getBlockState(leverPos).is(Blocks.LEVER)) {
+                mineBlock(leverPos);
+            }
+
             reset(null);
 
             // 处理下一个队列目标
@@ -622,6 +667,10 @@ public class BedrockBreakerManager {
     //
     //   策略1：围绕基岩找位置（排除活塞方向）
     //   策略2：围绕活塞找位置（排除活塞方向和反方向，不贴在活塞上）
+    //   策略3：围绕活塞头四个侧向方向找（v2.2 新增）
+    //          活塞头位于 pistonPos.relative(pistonDirection)，
+    //          拉杆放置在活塞头相邻方块上，通过充能该方块激活活塞。
+    //          → 参考来源：Minecraft Wiki 活塞激活机制（准链接）
     // ================================================================
     private boolean findLocationForLever() {
         assert mc.level != null && mc.player != null;
@@ -634,6 +683,7 @@ public class BedrockBreakerManager {
             if (direction == pistonDirection) continue;
             if (!mc.level.getBlockState(possibleLeverPos).canBeReplaced()) continue;
             if (!isValidY(possibleLeverPos.getY())) continue;
+            if (isInvalidLeverSupport(bedrockPos)) continue;
 
             BlockHitResult hit = new BlockHitResult(
                     Vec3.atCenterOf(bedrockPos).add(Vec3.atLowerCornerOf(direction.getNormal()).scale(0.5)),
@@ -664,6 +714,7 @@ public class BedrockBreakerManager {
                 BlockPos possibleSupportPos = possibleLeverPos.relative(dir);
                 if (possibleSupportPos.equals(pistonPos)) continue; // 不贴在活塞上
                 if (mc.level.getBlockState(possibleSupportPos).canBeReplaced()) continue;
+                if (isInvalidLeverSupport(possibleSupportPos)) continue; // 无效附着方块跳过
 
                 BlockHitResult hit = new BlockHitResult(
                         Vec3.atCenterOf(possibleSupportPos)
@@ -683,10 +734,85 @@ public class BedrockBreakerManager {
             }
         }
 
+        // ★ 策略3：围绕活塞头四个侧向方向找（v2.4 重构，修复对角方块 bug）
+        //   活塞头位于 pistonPos.relative(pistonDirection)，
+        //   拉杆放在活塞头侧向（candidatePos，需空气），附着在活塞水平相邻方块（supportPos，需固体）。
+        //
+        //   ★ 红石激活原理：
+        //     拉杆强充能其附着的方块（supportPos）。
+        //     被强充能的 supportPos 激活其相邻的机械元件（活塞）。
+        //     因此 supportPos 必须与 pistonPos 相邻（6面相邻）。
+        //
+        //   ★ v2.4 修复对角方块 bug：
+        //     旧实现遍历 candidatePos 的所有6方向找 supportPos，会找到对角位置的固体方块。
+        //     对角方块与活塞不相邻，充能后无法激活活塞。
+        //     修复：supportPos 固定为 pistonPos.relative(lateral)（活塞水平相邻，与活塞相邻）。
+        //     几何关系：candidatePos = pistonHeadPos.relative(lateral)
+        //                       = pistonPos.relative(pistonDirection).relative(lateral)
+        //     supportPos = pistonPos.relative(lateral)
+        //     candidatePos = supportPos.relative(pistonDirection)（supportPos 沿活塞方向再走一格）
+        //     → clickFace = pistonDirection（从 supportPos 指向 candidatePos）
+        //     → 拉杆放在 candidatePos，附着在 supportPos 的 pistonDirection 面
+        //     → 拉杆充能 supportPos，supportPos 与 pistonPos 相邻 ✓，激活活塞 ✓
+        BlockPos pistonHeadPos = pistonPos.relative(pistonDirection);
+        for (Direction lateral : getPistonHeadLateralDirections()) {
+            BlockPos candidatePos = pistonHeadPos.relative(lateral);
+            if (!mc.level.getBlockState(candidatePos).canBeReplaced()) continue;
+            if (!isValidY(candidatePos.getY())) continue;
+
+            // ★ supportPos 固定为活塞水平相邻方块（不遍历对角方向）
+            BlockPos supportPos = pistonPos.relative(lateral);
+            if (supportPos.equals(pistonHeadPos)) continue; // 防御性检查
+            if (mc.level.getBlockState(supportPos).canBeReplaced()) continue; // 需固体方块
+            if (isInvalidLeverSupport(supportPos)) continue; // 无效附着方块跳过
+
+            // 点击 supportPos 的 pistonDirection 面（朝向 candidatePos）
+            // 新方块位置 = supportPos.relative(pistonDirection) = candidatePos ✓
+            Direction clickFace = pistonDirection;
+            BlockHitResult hit = new BlockHitResult(
+                    Vec3.atCenterOf(supportPos)
+                            .add(Vec3.atLowerCornerOf(clickFace.getNormal()).scale(0.5)),
+                    clickFace,
+                    supportPos,
+                    false);
+            BlockState leverBlockState = Blocks.LEVER.getStateForPlacement(
+                    new BlockPlaceContext(mc.player, InteractionHand.MAIN_HAND,
+                            new ItemStack(Items.LEVER, 1), hit));
+            if (leverBlockState == null) continue;
+            if (isLeverStateMatch(leverBlockState, clickFace)) {
+                leverPos = candidatePos;
+                leverPlaceHitResult = hit;
+                return true;
+            }
+        }
+
         return false;
     }
 
     // ============ 辅助方法 ============
+
+    /**
+     * 校验拉杆附着方块是否为无效类型
+     *
+     * 无效类型分为两类：
+     *   1. 激活后拉杆会掉落的方块：活塞、粘液活塞、门、活板门
+     *      这些方块被活塞推动或开关状态变化时，附着的拉杆会掉落为物品。
+     *   2. 能放置拉杆但无法激活活塞的方块：半砖、楼梯
+     *      这些方块不是完整固体方块，拉杆放置后无法强充能方块激活活塞。
+     *
+     * @param supportPos 附着方块位置
+     * @return true 如果该方块不能直接放置拉杆（需使用辅助方块方案）
+     */
+    private boolean isInvalidLeverSupport(BlockPos supportPos) {
+        if (mc.level == null) return true;
+        BlockState state = mc.level.getBlockState(supportPos);
+        Block block = state.getBlock();
+        return block instanceof PistonBaseBlock
+                || block instanceof DoorBlock
+                || block instanceof TrapDoorBlock
+                || block instanceof StairBlock
+                || block instanceof SlabBlock;
+    }
 
     /**
      * 校验拉杆放置方向是否匹配指定方向
@@ -745,6 +871,101 @@ public class BedrockBreakerManager {
         Block target = ForgeRegistries.BLOCKS.getValue(
                 new net.minecraft.resources.ResourceLocation(cfg.targetBlockId));
         return target != null && mc.level.getBlockState(pos).is(target);
+    }
+
+    /**
+     * ★ 获取活塞头的四个侧向方向（v2.2 新增）
+     *   当前活塞方向仅可能为 UP 或 DOWN（由 initByClickPiston 约束），
+     *   因此侧向方向固定为四个水平方向。
+     *   → 若后续支持水平活塞，此方法需重构为通用实现
+     */
+    private Direction[] getPistonHeadLateralDirections() {
+        return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+    }
+
+    /**
+     * ★ 尝试放置辅助方块（v2.3 重构）
+     *
+     *   ★ 矛盾定性：辅助方块放置位置不准确 + 放置数量失控
+     *     旧实现使用 BlockPlacer.FROM_HORIZONTAL（点击上方方块下表面），
+     *     若辅助方块上方为空气则放置失败或位置偏移；且 isAdjacent 检查失败时
+     *     仅从列表移除但不挖掘已放置方块，导致循环放置多个。
+     *
+     *   ★ 实践路线：
+     *     1. 直接点击基岩的 dir 面放置辅助方块到 bedrockPos.relative(dir)，
+     *        基岩一定是固体方块，点击面可靠。
+     *     2. 每个方向只放一个辅助方块，放置后立即检测拉杆位置。
+     *     3. 成功则返回（只放一个）；失败则挖掘掉辅助方块再试下一个方向。
+     *
+     *   @return true 若放置后成功找到拉杆位置
+     */
+    private boolean tryPlaceHelperBlocks() {
+        BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
+        assert mc.level != null && mc.player != null;
+
+        String[] blockIds = cfg.helperBlockList.split(",");
+
+        // ★ 遍历基岩周围四个水平方向（前后左右），按顺序尝试
+        for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+            BlockPos helperPos = bedrockPos.relative(dir);
+            // 该位置必须可替换（空气/水/草等）
+            if (!mc.level.getBlockState(helperPos).canBeReplaced()) continue;
+            if (!isValidY(helperPos.getY())) continue;
+
+            // 按配置列表优先级尝试每种方块
+            boolean placed = false;
+            for (String blockId : blockIds) {
+                blockId = blockId.trim();
+                if (blockId.isEmpty()) continue;
+
+                Block helperBlock = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId));
+                if (helperBlock == null || helperBlock == Blocks.AIR) continue;
+                // 必须是固体方块才能提供拉杆附着面
+                if (!helperBlock.defaultBlockState().isSolid()) continue;
+
+                Item helperItem = helperBlock.asItem();
+                int hotbarSlot = ensureInHotbar(helperItem);
+                if (hotbarSlot < 0) continue; // 背包没有该方块，尝试下一个
+
+                // ★ 放置辅助方块：点击基岩的 dir 面
+                //   新方块位置 = bedrockPos.relative(dir) = helperPos ✓
+                //   基岩一定是固体方块，点击面可靠（不依赖上方方块）
+                Vec3 clickLoc = Vec3.atCenterOf(bedrockPos)
+                        .add(Vec3.atLowerCornerOf(dir.getNormal()).scale(0.5));
+                BlockHitResult hit = new BlockHitResult(clickLoc, dir, bedrockPos, false);
+
+                mc.player.connection.send(new ServerboundSetCarriedItemPacket(hotbarSlot));
+                sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, getSequenceNumber());
+
+                // ★ 客户端预测性更新方块状态（v2.4 关键修复）
+                //   放置包发送后服务端需1tick确认，同tick内 mc.level.getBlockState(helperPos)
+                //   仍是空气，导致 findLocationForLever() 检测不到辅助方块（策略2跳过）。
+                //   手动 setBlockAndUpdate 使同tick检测能识别辅助方块为固体，拉杆可附着。
+                //   若服务端最终拒绝放置，后续 reset 会清理，状态不一致风险可控。
+                mc.level.setBlockAndUpdate(helperPos, helperBlock.defaultBlockState());
+
+                placed = true;
+                break; // 成功放置一种方块即可
+            }
+
+            if (!placed) continue; // 这个方向放不下，试下一个
+
+            // 记录辅助方块位置
+            helperBlockPositions.add(helperPos.immutable());
+
+            // ★ 放置后重新检测拉杆位置
+            if (findLocationForLever() && leverPos != null) {
+                // 成功找到拉杆位置，只放了一个辅助方块，立即返回
+                return true;
+            }
+
+            // ★ 没找到拉杆位置：挖掘掉刚放的辅助方块，试下一个方向
+            //   旧实现仅从列表移除不挖掘，导致多个辅助方块残留（"放了四个"的根因）
+            mineBlock(helperPos);
+            helperBlockPositions.remove(helperPos.immutable());
+        }
+
+        return false;
     }
 
     /**
@@ -816,26 +1037,6 @@ public class BedrockBreakerManager {
                 return targetSlot;
             }
         }
-        return -1;
-    }
-
-    /**
-     * ★ 在热栏/背包中搜索活塞，优先普通活塞，后备粘性活塞
-     *
-     * 矛盾分析：
-     *   很多仓库只有粘性活塞没有普通活塞。
-     *   无头活塞机制要求放进底座的是普通活塞（sticky 会吸附方块干扰时序），
-     *   但反向活塞可以使用粘性活塞替代（仅用于推动无头活塞头）。
-     *   此处统一优先使用普通活塞，无普通时降级为粘性。
-     *
-     * @return 快捷栏槽位（0-8），-1 表示两种活塞都没有
-     */
-    private int ensurePistonInHotbar() {
-        int slot = ensureInHotbar(Items.PISTON);
-        if (slot >= 0) return slot;
-        // 普通活塞没有 → 尝试粘性活塞
-        slot = ensureInHotbar(Items.STICKY_PISTON);
-        if (slot >= 0) return slot;
         return -1;
     }
 
@@ -999,6 +1200,17 @@ public class BedrockBreakerManager {
         // ★ 用户主动关闭时不清理残留（cleanup=false），避免重新开启后被清理阻塞
         //   故障 reset 时清理残留（cleanup=true），避免对下一次操作造成影响
         if (cleanup && mc.player != null && mc.level != null) {
+            // ★ 清理辅助方块（v2.2 新增）：比拉杆优先清理，确保无残留
+            BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
+            if (cfg.cleanupHelpers && !helperBlockPositions.isEmpty()) {
+                for (BlockPos helperPos : helperBlockPositions) {
+                    if (!mc.level.getBlockState(helperPos).isAir()) {
+                        mineBlock(helperPos);
+                    }
+                }
+                helperBlockPositions.clear();
+            }
+
             if (pistonPos != null && !mc.level.getBlockState(pistonPos).isAir()) {
                 cleanupPistonPos = pistonPos.immutable();
                 cleanupPistonTicks = 0;
