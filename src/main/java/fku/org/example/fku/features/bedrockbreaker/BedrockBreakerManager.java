@@ -82,6 +82,8 @@ public class BedrockBreakerManager {
 
     private BlockPos bedrockPos;
     private Direction pistonDirection;
+    /** ★ 活塞朝向（v2.7 新增）：独立于活塞位置方向，可任意朝向 */
+    private Direction pistonFacing;
     private BlockPos pistonPos;
     private float blockDestroyProgress;
     private int blockDestroySeqNumber;
@@ -97,6 +99,8 @@ public class BedrockBreakerManager {
     private BlockPos cleanupPistonPos;
     /** 残留活塞清理序列号 */
     private int cleanupPistonSeq;
+    /** ★ 反向活塞旋转是否已预发（v2.6 新增） */
+    private boolean reverseRotSent;
     /** 残留活塞清理已过tick数 */
     private int cleanupPistonTicks = 0;
 
@@ -269,19 +273,29 @@ public class BedrockBreakerManager {
             }
         }
 
-        int pistonSlot = ensureInHotbar(Items.PISTON);
-        if (pistonSlot < 0) { reset("背包找不到活塞"); return; }
-
-        // ★ 只保留上下方向，侧面放置无法稳定生成无头活塞
+        // 正向活塞选择（回退 v2.7 二元组，恢复单方向耦合）
+        //   活塞位置 = bedrockPos.relative(pistonDirection)
+        //   活塞朝向 = pistonDirection（朝向与位置方向相同，即背对基岩伸出）
         pistonDirection = null;
-        for (Direction d : new Direction[]{Direction.UP, Direction.DOWN}) {
-            if (canPlacePiston(bedrockPos, d)) {
-                pistonDirection = d;
-                break;
-            }
+        pistonFacing = null;
+
+        Direction[] dirs = sortByDistance(bedrockPos,
+                Direction.UP, Direction.DOWN,
+                Direction.NORTH, Direction.SOUTH,
+                Direction.EAST, Direction.WEST);
+        for (Direction d : dirs) {
+            BlockPos p1 = bedrockPos.relative(d);
+            if (!mc.level.getBlockState(p1).canBeReplaced()) continue;
+            if (!isValidY(p1.getY())) continue;
+            // 验证伸出方向有空间（伸出方向 = 活塞位置方向）
+            if (!mc.level.getBlockState(p1.relative(d)).canBeReplaced()) continue;
+            if (!isValidY(p1.relative(d).getY())) continue;
+            pistonDirection = d;
+            pistonFacing = d;
+            break;
         }
 
-        if (pistonDirection == null) { reset("找不到放置活塞的位置（仅支持上下方向）"); return; }
+        if (pistonDirection == null) { reset("找不到放置活塞的位置"); return; }
 
         pistonPos = bedrockPos.relative(pistonDirection);
 
@@ -299,24 +313,32 @@ public class BedrockBreakerManager {
             }
         }
 
-        // 使用 BlockPlacer 生成放置计划
-        BlockPlacingMethod method = BlockPlacingMethod.facing(pistonDirection);
-        BlockPlacer.BlockPlacePlan plan = BlockPlacer.createPacketPlan(pistonPos, method);
-        if (plan == null) { reset("无法生成活塞放置计划"); return; }
+        int pistonSlot = findPistonSlot();
+        if (pistonSlot < 0) { reset("背包找不到活塞"); return; }
 
-        // ★ 计算假旋转并发送放置包
-        //   plan.apply(fakeYaw, fakePitch) 内部发送4参数假旋转包 + 放置包
-        calculateFakeRotation(method);
-        mc.player.connection.send(new ServerboundSetCarriedItemPacket(pistonSlot));
-        CompletableFuture<Void> future = plan.apply(fakeYaw, fakePitch);
-        if (!future.isDone()) {
-            reset("Unexpected piston placing plan apply result");
-            return;
+        // ★ v2.7 水平方向正向活塞需等待1tick同步yHeadRot
+        //   竖直方向（UP/DOWN）不受玩家视角影响，可直接放置
+        if (pistonFacing.getAxis() == Direction.Axis.Y) {
+            // 竖直：同tick放置，不等待yHeadRot同步
+            BlockPlacingMethod method = BlockPlacingMethod.facing(pistonFacing);
+            calculateFakeRotation(method);
+            BlockPlacer.BlockPlacePlan plan = BlockPlacer.createPacketPlan(pistonPos, method);
+            if (plan == null) { reset("无法生成活塞放置计划"); return; }
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(pistonSlot));
+            CompletableFuture<Void> future = plan.apply(fakeYaw, fakePitch);
+            if (!future.isDone()) { reset("Unexpected piston placing plan apply result"); return; }
+            // 链式调用：放置拉杆（同一 tick）
+            state = State.PLACE_LEVER;
+            state.handle(this);
+        } else {
+            // 水平：先发旋转包同步yHeadRot，下一tick再放置
+            BlockPlacingMethod method = BlockPlacingMethod.facing(pistonFacing);
+            calculateFakeRotation(method);
+            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
+                    fakeYaw, fakePitch, mc.player.onGround()));
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(pistonSlot));
+            state = State.WAIT_Y_HEAD_ROT_SYNC;
         }
-
-        // 链式调用：放置拉杆（同一 tick）
-        state = State.PLACE_LEVER;
-        state.handle(this);
     }
 
     // ================================================================
@@ -338,12 +360,53 @@ public class BedrockBreakerManager {
     }
 
     // ================================================================
-    // ★ 第3步：handleBreakPistonStart —— 严格参考 CheatUtils
+    // ★ 第3步：handleWaitYHeadRotSync —— 等待 yHeadRot 同步后放置正向活塞
+    //
+    //   上一 tick 已通过 fake 旋转包设置 yRot，
+    //   此 tick 服务端 yHeadRot 已同步至 yRot，
+    //   此时再发包放置活塞，确保活塞朝向正确。
+    // ================================================================
+    private void handleWaitYHeadRotSync() {
+        assert mc.level != null && mc.player != null;
+
+        // 上一tick已发送旋转包，这一tick yHeadRot已同步
+        BlockPlacingMethod method = BlockPlacingMethod.facing(pistonFacing);
+        calculateFakeRotation(method);
+        BlockPlacer.BlockPlacePlan plan = BlockPlacer.createPacketPlan(pistonPos, method);
+        if (plan == null) { reset("无法生成活塞放置计划（yHeadRot同步后）"); return; }
+        CompletableFuture<Void> future = plan.apply(fakeYaw, fakePitch);
+        if (!future.isDone()) { reset("Unexpected piston placing plan apply result"); return; }
+
+        // 链式调用：放置拉杆（同一 tick）
+        state = State.PLACE_LEVER;
+        state.handle(this);
+    }
+
+    // ================================================================
+    // ★ 第4步：handleBreakPistonStart —— 严格参考 CheatUtils
     // ================================================================
     private void handleBreakPistonStart() {
         assert mc.level != null && mc.player != null;
 
         tickCount = 0;
+
+        // ★ 预发送反向活塞旋转包（v2.5 侧向破基岩专用）
+        //   矛盾定性：反向活塞放置与活塞破坏需同 tick 完成，无法加入等待状态。
+        //   实践路线：在破坏活塞的第 1 tick 就预发送反向活塞的旋转包，
+        //   此时距实际破坏活塞还有 N 个 tick（挖掘进度累计阶段），
+        //   服务端有足够时间将 yRot 同步到 yHeadRot。
+        //   当最终执行 PLACE_REVERSE_PISTON 时，yHeadRot 已正确同步。
+        if (pistonFacing.getOpposite().getAxis() != Direction.Axis.Y) {
+            Direction reverseFacing = pistonFacing.getOpposite();
+            BlockPlacingMethod revMethod = BlockPlacingMethod.facing(reverseFacing);
+            Rotation revRot = revMethod.getTargetRotation();
+            if (revRot != null) {
+                float revYaw = Float.isNaN(revRot.yRot()) ? mc.player.getYRot() : revRot.yRot();
+                float revPitch = Float.isNaN(revRot.xRot()) ? mc.player.getXRot() : revRot.xRot();
+                mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
+                        revYaw, revPitch, mc.player.onGround()));
+            }
+        }
 
         // 切换镐子（严格参考 CheatUtils：使用 setSelectedSlot）
         int pickaxeSlot = findPickaxe();
@@ -404,9 +467,11 @@ public class BedrockBreakerManager {
     //   严格参考 CheatUtils BedrockBreaker.handleWaitPistonExtend()
     //
     // ★ 容错改进：遍历所有方向检测活塞头。
-    //   第一个活塞朝向可能因玩家视角影响而不等于 pistonDirection，
+    //   第一个活塞朝向可能因玩家视角影响而不等于预期的方向，
     //   只要活塞被激活（出现活塞头），状态机就继续。
-    //   清理时使用实际朝向，但 pistonDirection 保持不变（反向活塞仍需朝向基岩）。
+    //   pistonDirection = 活塞位置方向（基岩→活塞体），
+    //   pistonFacing = 活塞伸出朝向，两者解耦。
+    //   清理时使用实际朝向，但 pistonDirection/pistonFacing 保持不变。
     //
     //   检测到活塞头后，同一 tick 执行：
     //   ① 拉杆 OFF（活塞计划收回）
@@ -417,7 +482,7 @@ public class BedrockBreakerManager {
     private void handleWaitPistonExtend() {
         assert mc.player != null && mc.level != null;
 
-        // ★ 遍历所有方向检测活塞头（不严格要求在 pistonDirection 方向）
+        // ★ 遍历所有方向检测活塞头（不限制在 pistonFacing 方向）
         Direction actualPistonDir = null;
         for (Direction d : Direction.values()) {
             if (mc.level.getBlockState(pistonPos.relative(d)).getBlock() == Blocks.PISTON_HEAD) {
@@ -427,6 +492,26 @@ public class BedrockBreakerManager {
         }
 
         if (actualPistonDir != null) {
+            // ★ v2.7 侧向破基岩优化：检测到活塞头后，先预发反向活塞旋转包
+            //   矛盾定性：反向活塞与 STOP_DESTROY 必须同 tick（否则无头活塞失效），
+            //   但 yHeadRot 需要 1 tick 从 yRot 同步。
+            //   实践路线：此 tick 先发旋转包设 yRot，下一 tick 再执行破坏+放置，
+            //   此时 yHeadRot 已正确同步，且 STOP_DESTROY 与 PLACE_REVERSE_PISTON 仍同 tick。
+            //   ★ v2.7 使用 pistonFacing 计算反向活塞朝向，不再依赖活塞位置方向。
+            if (pistonFacing.getOpposite().getAxis() != Direction.Axis.Y && !reverseRotSent) {
+                Direction reverseFacing = pistonFacing.getOpposite();
+                BlockPlacingMethod revMethod = BlockPlacingMethod.facing(reverseFacing);
+                Rotation revRot = revMethod.getTargetRotation();
+                if (revRot != null) {
+                    float revYaw = Float.isNaN(revRot.yRot()) ? mc.player.getYRot() : revRot.yRot();
+                    float revPitch = Float.isNaN(revRot.xRot()) ? mc.player.getXRot() : revRot.xRot();
+                    mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
+                            revYaw, revPitch, mc.player.onGround()));
+                }
+                reverseRotSent = true;
+                return; // 等待下一 tick 让 yHeadRot 同步
+            }
+
             // ① 拉杆 OFF（收杆）
             mc.player.connection.send(new ServerboundUseItemOnPacket(
                     InteractionHand.MAIN_HAND,
@@ -464,22 +549,23 @@ public class BedrockBreakerManager {
     //   与正向活塞放置保持一致，由 BlockPlacePlan.apply() 内部处理旋转。
     //
     //   反向活塞放在 pistonPos（同一位置）
-    //   朝向 = pistonDirection.getOpposite()（朝向基岩）
+    //   朝向 = pistonFacing.getOpposite()（朝向基岩）
     // ================================================================
     private void handlePlaceReversePiston() {
         assert mc.level != null && mc.player != null;
 
-        int pistonSlot = ensureInHotbar(Items.PISTON);
+        int pistonSlot = findPistonSlot();
         if (pistonSlot < 0) { reset("背包找不到活塞（反向）"); return; }
 
         // ★ 反向活塞放置：点击基岩面（bedrockPos），而非活塞头位置
-        //   createPacketPlan 默认点击 pistonPos.relative(pistonDirection)（活塞头位置），
+        //   createPacketPlan 默认点击 pistonPos.relative(pistonFacing)（活塞头位置），
         //   但正向活塞激活后该位置变为 MOVING_PISTON/PISTON_HEAD，服务端可能拒绝放置。
         //   改为点击 bedrockPos 的 pistonDirection 面，新方块放置到
         //   bedrockPos.relative(pistonDirection) = pistonPos（底座位置，紧贴基岩）。
-        Direction reverseFacing = pistonDirection.getOpposite();
+        //   pistonDirection 是活塞位置方向（基岩→活塞），与朝向无关。
+        Direction reverseFacing = pistonFacing.getOpposite();
         BlockPos clickPos = pistonPos.relative(reverseFacing); // = bedrockPos
-        Direction clickFace = pistonDirection; // 点击基岩的 pistonDirection 面
+        Direction clickFace = pistonDirection; // 点击基岩的 pistonDirection 面（活塞位置方向）
         Vec3 clickLoc = Vec3.atCenterOf(clickPos)
                 .add(Vec3.atLowerCornerOf(clickFace.getNormal()).scale(0.5));
         BlockHitResult hit = new BlockHitResult(clickLoc, clickFace, clickPos, false);
@@ -497,7 +583,7 @@ public class BedrockBreakerManager {
 
         // ★ 反向活塞放置成功后，客户端清理正向活塞头和底座
         mc.level.destroyBlock(pistonPos, false);
-        mc.level.destroyBlock(pistonPos.relative(pistonDirection), false);
+        mc.level.destroyBlock(pistonPos.relative(pistonFacing), false);
 
         state = State.WAIT_BEDROCK_BREAK;
         tickCount = 0;
@@ -510,7 +596,7 @@ public class BedrockBreakerManager {
         assert mc.player != null && mc.level != null;
 
         if (mc.level.getBlockState(bedrockPos).isAir()
-                && !mc.level.getBlockState(pistonPos.relative(pistonDirection)).is(Blocks.MOVING_PISTON)) {
+                && !mc.level.getBlockState(pistonPos.relative(pistonFacing)).is(Blocks.MOVING_PISTON)) {
             BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
 
             // 替换方块（如配置）- 使用 plan.apply() 模式
@@ -551,6 +637,46 @@ public class BedrockBreakerManager {
             tickCount = 0;
         } else {
             if (tickCount > 20) {
+                // ★ v2.7 幽灵方块兜底清理：超时时向活塞位置、活塞头、拉杆和辅助方块发包清理
+                //   避免残留幽灵方块阻挡后续流程
+                {
+                    int ghostSeq = getSequenceNumber();
+                    mc.player.connection.send(new ServerboundPlayerActionPacket(
+                            ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                            pistonPos, Direction.DOWN, ghostSeq));
+                    mc.player.connection.send(new ServerboundPlayerActionPacket(
+                            ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                            pistonPos, Direction.DOWN, ghostSeq));
+                    mc.level.destroyBlock(pistonPos, false);
+                    BlockPos pistonHeadPos = pistonPos.relative(pistonFacing);
+                    mc.level.destroyBlock(pistonHeadPos, false);
+
+                    // ★ v2.7 加入拉杆幽灵方块清理
+                    if (leverPos != null) {
+                        int seqLever = getSequenceNumber();
+                        mc.player.connection.send(new ServerboundPlayerActionPacket(
+                                ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                                leverPos, Direction.DOWN, seqLever));
+                        mc.player.connection.send(new ServerboundPlayerActionPacket(
+                                ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                                leverPos, Direction.DOWN, seqLever));
+                        mc.level.destroyBlock(leverPos, false);
+                    }
+
+                    if (!helperBlockPositions.isEmpty()) {
+                        for (BlockPos hp : helperBlockPositions) {
+                            int seq2 = getSequenceNumber();
+                            mc.player.connection.send(new ServerboundPlayerActionPacket(
+                                    ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                                    hp, Direction.DOWN, seq2));
+                            mc.player.connection.send(new ServerboundPlayerActionPacket(
+                                    ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                                    hp, Direction.DOWN, seq2));
+                            mc.level.destroyBlock(hp, false);
+                        }
+                        helperBlockPositions.clear();
+                    }
+                }
                 reset("等待基岩破坏超时");
             }
         }
@@ -637,9 +763,9 @@ public class BedrockBreakerManager {
             mc.level.destroyBlock(pistonPos, false);
 
             // ★ 清理活塞头（v2.2 新增）：确保无头活塞的活塞头也被清理
-            //   活塞头位于 pistonPos.relative(pistonDirection)
+            //   活塞头位于 pistonPos.relative(pistonFacing)
             //   使用 destroyBlock 客户端销毁 + mineBlock 服务端包发送
-            BlockPos pistonHeadPos = pistonPos.relative(pistonDirection);
+            BlockPos pistonHeadPos = pistonPos.relative(pistonFacing);
             if (!mc.level.getBlockState(pistonHeadPos).isAir()) {
                 mc.level.destroyBlock(pistonHeadPos, false);
                 mineBlock(pistonHeadPos);
@@ -649,6 +775,37 @@ public class BedrockBreakerManager {
             //   若拉杆在 BREAK_REMAINING_LEVER 阶段超时跳过，此处兜底清理，确保无残留。
             if (leverPos != null && mc.level.getBlockState(leverPos).is(Blocks.LEVER)) {
                 mineBlock(leverPos);
+            }
+
+            // ★ 幽灵方块兜底清理（v2.6 新增）：
+            //   破基岩流程中若发生异常（如网络延迟、服务端拒绝放置等），
+            //   客户端可能残留幽灵方块（客户端认为存在但服务端已移除，或反之）。
+            //   向活塞位置和所有辅助方块位置无条件发送 START_DESTROY + STOP_DESTROY 包，
+            //   mineBlock 内部有 isAir() 检测会跳过空气，因此直接发包确保服务端同步清除。
+            //   → 使用独立序列号，不影响主流程
+            {
+                int ghostSeq = getSequenceNumber();
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                        pistonPos, Direction.DOWN, ghostSeq));
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                        pistonPos, Direction.DOWN, ghostSeq));
+                mc.level.destroyBlock(pistonPos, false);
+
+                if (!helperBlockPositions.isEmpty()) {
+                    for (BlockPos hp : helperBlockPositions) {
+                        int seq2 = getSequenceNumber();
+                        mc.player.connection.send(new ServerboundPlayerActionPacket(
+                                ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                                hp, Direction.DOWN, seq2));
+                        mc.player.connection.send(new ServerboundPlayerActionPacket(
+                                ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                                hp, Direction.DOWN, seq2));
+                        mc.level.destroyBlock(hp, false);
+                    }
+                    helperBlockPositions.clear();
+                }
             }
 
             reset(null);
@@ -665,10 +822,10 @@ public class BedrockBreakerManager {
     // ================================================================
     // ★ 寻找拉杆位置 —— 严格参考 CheatUtils BedrockBreaker.findLocationForLever()
     //
-    //   策略1：围绕基岩找位置（排除活塞方向）
-    //   策略2：围绕活塞找位置（排除活塞方向和反方向，不贴在活塞上）
+    //   策略1：围绕基岩找位置（排除活塞方向和伸出方向）
+    //   策略2：围绕活塞找位置（排除活塞方向和反方向、伸出方向，不贴在活塞上）
     //   策略3：围绕活塞头四个侧向方向找（v2.2 新增）
-    //          活塞头位于 pistonPos.relative(pistonDirection)，
+    //          活塞头位于 pistonPos.relative(pistonFacing)，
     //          拉杆放置在活塞头相邻方块上，通过充能该方块激活活塞。
     //          → 参考来源：Minecraft Wiki 活塞激活机制（准链接）
     // ================================================================
@@ -678,9 +835,12 @@ public class BedrockBreakerManager {
         leverPos = null;
 
         // 策略1：围绕基岩找
+        BlockPos pistonHeadPos_ = pistonPos.relative(pistonFacing);
         for (Direction direction : sortByDistance(bedrockPos, Direction.values())) {
             BlockPos possibleLeverPos = bedrockPos.relative(direction);
             if (direction == pistonDirection) continue;
+            // ★ v2.7 排除活塞伸出方向位置（防止拉杆与活塞头重叠）
+            if (possibleLeverPos.equals(pistonHeadPos_)) continue;
             if (!mc.level.getBlockState(possibleLeverPos).canBeReplaced()) continue;
             if (!isValidY(possibleLeverPos.getY())) continue;
             if (isInvalidLeverSupport(bedrockPos)) continue;
@@ -701,10 +861,12 @@ public class BedrockBreakerManager {
             }
         }
 
-        // 策略2：围绕活塞找（不贴在活塞上）
+        // 策略2：围绕活塞找（不贴在活塞上，不在活塞伸出方向）
         for (Direction direction : sortByDistance(pistonPos, Direction.values())) {
             if (direction == pistonDirection) continue;
             if (direction == pistonDirection.getOpposite()) continue;
+            // ★ v2.7 排除活塞伸出方向（防止拉杆与活塞头重叠）
+            if (direction == pistonFacing) continue;
 
             BlockPos possibleLeverPos = pistonPos.relative(direction);
             if (!mc.level.getBlockState(possibleLeverPos).canBeReplaced()) continue;
@@ -735,7 +897,7 @@ public class BedrockBreakerManager {
         }
 
         // ★ 策略3：围绕活塞头四个侧向方向找（v2.4 重构，修复对角方块 bug）
-        //   活塞头位于 pistonPos.relative(pistonDirection)，
+        //   活塞头位于 pistonPos.relative(pistonFacing)，
         //   拉杆放在活塞头侧向（candidatePos，需空气），附着在活塞水平相邻方块（supportPos，需固体）。
         //
         //   ★ 红石激活原理：
@@ -748,13 +910,13 @@ public class BedrockBreakerManager {
         //     对角方块与活塞不相邻，充能后无法激活活塞。
         //     修复：supportPos 固定为 pistonPos.relative(lateral)（活塞水平相邻，与活塞相邻）。
         //     几何关系：candidatePos = pistonHeadPos.relative(lateral)
-        //                       = pistonPos.relative(pistonDirection).relative(lateral)
+        //                       = pistonPos.relative(pistonFacing).relative(lateral)
         //     supportPos = pistonPos.relative(lateral)
-        //     candidatePos = supportPos.relative(pistonDirection)（supportPos 沿活塞方向再走一格）
-        //     → clickFace = pistonDirection（从 supportPos 指向 candidatePos）
-        //     → 拉杆放在 candidatePos，附着在 supportPos 的 pistonDirection 面
+        //     candidatePos = supportPos.relative(pistonFacing)（supportPos 沿活塞朝向再走一格）
+        //     → clickFace = pistonFacing（从 supportPos 指向 candidatePos）
+        //     → 拉杆放在 candidatePos，附着在 supportPos 的 pistonFacing 面
         //     → 拉杆充能 supportPos，supportPos 与 pistonPos 相邻 ✓，激活活塞 ✓
-        BlockPos pistonHeadPos = pistonPos.relative(pistonDirection);
+        BlockPos pistonHeadPos = pistonPos.relative(pistonFacing);
         for (Direction lateral : getPistonHeadLateralDirections()) {
             BlockPos candidatePos = pistonHeadPos.relative(lateral);
             if (!mc.level.getBlockState(candidatePos).canBeReplaced()) continue;
@@ -766,9 +928,9 @@ public class BedrockBreakerManager {
             if (mc.level.getBlockState(supportPos).canBeReplaced()) continue; // 需固体方块
             if (isInvalidLeverSupport(supportPos)) continue; // 无效附着方块跳过
 
-            // 点击 supportPos 的 pistonDirection 面（朝向 candidatePos）
-            // 新方块位置 = supportPos.relative(pistonDirection) = candidatePos ✓
-            Direction clickFace = pistonDirection;
+            // 点击 supportPos 的 pistonFacing 面（朝向 candidatePos）
+            // 新方块位置 = supportPos.relative(pistonFacing) = candidatePos ✓
+            Direction clickFace = pistonFacing;
             BlockHitResult hit = new BlockHitResult(
                     Vec3.atCenterOf(supportPos)
                             .add(Vec3.atLowerCornerOf(clickFace.getNormal()).scale(0.5)),
@@ -874,13 +1036,31 @@ public class BedrockBreakerManager {
     }
 
     /**
-     * ★ 获取活塞头的四个侧向方向（v2.2 新增）
-     *   当前活塞方向仅可能为 UP 或 DOWN（由 initByClickPiston 约束），
-     *   因此侧向方向固定为四个水平方向。
-     *   → 若后续支持水平活塞，此方法需重构为通用实现
+     * ★ 获取活塞头的侧向方向（回退单方向耦合，仍保留 pistonFacing 字段）
+     *
+     *   对于垂直方向活塞（UP/DOWN），侧向为四个水平方向：
+     *     活塞头在上/下方，拉杆可以放在四个水平侧面相邻方块的底面/顶面。
+     *   对于水平方向活塞（N/S/E/W），侧向包括 UP/DOWN 及另两个水平方向：
+     *     活塞头在水平方向，拉杆可以放在上下或侧面相邻方块的侧面。
+     *
+     *   → 注：此处返回的是与活塞朝向（pistonFacing）垂直的所有方向，
+     *     用于在活塞头周围找拉杆放置位置（策略3）。
      */
     private Direction[] getPistonHeadLateralDirections() {
-        return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+        if (pistonFacing == null) {
+            return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+        }
+        // 垂直活塞：侧向为四个水平方向
+        if (pistonFacing.getAxis() == Direction.Axis.Y) {
+            return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+        }
+        // 水平活塞：侧向为 UP/DOWN + 除朝向外的另一水平轴向
+        Direction.Axis axis = pistonFacing.getAxis();
+        if (axis == Direction.Axis.X) {
+            return new Direction[]{Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH};
+        } else { // Z axis（NORTH/SOUTH）
+            return new Direction[]{Direction.UP, Direction.DOWN, Direction.EAST, Direction.WEST};
+        }
     }
 
     /**
@@ -905,8 +1085,28 @@ public class BedrockBreakerManager {
 
         String[] blockIds = cfg.helperBlockList.split(",");
 
-        // ★ 遍历基岩周围四个水平方向（前后左右），按顺序尝试
-        for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+        // ★ v2.6 适配侧向破基岩：根据活塞朝向动态选择辅助方块放置方向
+        //   垂直活塞（UP/DOWN）：辅助方块放在基岩前后左右四个水平方向
+        //   水平活塞（N/S/E/W）：辅助方块放在基岩上下 + 与活塞垂直的两个水平方向
+        //   → 跳过活塞方向和反方向，优先保证辅助方块紧贴活塞提供拉杆附着面
+        List<Direction> searchDirs = new ArrayList<>();
+        if (pistonDirection.getAxis() == Direction.Axis.Y) {
+            searchDirs.addAll(Arrays.asList(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST));
+        } else {
+            searchDirs.add(Direction.UP);
+            searchDirs.add(Direction.DOWN);
+            for (Direction d : Arrays.asList(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST)) {
+                if (d.getAxis() != pistonDirection.getAxis()) {
+                    searchDirs.add(d);
+                }
+            }
+        }
+
+        // ★ 按距离玩家由近到远排序，优先放置最近的辅助方块
+        searchDirs.sort(Comparator.comparingDouble(d ->
+                mc.player.distanceToSqr(Vec3.atCenterOf(bedrockPos.relative(d)))));
+
+        for (Direction dir : searchDirs) {
             BlockPos helperPos = bedrockPos.relative(dir);
             // 该位置必须可替换（空气/水/草等）
             if (!mc.level.getBlockState(helperPos).canBeReplaced()) continue;
@@ -1050,6 +1250,24 @@ public class BedrockBreakerManager {
             if (inventory.getItem(i).is(item)) return i;
         }
         return -1;
+    }
+
+    /**
+     * ★ 找活塞物品（v2.7 新增）：优先普通活塞，后备粘液活塞
+     *
+     *   与 ensureInHotbar 不同，此方法在背包中搜索两种活塞：
+     *   1. 优先找普通活塞（Items.PISTON）
+     *   2. 未找到则找粘液活塞（Items.STICKY_PISTON）
+     *   3. 两种都找不到返回 -1
+     *
+     *   @return 快捷栏槽位（0-8），-1 表示全背包未找到
+     */
+    @SuppressWarnings("deprecation")
+    private int findPistonSlot() {
+        int slot = ensureInHotbar(Items.PISTON);
+        if (slot >= 0) return slot;
+        slot = ensureInHotbar(Items.STICKY_PISTON);
+        return slot;
     }
 
     /**
@@ -1222,6 +1440,7 @@ public class BedrockBreakerManager {
 
         bedrockPos = null;
         pistonDirection = null;
+        pistonFacing = null;
         pistonPos = null;
         leverPos = null;
         leverPlaceHitResult = null;
@@ -1229,6 +1448,7 @@ public class BedrockBreakerManager {
         blockDestroySeqNumber = 0;
         state = State.INIT;
         tickCount = 0;
+        reverseRotSent = false;
         queue.clear(); // ★ 清空序列队列，避免关闭功能后残留
 
         // 恢复快捷栏
@@ -1251,6 +1471,7 @@ public class BedrockBreakerManager {
         INIT(instance -> {}),
         START(BedrockBreakerManager::handleStart),
         PLACE_LEVER(BedrockBreakerManager::handlePlaceLever),
+        WAIT_Y_HEAD_ROT_SYNC(BedrockBreakerManager::handleWaitYHeadRotSync),
         BREAK_PISTON_START(BedrockBreakerManager::handleBreakPistonStart),
         BREAK_PISTON_PROGRESS(BedrockBreakerManager::handleBreakPistonProgress),
         WAIT_PISTON_EXTEND(BedrockBreakerManager::handleWaitPistonExtend),

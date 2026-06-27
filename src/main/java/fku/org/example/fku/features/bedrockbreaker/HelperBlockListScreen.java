@@ -102,10 +102,30 @@ public class HelperBlockListScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (listInput.mouseClicked(mouseX, mouseY, button)) {
+        // 先让 listInput 处理鼠标点击
+        boolean inputClicked = listInput.mouseClicked(mouseX, mouseY, button);
+
+        // ★ 修复：鼠标在输入框区域内时强制设置焦点
+        //   MultiLineEditBox.mouseClicked() 在某些情况下（如 GUI 缩放）
+        //   可能不会正确调用 setFocused(true)，导致需按 Tab 键才能激活输入。
+        //   此处额外检测鼠标位置，确保点击输入框即激活焦点。
+        if (isMouseOverInput(mouseX, mouseY)) {
+            listInput.setFocused(true);
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+
+        return inputClicked || super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /**
+     * 判断鼠标是否在输入框区域内
+     */
+    private boolean isMouseOverInput(double mouseX, double mouseY) {
+        int inputX = listInput.getX();
+        int inputY = listInput.getY();
+        int inputRight = inputX + listInput.getWidth();
+        int inputBottom = inputY + listInput.getHeight();
+        return mouseX >= inputX && mouseX <= inputRight && mouseY >= inputY && mouseY <= inputBottom;
     }
 
     @Override
