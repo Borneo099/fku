@@ -3,5 +3,16 @@
   "key.fku.bedrock_breaker": "基岩破坏器",
   "key.categories.fku": "Fku模组",
   "feature.fku.no_jump_delay": "取消跳跃间隔",
-  "feature.fku.no_jump_delay.status": "No Jump Delay: "
+  "feature.fku.no_jump_delay.status": "No Jump Delay: ",
+  "feature.fku.knockback": "自由击退方向",
+  "feature.fku.knockback.mode": "模式",
+  "feature.fku.knockback.mode.pushback": "推离",
+  "feature.fku.knockback.mode.pullback": "拉回",
+  "feature.fku.knockback.mode.cliff": "悬崖",
+  "feature.fku.knockback.mode.custom": "自定义",
+  "feature.fku.knockback.custom_yaw": "自定义角度",
+  "feature.fku.knockback.cliff_radius": "搜索半径",
+  "feature.fku.knockback.smooth": "平滑旋转",
+  "feature.fku.knockback.smooth_steps": "平滑步数",
+  "feature.fku.knockback.aggressive": "强制模式"
 }

@@ -36,6 +36,8 @@ public class ConfigButtonComponent extends GuiComponent {
         
         // 绘制文字
         guiGraphics.drawString(Minecraft.getInstance().font, label, x + 5, y + (height - 8) / 2, config.getTextColor());
+        // ★ 右键配置提示
+        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
     }
 
     @Override

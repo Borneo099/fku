@@ -1,30 +1,33 @@
-package fku.org.example.fku.client.gui.components;
+package fku.org.example.fku.client.gui.components; /* water */
 
 import fku.org.example.fku.config.GuiStyleConfig;
-import fku.org.example.fku.features.duplicator.DuplicatorConfig;
-import fku.org.example.fku.features.duplicator.DuplicatorConfigScreen;
+import fku.org.example.fku.features.antilag.AntiLagConfig;
+import fku.org.example.fku.features.antilag.AntiLagScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * 三叉戟复制开关组件
- * 左键切换启用/禁用
+ * AntiLag 防拉回开关组件
+ *
+ * 左键：切换启用/禁用
+ * 右键：打开配置界面（AntiLagScreen）
+ *
+ * 渲染风格与 BedrockBreakerComponent 一致
  */
-public class DuplicatorComponent extends GuiComponent {
+public class AntiLagComponent extends GuiComponent {
 
-    public DuplicatorComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "三叉戟复制");
+    public AntiLagComponent(int x, int y, int width, int height) {
+        super(x, y, width, height, "防拉回");
     }
 
     private boolean isEnabled() {
-        return DuplicatorConfig.getInstance().enableTrident;
+        return AntiLagConfig.getInstance().enabled;
     }
 
     private void toggle() {
-        DuplicatorConfig cfg = DuplicatorConfig.getInstance();
-        cfg.enableTrident = !cfg.enableTrident;
-        DuplicatorConfig.save();
+        AntiLagConfig cfg = AntiLagConfig.getInstance();
+        cfg.setEnabled(!cfg.enabled);
     }
 
     @Override
@@ -36,10 +39,11 @@ public class DuplicatorComponent extends GuiComponent {
 
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        String displayStr = "三叉戟复制: " + (enabled ? "ON" : "OFF");
+        String status = enabled ? "ON" : "OFF";
+        String displayStr = "防拉回: " + status;
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
-        // ★ 右键打开配置提示
+        // ★ 右键配置提示箭头
         guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
     }
 
@@ -50,7 +54,7 @@ public class DuplicatorComponent extends GuiComponent {
                 toggle();
                 return true;
             } else if (button == 1) {
-                Minecraft.getInstance().setScreen(new DuplicatorConfigScreen());
+                Minecraft.getInstance().setScreen(new AntiLagScreen());
                 return true;
             }
         }

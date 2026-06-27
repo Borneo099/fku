@@ -17,12 +17,10 @@ public class HealthTagConfig {
     
     private static File getGameDirectory() {
         try {
-            Class<?> minecraftClass = Class.forName("net.minecraft.client.Minecraft");
-            Object minecraft = minecraftClass.getMethod("getInstance").invoke(null);
-            return (File) minecraftClass.getField("gameDir").get(minecraft);
-        } catch (Exception e) {
-            return Paths.get(".").toAbsolutePath().normalize().toFile();
-        }
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null) return mc.gameDirectory;
+        } catch (Exception ignored) {}
+        return Paths.get(".").toAbsolutePath().normalize().toFile();
     }
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

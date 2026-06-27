@@ -7,6 +7,11 @@ import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerFeature;
+import fku.org.example.fku.features.knockback.KnockbackFeature;
+import fku.org.example.fku.features.antilag.AntiLagFeature;
+import fku.org.example.fku.features.tpaura.TpAuraFeature;
+import fku.org.example.fku.features.loot.LootConfig;
+import fku.org.example.fku.features.loot.LootFeature;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -29,7 +34,13 @@ public class Fku
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         // 注册模组通用设置事件，在这里面加载我们的配置
         modEventBus.addListener(this::commonSetup);
+
+        // 注册各功能事件订阅器
         MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(KnockbackFeature.class);
+        MinecraftForge.EVENT_BUS.register(AntiLagFeature.class);
+        MinecraftForge.EVENT_BUS.register(TpAuraFeature.class);
+        MinecraftForge.EVENT_BUS.register(LootFeature.class);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event)
@@ -42,5 +53,9 @@ public class Fku
         DisplayModelConfig.load();
         BedrockBreakerConfig.load();
         BedrockBreakerFeature.init();
+        KnockbackFeature.init();
+        AntiLagFeature.init();
+        TpAuraFeature.init();
+        LootConfig.load();
     }
 }

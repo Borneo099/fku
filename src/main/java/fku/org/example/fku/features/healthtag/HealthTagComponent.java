@@ -1,6 +1,9 @@
 package fku.org.example.fku.features.healthtag; /* water */
 
+import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.config.GuiStyleConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import fku.org.example.fku.client.gui.components.ToggleComponent;
 
 /**
@@ -26,6 +29,19 @@ public class HealthTagComponent extends ToggleComponent {
     @Override
     protected void saveConfig() {
         HealthTagConfig.save();
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        if (!visible) return;
+        GuiStyleConfig config = GuiStyleConfig.getInstance();
+        boolean enabled = isEnabled();
+        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
+        String displayStr = label + ": " + (enabled ? "ON" : "OFF");
+        int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
+        g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
+        // ★ 右键打开配置提示
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
     }
 
     @Override

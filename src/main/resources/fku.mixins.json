@@ -9,7 +9,10 @@
     "ConnectionMixin"
   ],
   "client": [
-    "ClientLevelAccessor"
+    "ClientLevelAccessor",
+    "MixinMultiPlayerGameMode",
+    "MixinConnectionAttackInterceptor",
+    "MixinClientPacketListener"
   ],
   "injectors": {
     "defaultRequire": 1

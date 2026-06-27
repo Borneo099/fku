@@ -7,6 +7,7 @@ import fku.org.example.fku.client.gui.components.MovementPanel;
 import fku.org.example.fku.client.gui.components.VisualPanel;
 import fku.org.example.fku.client.gui.components.ToolPanel;
 import fku.org.example.fku.client.gui.components.EntertainmentPanel;
+import fku.org.example.fku.client.gui.components.CombatPanel;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -34,6 +35,7 @@ public class ClickGuiScreen extends Screen {
         panels.add(new VisualPanel());
         panels.add(new ToolPanel());
         panels.add(new EntertainmentPanel());
+        panels.add(new CombatPanel());
         
         openAnimationStartTime = System.currentTimeMillis();
     }

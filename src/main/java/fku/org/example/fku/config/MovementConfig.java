@@ -19,14 +19,10 @@ public class MovementConfig {
     
     private static File getGameDirectory() {
         try {
-            // 尝试从 Minecraft 获取游戏目录（仅客户端）
-            Class<?> minecraftClass = Class.forName("net.minecraft.client.Minecraft");
-            Object minecraft = minecraftClass.getMethod("getInstance").invoke(null);
-            return (File) minecraftClass.getField("gameDir").get(minecraft);
-        } catch (Exception e) {
-            // 服务端环境或其他情况，返回当前工作目录
-            return Paths.get(".").toAbsolutePath().normalize().toFile();
-        }
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null) return mc.gameDirectory;
+        } catch (Exception ignored) {}
+        return Paths.get(".").toAbsolutePath().normalize().toFile();
     }
     
     // 添加调试日志，打印配置路径

@@ -31,6 +31,8 @@ public class FkuConfig {
     public static ForgeConfigSpec.IntValue autoDropPanelYPos;
     public static ForgeConfigSpec.IntValue entertainmentPanelX;
     public static ForgeConfigSpec.IntValue entertainmentPanelY;
+    public static ForgeConfigSpec.IntValue combatPanelX;
+    public static ForgeConfigSpec.IntValue combatPanelY;
     public static ForgeConfigSpec.BooleanValue disableConnectionTimeout;
 
     static {
@@ -68,6 +70,12 @@ public class FkuConfig {
         entertainmentPanelY = BUILDER
                 .comment("娱乐面板Y坐标")
                 .defineInRange("entertainment_panel_y_pos", 490, 0, Integer.MAX_VALUE);
+        combatPanelX = BUILDER
+                .comment("战斗面板X坐标")
+                .defineInRange("combat_panel_x_pos", 230, 0, Integer.MAX_VALUE);
+        combatPanelY = BUILDER
+                .comment("战斗面板Y坐标")
+                .defineInRange("combat_panel_y_pos", 260, 0, Integer.MAX_VALUE);
         BUILDER.pop();
 
         BUILDER.push("Feature Toggles");

@@ -143,6 +143,12 @@ public class BedrockBreakerManager {
             for (int x = playerPos.getX() - range; x <= playerPos.getX() + range; x++) {
                 for (int z = playerPos.getZ() - range; z <= playerPos.getZ() + range; z++) {
                     BlockPos pos = new BlockPos(x, y, z);
+                    // ★ 排除玩家脚下3x3区域（玩家占位两格，两个方块之间也无法放活塞）
+                    int dx = pos.getX() - playerPos.getX();
+                    int dz = pos.getZ() - playerPos.getZ();
+                    boolean inPlayerArea = Math.abs(dx) <= 1 && Math.abs(dz) <= 1
+                            && (pos.getY() == playerPos.getY() - 1);
+                    if (inPlayerArea) continue;
                     if (isValidBlock(pos)) {
                         layerHasTarget = true;
                         layerTargets.add(pos.immutable());
@@ -255,8 +261,8 @@ public class BedrockBreakerManager {
             }
         }
 
-        int pistonSlot = ensureInHotbar(Items.PISTON);
-        if (pistonSlot < 0) { reset("背包找不到活塞"); return; }
+        int pistonSlot = ensurePistonInHotbar();
+        if (pistonSlot < 0) { reset("背包找不到活塞（普通或粘性）"); return; }
 
         // ★ 只保留上下方向，侧面放置无法稳定生成无头活塞
         pistonDirection = null;
@@ -444,8 +450,8 @@ public class BedrockBreakerManager {
     private void handlePlaceReversePiston() {
         assert mc.level != null && mc.player != null;
 
-        int pistonSlot = ensureInHotbar(Items.PISTON);
-        if (pistonSlot < 0) { reset("背包找不到活塞（反向）"); return; }
+        int pistonSlot = ensurePistonInHotbar();
+        if (pistonSlot < 0) { reset("背包找不到活塞（反向，普通或粘性）"); return; }
 
         // ★ 反向活塞放置：点击基岩面（bedrockPos），而非活塞头位置
         //   createPacketPlan 默认点击 pistonPos.relative(pistonDirection)（活塞头位置），
@@ -810,6 +816,26 @@ public class BedrockBreakerManager {
                 return targetSlot;
             }
         }
+        return -1;
+    }
+
+    /**
+     * ★ 在热栏/背包中搜索活塞，优先普通活塞，后备粘性活塞
+     *
+     * 矛盾分析：
+     *   很多仓库只有粘性活塞没有普通活塞。
+     *   无头活塞机制要求放进底座的是普通活塞（sticky 会吸附方块干扰时序），
+     *   但反向活塞可以使用粘性活塞替代（仅用于推动无头活塞头）。
+     *   此处统一优先使用普通活塞，无普通时降级为粘性。
+     *
+     * @return 快捷栏槽位（0-8），-1 表示两种活塞都没有
+     */
+    private int ensurePistonInHotbar() {
+        int slot = ensureInHotbar(Items.PISTON);
+        if (slot >= 0) return slot;
+        // 普通活塞没有 → 尝试粘性活塞
+        slot = ensureInHotbar(Items.STICKY_PISTON);
+        if (slot >= 0) return slot;
         return -1;
     }
 
