@@ -66,6 +66,13 @@ public class BedrockBreakerConfig {
     /** 是否清理辅助方块：功能完成时自动移除辅助方块 */
     public boolean cleanupHelpers = true;
 
+    /** 活塞方向选择优先级（v2.8 新增）: HORIZONTAL_FIRST=水平优先, VERTICAL_FIRST=垂直优先, DEFAULT=按枚举顺序 */
+    public String pistonDirectionPriority = "HORIZONTAL_FIRST";
+
+    /** ★ v2.8 幽灵方块清理间隔（tick数）：每N tick对已处理完成的方块位置发送清理包。
+     *  设为1表示每tick清理（参考 bedrockminer），设为0表示禁用每tick清理。 */
+    public int ghostCleanupInterval = 1;
+
     private static File getConfigFile() {
         File configDir = new File(getGameDirectory(), "fku");
         if (!configDir.exists()) configDir.mkdirs();
