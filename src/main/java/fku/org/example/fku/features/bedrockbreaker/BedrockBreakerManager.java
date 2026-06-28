@@ -330,7 +330,17 @@ public class BedrockBreakerManager {
         leverPos = best.leverPos;
         leverPlaceHitResult = best.leverHit;
 
-        int pistonSlot = findPistonSlot();
+        // ★ v2.15 正向活塞：粘液活塞仅支持水平方向（禁用上下方向）
+        //   矛盾定性：用户实测粘液活塞垂直方向不稳定，直接禁用。
+        //   实践路线：
+        //   - 反向水平（X/Z轴）：可用粘液活塞（findPistonSlot）
+        //   - 反向垂直（Y轴）：只允许普通活塞（ensureInHotbar）
+        int pistonSlot;
+        if (best.facing.getOpposite().getAxis() == Direction.Axis.Y) {
+            pistonSlot = ensureInHotbar(Items.PISTON);
+        } else {
+            pistonSlot = findPistonSlot();
+        }
         if (pistonSlot < 0) { reset("背包找不到活塞"); return; }
 
         // ★ v2.8 质量评分日志（调试场景用）
@@ -353,13 +363,14 @@ public class BedrockBreakerManager {
             mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
                     fakeYaw, fakePitch, mc.player.onGround()));
             sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, getSequenceNumber());
-            // ★ 不在此tick链式调用 handlePlaceLever（v2.9 stateId 冲突修复）
-            //   ensureInHotbar 在同一tick发送第二个 ServerboundContainerClickPacket(SWAP)
-            //   时 stateId 与服务端不匹配（服务端处理第一个 SWAP 后 stateId 已 +1），
-            //   导致 lever SWAP 被拒，目标槽位仍为活塞，误在 leverPos 放置活塞。
-            //   改为下一 tick 由 onClientTick() 进入 PLACE_LEVER 状态处理。
+            // ★ 此 tick 不链式调用 handlePlaceLever（需确保 SWAP 包跨 tick 同步）
+            //   ensureInHotbar 在本 tick 发送 ServerboundContainerClickPacket(SWAP)
+            //   后，服务端处理 SWAP 且 stateId +1，但客户端 stateId 未同步。
+            //   若同 tick 再调用 ensureInHotbar（handlePlaceLever 中放拉杆），
+            //   第二个 SWAP 的 stateId 仍是旧值，被服务端拒绝。
+            //   改为下一 tick 进入 PLACE_LEVER 状态处理，handlePlaceLever 中
+            //   链式调用 BREAK_PISTON_START 保证放置与挖掘同 tick。
             state = State.PLACE_LEVER;
-            // state.handle(this);  ← 不再直接调用
         } else {
             // 水平：先发旋转包同步yHeadRot，下一tick再放置
             BlockPlacingMethod method = BlockPlacingMethod.facing(best.facing);
@@ -384,7 +395,11 @@ public class BedrockBreakerManager {
         // ★ 下蹲+右键放置拉杆，避免打开容器 GUI
         sendUseItemOnSneak(InteractionHand.MAIN_HAND, leverPlaceHitResult, getSequenceNumber());
 
-        // 链式调用：开始挖掘活塞
+        // ★ 同 tick 链式调用 BREAK_PISTON_START（恢复原状态机流程）
+        //   矛盾定性：粘性活塞/普通活塞的放置和挖掘需在同 tick 完成时序，
+        //   下一 tick 再开始挖掘会导致服务端侧活塞已完全放置，
+        //   挖掘包到达时服务端时序不同步，出现刚放置就被挖掘掉的问题。
+        //   实践路线：同 tick 链式调用，利用后发包顺序保证在处理序列中的时序。
         state = State.BREAK_PISTON_START;
         state.handle(this);
     }
@@ -484,7 +499,11 @@ public class BedrockBreakerManager {
 
         blockDestroyProgress += getPistonDestroyProgress();
         if (blockDestroyProgress >= 1) {
-            // 激活拉杆 → 活塞伸出
+            // ★ 激活拉杆 → 活塞伸出（恢复原状态机流程：直接激活，无需 STOP_DESTROY）
+            //   矛盾定性：同 tick 链式调用后，START_DESTROY 和拉杆激活包在同 tick 发出，
+            //   服务端按包到达顺序处理：先处理挖掘的 START_DESTROY，再处理拉杆激活。
+            //   拉杆激活使活塞伸出 → 活塞体发生区块更新 → 挖掘状态被清除。
+            //   无需显式 STOP_DESTROY，因为活塞伸出后区块状态改变会自然中断挖掘。
             mc.player.connection.send(new ServerboundUseItemOnPacket(
                     InteractionHand.MAIN_HAND,
                     new BlockHitResult(Vec3.atCenterOf(leverPos), Direction.UP, leverPos, false),
@@ -534,9 +553,17 @@ public class BedrockBreakerManager {
             //   但 yHeadRot 需要 1 tick 从 yRot 同步。
             //   实践路线：此 tick 先发旋转包设 yRot，下一 tick 再执行破坏+放置，
             //   此时 yHeadRot 已正确同步，且 STOP_DESTROY 与 PLACE_REVERSE_PISTON 仍同 tick。
-            //   ★ v2.7 使用 pistonFacing 计算反向活塞朝向，不再依赖活塞位置方向。
+            // ★ v2.7 使用 pistonFacing 计算反向活塞朝向，不再依赖活塞位置方向。
             //   ★ v2.8 解耦：反向活塞朝向 = pistonDirection.getOpposite()（朝向基岩）
-            if (pistonDirection.getOpposite().getAxis() != Direction.Axis.Y && !reverseRotSent) {
+            //   ★ v2.11 修复：移除 Axis.Y 排除条件——垂直方向（破下方基岩）也需要预发旋转包。
+            //     矛盾定性（重分析）：
+            //       旧约束：垂直方向不需要预发旋转，yHeadRot 自动同步。
+            //       实测发现：不预发旋转时，STOP_DESTROY 与旋转包在同 tick 发出，
+            //       服务端可能先处理 STOP_DESTROY 再处理旋转，反向活塞放置时 yHeadRot
+            //       尚未更新，伸展方向错误。
+            //       普通活塞可能因默认朝向巧合成功，但粘性活塞对朝向更敏感（粘面位置不同）。
+            //     实践路线：统一预发旋转包，无论方向，确保反向活塞旋转早于放置 1 tick。
+            if (!reverseRotSent) {
                 Direction reverseFacing = pistonDirection.getOpposite();
                 BlockPlacingMethod revMethod = BlockPlacingMethod.facing(reverseFacing);
                 Rotation revRot = revMethod.getTargetRotation();
@@ -587,13 +614,28 @@ public class BedrockBreakerManager {
     //   与正向活塞放置保持一致，由 BlockPlacePlan.apply() 内部处理旋转。
     //
     //   反向活塞放在 pistonPos（同一位置）
-    //   朝向 = pistonFacing.getOpposite()（朝向基岩）
+    //   朝向 = pistonDirection.getOpposite()（朝向基岩）
+    //   反向活塞强制使用普通活塞（Items.PISTON），粘液活塞会导致 UP/DOWN 方向失败
     // ================================================================
     private void handlePlaceReversePiston() {
         assert mc.level != null && mc.player != null;
 
-        int pistonSlot = findPistonSlot();
-        if (pistonSlot < 0) { reset("背包找不到活塞（反向）"); return; }
+        // ★ 反向活塞：粘液活塞仅支持水平方向（v2.15）
+        //   矛盾定性：粘液活塞垂直方向不稳定，直接禁用。
+        //   - 水平方向（X/Z轴）：可用粘液活塞（findPistonSlot）
+        //   - 垂直方向（Y轴）：只允许普通活塞（ensureInHotbar）
+        int pistonSlot;
+        if (pistonDirection.getAxis() == Direction.Axis.Y) {
+            pistonSlot = ensureInHotbar(Items.PISTON);
+        } else {
+            pistonSlot = findPistonSlot();
+        }
+        if (pistonSlot < 0) {
+            reset(pistonDirection.getAxis() == Direction.Axis.Y
+                    ? "背包找不到普通活塞（反向垂直需要普通活塞）"
+                    : "背包找不到可用活塞");
+            return;
+        }
 
         // ★ 反向活塞放置：点击基岩面（bedrockPos），而非活塞头位置
         //   createPacketPlan 默认点击 pistonPos.relative(pistonFacing)（活塞头位置），
@@ -1267,6 +1309,35 @@ public class BedrockBreakerManager {
         if (slot >= 0) return slot;
         slot = ensureInHotbar(Items.STICKY_PISTON);
         return slot;
+    }
+
+    /**
+     * ★ 找活塞物品（粘液优先）：优先粘液活塞，后备普通活塞
+     *
+     *   与 findPistonSlot 相反，此方法优先搜索粘液活塞。
+     *   使用场景：水平方向反向活塞、垂直方向正向活塞（省普通活塞给反向）。
+     *
+     *   @return 快捷栏槽位（0-8），-1 表示全背包未找到
+     */
+    @SuppressWarnings("deprecation")
+    private int findPistonSlotPreferSticky() {
+        int slot = ensureInHotbar(Items.STICKY_PISTON);
+        if (slot >= 0) return slot;
+        slot = ensureInHotbar(Items.PISTON);
+        return slot;
+    }
+
+    /**
+     * ★ 统计背包中指定物品的总数量（含快捷栏 + 背包 0-35）
+     */
+    private int countItem(Item item) {
+        int count = 0;
+        for (int i = 0; i < 36; i++) {
+            if (mc.player.getInventory().getItem(i).is(item)) {
+                count += mc.player.getInventory().getItem(i).getCount();
+            }
+        }
+        return count;
     }
 
     /**

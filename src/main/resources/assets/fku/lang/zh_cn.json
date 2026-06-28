@@ -14,5 +14,13 @@
   "feature.fku.knockback.cliff_radius": "搜索半径",
   "feature.fku.knockback.smooth": "平滑旋转",
   "feature.fku.knockback.smooth_steps": "平滑步数",
-  "feature.fku.knockback.aggressive": "强制模式"
+  "feature.fku.knockback.aggressive": "强制模式",
+  "feature.fku.killfx": "击杀特效",
+  "feature.fku.killfx.status": "KillFX: ",
+  "feature.fku.killfx.category": "分类",
+  "feature.fku.killfx.lightning": "闪电",
+  "feature.fku.killfx.particle": "粒子",
+  "feature.fku.killfx.sound": "音效",
+  "feature.fku.killfx.firework": "烟花",
+  "feature.fku.killfx.explosion": "爆炸烟雾"
 }

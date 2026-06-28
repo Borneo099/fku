@@ -42,6 +42,10 @@ public class SprintConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    // ===== 开关 =====
+    /** 功能是否启用（重开后自动恢复） */
+    public boolean enabled = false;
+
     // ===== 核心模式 =====
     /** 疾跑模式：LEGIT / OMNIDIRECTIONAL / OMNIROTATIONAL */
     public String mode = "OMNIROTATIONAL";

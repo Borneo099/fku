@@ -14,6 +14,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  *   和 ServerboundPlayerActionPacket 的序列号与服务端预测系统一致。
  *
  *   不使用正确的序列号将导致服务端拒绝所有数据包，功能完全失效。
+ *
+ *   ★ 注：闪电渲染改用 ClientLevel.putNonPlayerEntity() 公开方法，
+ *      无需再通过 @Accessor 访问 weatherEffects 字段。
  */
 @Mixin(ClientLevel.class)
 public interface ClientLevelAccessor {

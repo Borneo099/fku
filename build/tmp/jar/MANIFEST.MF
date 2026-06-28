@@ -3,8 +3,8 @@ Specification-Title: fku
 Specification-Vendor: 
 Specification-Version: 1
 Implementation-Title: fku
-Implementation-Version: 1.0-SNAPSHOT
+Implementation-Version: 1.1
 Implementation-Vendor: 
-Implementation-Timestamp: 2026-05-17T17:38:56+0800
+Implementation-Timestamp: 2026-06-29T02:05:29+0800
 MixinConfigs: fku.mixins.json
 

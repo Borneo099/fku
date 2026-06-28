@@ -1,6 +1,7 @@
 package fku.org.example.fku.mixin; /* water */
 
 import fku.org.example.fku.features.knockback.FakeRotationManager;
+import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import io.netty.channel.Channel;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -53,33 +54,44 @@ public abstract class MixinConnectionAttackInterceptor {
     private static boolean fku$sendingPending = false;
 
     /**
-     * 在 Connection.send(Packet) HEAD 注入
-     *
-     * 检测到攻击包 + 有 pending 假旋转 → 通过 channel 直发假旋转
-     */
-    @Inject(
-            method = "send(Lnet/minecraft/network/protocol/Packet;)V",
-            at = @At(value = "HEAD")
-    )
-    private void fku$onSendPacket(Packet<?> packet, CallbackInfo ci) {
-        // ★ 递归保护
-        if (fku$sendingPending) return;
-        if (!FakeRotationManager.hasPending()) return;
-        // ★ 只拦截 ServerboundInteractPacket（攻击/交互包），其他包放行
-        if (!(packet instanceof ServerboundInteractPacket)) return;
+ * 在 Connection.send(Packet) HEAD 注入
+ *
+ * 检测到攻击包 + 有 pending 假旋转 → 通过 channel 直发假旋转
+ */
+@Inject(
+        method = "send(Lnet/minecraft/network/protocol/Packet;)V",
+        at = @At(value = "HEAD")
+        ,
+        cancellable = true
+)
+private void fku$onSendPacket(Packet<?> packet, CallbackInfo ci) {
+    // ★ 递归保护
+    if (fku$sendingPending) return;
+    // ★ 只拦截 ServerboundInteractPacket（攻击/交互包），其他包放行
+    if (!(packet instanceof ServerboundInteractPacket)) return;
 
-        // ★ 通过 netty channel 直接发送 pending 的假旋转包（绕过本 Mixin 防递归）
-        fku$sendingPending = true;
-        try {
-            Channel ch = this.channel;
-            if (ch != null && ch.isOpen()) {
+    boolean hasRotation = FakeRotationManager.hasPending();
+    boolean hasQuickSwitch = QuickSwitchFeature.canHandle();
+
+    if (!hasRotation && !hasQuickSwitch) return;
+
+    // ★ 通过 netty channel 直接发送假旋转/秒切换包，确保在攻击包前到达服务端
+    fku$sendingPending = true;
+    try {
+        Channel ch = this.channel;
+        if (ch != null && ch.isOpen()) {
+            if (hasRotation) {
                 ch.writeAndFlush(FakeRotationManager.createPendingPacket());
+                FakeRotationManager.clearPending();
             }
-        } catch (Exception ignored) {
-            // channel 异常不影响攻击包正常发送
-        } finally {
-            FakeRotationManager.clearPending();
-            fku$sendingPending = false;
+            if (hasQuickSwitch) {
+                QuickSwitchFeature.handlePreAttackViaChannel(ch);
+            }
         }
+    } catch (Exception ignored) {
+        // channel 异常不影响攻击包正常发送
+    } finally {
+        fku$sendingPending = false;
     }
+}
 }

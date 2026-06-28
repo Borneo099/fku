@@ -7,9 +7,14 @@ import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerFeature;
+import fku.org.example.fku.features.killfx.KillFXFeature;
 import fku.org.example.fku.features.knockback.KnockbackFeature;
+import fku.org.example.fku.features.sprint.SprintHandler;
 import fku.org.example.fku.features.antilag.AntiLagFeature;
+import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import fku.org.example.fku.features.tpaura.TpAuraFeature;
+import fku.org.example.fku.features.pearlphase.PearlPhaseFeature;
+import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import fku.org.example.fku.features.loot.LootConfig;
 import fku.org.example.fku.features.loot.LootFeature;
 import com.mojang.logging.LogUtils;
@@ -41,6 +46,9 @@ public class Fku
         MinecraftForge.EVENT_BUS.register(AntiLagFeature.class);
         MinecraftForge.EVENT_BUS.register(TpAuraFeature.class);
         MinecraftForge.EVENT_BUS.register(LootFeature.class);
+        MinecraftForge.EVENT_BUS.register(PearlPhaseFeature.class);
+        MinecraftForge.EVENT_BUS.register(FakePlayerFeature.class);
+        // KillFXFeature 使用 @Mod.EventBusSubscriber 自动注册，无需手动 register
     }
 
     private void commonSetup(final FMLCommonSetupEvent event)
@@ -57,5 +65,10 @@ public class Fku
         AntiLagFeature.init();
         TpAuraFeature.init();
         LootConfig.load();
+        KillFXFeature.init();
+        PearlPhaseFeature.init();
+        SprintHandler.init();
+        FakePlayerFeature.init();
+        QuickSwitchFeature.init();
     }
 }

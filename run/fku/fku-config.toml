@@ -1,29 +1,45 @@
 
+["Feature Toggles"]
+	#禁用连接超时检测，开启后断开连接时不会弹出超时提示
+	disable_connection_timeout = true
+
 ["GUI Settings"]
+	#战斗面板X坐标
+	#Range: > 0
+	combat_panel_x_pos = 231
 	#视觉面板X坐标
 	#Range: > 0
-	visual_x_pos = 387
-	#视觉面板Y坐标
-	#Range: > 0
-	visual_y_pos = 107
-	#GUI窗口Y坐标
-	#Range: > 0
-	gui_y_pos = 105
-	#自动丢面板X坐标
-	#Range: > 0
-	auto_drop_panel_x_pos = 671
-	#打开GUI的按键名称，默认为右Shift
-	gui_open_key = "key.keyboard.right.shift"
+	visual_x_pos = 379
 	#自动丢面板Y坐标
 	#Range: > 0
 	auto_drop_panel_y_pos = 237
 	#GUI窗口X坐标
 	#Range: > 0
-	gui_x_pos = 82
-	#工具面板X坐标
-	#Range: > 0
-	tool_x_pos = 516
+	gui_x_pos = 83
 	#工具面板Y坐标
 	#Range: > 0
-	tool_y_pos = 106
+	tool_y_pos = 104
+	#娱乐面板X坐标
+	#Range: > 0
+	entertainment_panel_x_pos = 83
+	#视觉面板Y坐标
+	#Range: > 0
+	visual_y_pos = 105
+	#GUI窗口Y坐标
+	#Range: > 0
+	gui_y_pos = 103
+	#自动丢面板X坐标
+	#Range: > 0
+	auto_drop_panel_x_pos = 671
+	#打开GUI的按键名称，默认为右Shift
+	gui_open_key = "key.keyboard.right.shift"
+	#战斗面板Y坐标
+	#Range: > 0
+	combat_panel_y_pos = 202
+	#工具面板X坐标
+	#Range: > 0
+	tool_x_pos = 520
+	#娱乐面板Y坐标
+	#Range: > 0
+	entertainment_panel_y_pos = 198
 

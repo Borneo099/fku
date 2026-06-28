@@ -3,6 +3,7 @@ package fku.org.example.fku.client.gui.components; /* water */
 import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.features.knockback.KnockbackConfig;
 import fku.org.example.fku.features.knockback.KnockbackConfigScreen;
+import fku.org.example.fku.features.quickswitch.QuickSwitchComponent;
 import fku.org.example.fku.features.tpaura.TpAuraComponent;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import fku.org.example.fku.config.GuiStyleConfig;
@@ -58,6 +59,9 @@ public class CombatPanel extends GuiPanel {
 
         // ★ 如来神掌功能开关（左键开关，右键配置界面）
         addComponent(new TpAuraComponent(0, 0, 110, 25));
+
+        // ★ 鬼手秒切功能开关（左键开关，右键配置界面）
+        addComponent(new QuickSwitchComponent(0, 0, 110, 20));
     }
 
     @Override

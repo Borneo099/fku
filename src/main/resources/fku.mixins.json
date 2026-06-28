@@ -12,7 +12,8 @@
     "ClientLevelAccessor",
     "MixinMultiPlayerGameMode",
     "MixinConnectionAttackInterceptor",
-    "MixinClientPacketListener"
+    "MixinClientPacketListener",
+    "ServerboundInteractPacketAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,5 +1,9 @@
 {
   "enabled": true,
   "dropAsEntity": true,
-  "blacklist": []
+  "scanInterval": 1,
+  "blacklist": [
+    "minecraft:grass_block",
+    "minecraft:dandelion"
+  ]
 }

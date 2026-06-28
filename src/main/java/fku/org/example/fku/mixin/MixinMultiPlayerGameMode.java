@@ -45,15 +45,14 @@ public abstract class MixinMultiPlayerGameMode {
     )
     public void onAttackHead(Player player, Entity target, CallbackInfo ci) {
         KnockbackConfig config = KnockbackConfig.getInstance();
-        if (!config.enabled) return;
-        if (!(target instanceof LivingEntity livingTarget)) return;
 
-        // ★ 计算目标旋转角度
-        float targetYaw = KnockbackDirectionCalculator.calculateYaw(player, livingTarget, config.mode);
+        // ★ 击退方向：假旋转
+        if (config.enabled && target instanceof LivingEntity livingTarget) {
+            float targetYaw = KnockbackDirectionCalculator.calculateYaw(player, livingTarget, config.mode);
+            FakeRotationManager.setPending(livingTarget, targetYaw);
+        }
 
-        // ★ 设置待发送状态（不立即发送，由 MixinConnectionAttackInterceptor 在攻击包发出前通过 channel 直发）
-        //   旧方案在 attack() HEAD 直接发 PosRot，但跨服时攻击包可能先到服务端。
-        //   新方案推迟到 Connection.send() 层拦截攻击包，确保 PosRot 紧贴攻击包发出。
-        FakeRotationManager.setPending(livingTarget, targetYaw);
+        // ★ 秒切：已迁移至 MixinConnectionAttackInterceptor（Connection.send() 层），
+        //   确保 TpAura / 手动攻击 / 第三方 Aura 全部经过同一切换逻辑。
     }
 }

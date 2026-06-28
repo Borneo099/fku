@@ -28,6 +28,10 @@ import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.joml.Matrix4f;
+
+import fku.org.example.fku.features.healthtag.HealthTagManager;
+import fku.org.example.fku.features.killfx.KillFXFeature;
+import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import org.lwjgl.glfw.GLFW;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -247,7 +251,7 @@ public class TpAuraFeature {
         TpAuraFeature self = getInstance();
         TpAuraConfig cfg = TpAuraConfig.getInstance();
 
-        // 1. 武器切换（找不到武器时不阻断，允许空手攻击）
+        // 1. 武器切换
         if (cfg.autoSwitch) {
             self.checkAndSwapWeapon(cfg);
         }
@@ -417,9 +421,34 @@ public class TpAuraFeature {
      *   A. 垫包预热 → B. 上升+瞬移 → C. 攻击（单次/图腾绕过多次）→ D. 回传
      */
     private void executeTrouserAttack(Entity target, TpAuraConfig cfg) {
+        // ★ 空指针防护：防止玩家死亡/切换维度时崩溃
+        if (mc.player == null || mc.level == null) return;
+        if (mc.player.connection == null) return;
+        if (target == null || !target.isAlive()) return;
+
+        try {
+            executeTrouserAttackInternal(target, cfg);
+        } catch (Exception e) {
+            // ★ 全局异常捕获：防止任何未预期的异常导致游戏卡死
+            //   记录异常并清理状态，确保下次 Tick 能正常恢复
+            cleanup();
+        }
+    }
+
+    /** 执行瞬移攻击内部逻辑（被 try-catch 包裹，防止异常卡死） */
+    private void executeTrouserAttackInternal(Entity target, TpAuraConfig cfg) {
         Vec3 startPos = mc.player.position();
         Vec3 targetPos = target.position();
+
+        // ★ NaN 防护：防止实体坐标异常导致后续计算卡死
+        if (Double.isNaN(startPos.x) || Double.isNaN(startPos.y) || Double.isNaN(startPos.z)) return;
+        if (Double.isNaN(targetPos.x) || Double.isNaN(targetPos.y) || Double.isNaN(targetPos.z)) return;
         double reach = cfg.maxRange;
+
+        // ★ 世界边界检查：防止虚空/Y轴越界导致卡死
+        int worldMinY = mc.level.getMinBuildHeight();
+        int worldMaxY = mc.level.getMaxBuildHeight() - 1;
+        if (startPos.y < worldMinY || startPos.y > worldMaxY) return;
 
         // 计算有效的攻击位置
         Vec3 finalPos = !invalid(targetPos) ? targetPos : findNearestPos(targetPos);
@@ -439,7 +468,10 @@ public class TpAuraFeature {
 
         // A. 垫包预热 — 发送 onGround=false 包使服务端进入"下落"状态
         int spam = "Paper".equals(cfg.mode) ? cfg.paperPackets : 4;
+        // ★ 安全上限：防止配置异常导致过量发包
+        if (spam > 100) spam = 100;
         for (int i = 0; i < spam; i++) {
+            if (mc.player == null || mc.player.connection == null) break;
             mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
                 mc.player.getX(), mc.player.getY(), mc.player.getZ(), false
             ));
@@ -489,12 +521,33 @@ public class TpAuraFeature {
 
     /** 执行攻击发包 */
     private void performAttack(Entity target, TpAuraConfig cfg) {
-        if (mc.player == null) return;
+        if (mc.player == null || mc.player.connection == null) return;
+        if (target == null) return;
+
+        // ★ 假人联动：如果目标是本地假人，直接在客户端模拟伤害，不发包
+        //   服务端不认识客户端假人实体，发攻击包会被丢弃
+        if (FakePlayerFeature.handleTpAuraAttack(target)) {
+            if (cfg.swingHand) {
+                mc.player.swing(InteractionHand.MAIN_HAND);
+            }
+            mc.player.resetAttackStrengthTicker();
+            return;
+        }
 
         // ★ 直接发送标准攻击包（原始发包方式，经测试最可靠）
         // 注意：LocalPlayer#attack() 在 Forge 1.20.1 中有额外客户端检查
         // （如 onClientAttack 事件），可能取消发包，因此直接发原始包。
         mc.player.connection.send(ServerboundInteractPacket.createAttackPacket(target, mc.player.isShiftKeyDown()));
+
+        // ★ TpAura 联动 KillFX：手动记录攻击记录
+        //   TpAura 直接发包攻击，绕过 AttackEntityEvent，
+        //   导致 KillFX 的 onlyTargeted 模式无法识别攻击目标。
+        //   此处手动调用 KillFX 接口写入攻击记录。
+        KillFXFeature.markAttackedByTpAura(target.getId());
+
+        // ★ TpAura 联动 HealthTag：手动锁定目标
+        //   同样绕过 AttackEntityEvent，导致 HealthTag 无法锁定被攻击目标。
+        HealthTagManager.onAttack(target);
 
         if (cfg.swingHand) {
             mc.player.swing(InteractionHand.MAIN_HAND);
@@ -510,11 +563,13 @@ public class TpAuraFeature {
 
     /** 发送位置包（模拟 PositionAndOnGround） */
     private void sendMove(Vec3 pos) {
+        if (mc.player == null || mc.player.connection == null) return;
         mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
     }
 
     /** 计算回传位置并设置玩家位置 */
     private void doReturn(Vec3 startPos, Vec3 finalPos, TpAuraConfig cfg) {
+        if (mc.player == null) return;
         if (cfg.returnPos) {
             if ("Paper".equals(cfg.mode) && cfg.goUp) {
                 Vec3 highStart = startPos.add(0, cfg.maxRange, 0);
@@ -564,8 +619,10 @@ public class TpAuraFeature {
 
     /** 检查位置是否无效（碰撞箱重叠或岩浆） */
     private boolean invalid(Vec3 pos) {
-        if (mc.level == null) return true;
+        if (mc.level == null || mc.player == null) return true;
         BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
+        // ★ 世界边界检查：防止虚空/Y轴越界导致异常
+        if (bp.getY() < mc.level.getMinBuildHeight() || bp.getY() >= mc.level.getMaxBuildHeight()) return true;
         if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return true;
         AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
         for (BlockPos bPos : BlockPos.betweenClosed(
@@ -595,7 +652,7 @@ public class TpAuraFeature {
 
     /** 查找最近的有效目标 */
     private Entity findTarget(TpAuraConfig cfg) {
-        if (mc.level == null) return null;
+        if (mc.level == null || mc.player == null) return null;
 
         Set<String> allowedTypes = cfg.getEntityTypeSet();
 
@@ -667,7 +724,7 @@ public class TpAuraFeature {
 
     /** 检查并切换到武器 */
     private boolean checkAndSwapWeapon(TpAuraConfig cfg) {
-        if (mc.player == null) return false;
+        if (mc.player == null || mc.player.connection == null) return false;
 
         ItemStack mainHand = mc.player.getMainHandItem();
         String itemName = mainHand.getItem().toString().toLowerCase();
@@ -715,7 +772,7 @@ public class TpAuraFeature {
     private void swapBackWeapon() {
         if (silentSwapSlot == -1 && originalSlot == -1) return;
 
-        if (silentSwapSlot != -1 && mc.player != null) {
+        if (silentSwapSlot != -1 && mc.player != null && mc.player.connection != null) {
             if (silentSwapSlot >= 36) {
                 mc.player.getInventory().selected = silentSwapPrevSlot;
             } else {

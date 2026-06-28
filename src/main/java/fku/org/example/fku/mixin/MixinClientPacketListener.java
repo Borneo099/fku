@@ -29,6 +29,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * ★ 参考：
  *   AntiLag.java (Meteor Client) onPacketReceive → 改用 Mixin 确保拦截准确
+ *
+ * ★ 关于 QuickSwitch：
+ *   v4 架构变更（2026-06-28）：移除了 send(Packet) 的 HEAD/RETURN 注入。
+ *   根因：send(Packet) 方法定义在父类 ClientCommonPacketListenerImpl 中，
+ *   @Mixin(ClientPacketListener.class) 对继承方法的注入静默失效，
+ *   导致秒切逻辑从未执行。现改为由 TpAura 直接调用 QuickSwitchFeature 的
+ *   beforeAttack() / afterAttack()，时序可控，100% 可靠。
  */
 @OnlyIn(Dist.CLIENT)
 @Mixin(ClientPacketListener.class)

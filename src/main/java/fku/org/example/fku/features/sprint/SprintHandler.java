@@ -39,8 +39,17 @@ import net.minecraftforge.fml.common.Mod;
 public class SprintHandler {
 
     private static final Minecraft mc = Minecraft.getInstance();
-    private static boolean enabled = false;
     private static final boolean DEBUG = false;
+
+    /** 从持久化配置读取 */
+    private static boolean enabled() { return SprintConfig.getInstance().enabled; }
+    private static void setEnabledPersist(boolean v) {
+        SprintConfig cfg = SprintConfig.getInstance();
+        cfg.enabled = v;
+        SprintConfig.save();
+    }
+    /** isEnabled 委托到 config（支持重开恢复） */
+    public static boolean isEnabled() { return enabled(); }
 
     // ════════════════════════════════════════════════════════
     // ★ CHANGE_LOOK 状态
@@ -73,12 +82,10 @@ public class SprintHandler {
     // ★ 公开接口
     // ════════════════════════════════════════════════════════
 
-    public static boolean isEnabled() { return enabled; }
-
     public static void setEnabled(boolean value) {
         if (DEBUG) System.out.println("[Sprint] setEnabled: " + value);
-        enabled = value;
-        if (!enabled) {
+        setEnabledPersist(value);
+        if (!value) {
             if (mc.player != null) {
                 mc.player.setSprinting(false);
             }
@@ -105,7 +112,7 @@ public class SprintHandler {
             yawModified = false;
             overrideInputThisTick = false;
 
-            if (!enabled) return;
+            if (!isEnabled()) return;
 
             switch (cfg.getMode()) {
                 case LEGIT -> handleLegit(cfg);

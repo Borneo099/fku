@@ -1,5 +1,6 @@
 package fku.org.example.fku.features.knockback; /* water */
 
+import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.TickEvent;
@@ -44,5 +45,6 @@ public class KnockbackFeature {
         if (event.phase != TickEvent.Phase.END) return;
 
         FakeRotationManager.tick();
+        QuickSwitchFeature.tick(); // ★ 秒切恢复定时器（照搬击退方向模式）
     }
 }
