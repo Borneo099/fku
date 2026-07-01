@@ -43,8 +43,7 @@ public class QuickSwitchComponent extends GuiComponent {
 
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
         String modeLabel = switch (cfg.mode) {
-            case "SILENT" -> "静默";
-            case "NINE_SLOT" -> "九切";
+            case "SMART" -> "智能";
             case "CUSTOM" -> "自定义";
             default -> "关闭";
         };

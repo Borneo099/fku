@@ -8,26 +8,24 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * QuickSwitch（鬼手秒切）配置类（JSON 持久化）
  *
  * ★ 职责：
- *   管理秒切功能的开关、模式、自定义物品列表、恢复行为等配置项。
+ *   管理秒切功能的开关、模式、自定义物品列表等配置项。
  *   所有修改即时写入 config/fku/quickswitch.json。
  *
- * ★ 模式说明：
- *   SILENT    — 静默秒切：攻击前切换到武器，攻击后立即恢复原槽位（1次切换+1次攻击）
- *   NINE_SLOT — 在单 Tick 内遍历 9 个热栏槽位，每槽发送一次切换+攻击
- *   CUSTOM    — 遍历用户自定义物品列表
- *   OFF       — 功能关闭
+ * ★ 模式说明（v8 — 纯附魔武器模式）：
+ *   SMART    — 智能秒切：查找附魔评分最高武器 → 切换 → 攻击包发出 → RTT延迟后切回原槽位。不切空手
+ *   CUSTOM   — 自定义模式：按 prioritySlots 顺序切换 → 攻击 → 不切回（常驻自定义武器）
+ *   OFF      — 功能关闭
  *
- * ★ 参考：
- *   Meteor Client AutoSwitch (Silent/Normal) 模式设计
- *   该方法由赛博教员实现
+ * ★ v8 变更（2026-07）：
+ *   - SMART 模式移除空手/无耐久物品切换，直接使用附魔武器攻击
+ *   - 因为空手攻击对大多数实体无伤害且服务器端仍记录耐久消耗
+ *
+ * ★ 该方法由赛博教员实现
  */
 public class QuickSwitchConfig {
 
@@ -40,31 +38,31 @@ public class QuickSwitchConfig {
     public boolean enabled = false;
 
     // ════════ 模式 ════════
-    /** 秒切模式：SILENT / NINE_SLOT / CUSTOM / OFF */
+    /** 秒切模式：SMART / CUSTOM / OFF */
     public String mode = "OFF";
 
-    // ════════ 自定义物品（SILENT/CUSTOM 模式共用） ════════
+    // ════════ 自定义物品（CUSTOM 模式使用） ════════
     /**
      * 自定义物品列表（逗号分隔的注册名）。
-     * SILENT 模式：扫描热栏找到第一个匹配的物品，切换后攻击
-     * CUSTOM 模式：遍历所有匹配物品逐个攻击
+     * CUSTOM 模式：遍历 prioritySlots 中每个槽位，切换后攻击
      * 如 "minecraft:diamond_sword,minecraft:diamond_axe,minecraft:mace"
      */
     public String customItems = "minecraft:diamond_sword,minecraft:diamond_axe,minecraft:mace";
 
-    // ════════ 行为 ════════
-    /** 攻击后是否恢复原槽位（SILENT 模式默认开启） */
-    public boolean restoreSlot = true;
-
     // ════════ 高级 ════════
-    /** 九切模式下每组（切换+攻击）之间的延迟 Tick（0=无延迟，1/2=按Tick分散） */
-    public int burstDelay = 0;
-
     /** 视觉反馈：显示秒切切换消息 */
     public boolean visualFeedback = true;
 
-    /** 优先级槽位列表（CUSTOM 模式：按此顺序切换，如 [0, 2, 4]） */
-    public int[] prioritySlots = new int[]{0, 1, 2};
+    /** 优先级槽位列表（CUSTOM 模式：按此顺序切换，如 [1, 2, 3]） */
+    public int[] prioritySlots = new int[]{1, 2, 3};
+
+    /**
+     * 秒切恢复延迟（毫秒）
+     * 切换武器 → 攻击包到达服务端 → 切回原槽位 之间的等待时间。
+     * 建议值：50~150ms，默认 80ms（约 1.5 个游戏 tick）。
+     * 网络延迟高时可适当调高。
+     */
+    public int rttDelay = 80;
 
     private QuickSwitchConfig() {}
 
@@ -82,6 +80,16 @@ public class QuickSwitchConfig {
                 instance = GSON.fromJson(reader, QuickSwitchConfig.class);
             } catch (IOException e) {
                 getInstance();
+            }
+        }
+        // 兼容旧版配置迁移：若 mode 为旧的 SILENT/NINE_SLOT，自动升级
+        if (instance != null) {
+            if ("SILENT".equals(instance.mode)) {
+                instance.mode = "SMART";
+                save();
+            } else if ("NINE_SLOT".equals(instance.mode)) {
+                instance.mode = "SMART";
+                save();
             }
         }
         getInstance();
@@ -109,5 +117,10 @@ public class QuickSwitchConfig {
     /** 是否为活跃的秒切模式（非 OFF） */
     public boolean isActiveMode() {
         return !"OFF".equals(mode);
+    }
+
+    /** 获取所有可用模式（循环用） */
+    public static String[] getAvailableModes() {
+        return new String[]{"OFF", "SMART", "CUSTOM"};
     }
 }

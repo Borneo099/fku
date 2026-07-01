@@ -17,6 +17,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -36,6 +37,7 @@ import org.lwjgl.glfw.GLFW;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -450,8 +452,29 @@ public class TpAuraFeature {
         int worldMaxY = mc.level.getMaxBuildHeight() - 1;
         if (startPos.y < worldMinY || startPos.y > worldMaxY) return;
 
+        // ★ 天花板检测：V-Clip高度不超天花板下方2格（防穿墙拉回）
+        if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling) {
+            double safeHeight = getSafeCeilingHeight(startPos, reach, cfg.ceilingScanStep);
+            if (safeHeight <= startPos.y + 1) {
+                // 头顶紧贴天花板，V-Clip无意义→回退到不开goUp
+                reach = 0;
+            } else {
+                reach = Math.min(reach, safeHeight - startPos.y);
+            }
+        }
+
         // 计算有效的攻击位置
-        Vec3 finalPos = !invalid(targetPos) ? targetPos : findNearestPos(targetPos);
+        // ★ tpOffset > 0 时：在目标周围随机选择加权安全落点
+        Vec3 finalPos;
+        if (cfg.tpOffset > 0) {
+            finalPos = findRandomLandingPoint(targetPos, cfg.tpOffset, cfg.maxRange);
+            if (finalPos == null) {
+                // 所有候选点都不可用，回退到原逻辑
+                finalPos = !invalid(targetPos) ? targetPos : findNearestPos(targetPos);
+            }
+        } else {
+            finalPos = !invalid(targetPos) ? targetPos : findNearestPos(targetPos);
+        }
         if (finalPos == null) return;
 
         Vec3 highStart = startPos.add(0, reach, 0);
@@ -487,6 +510,14 @@ public class TpAuraFeature {
 
             for (int i = 0; i < attackCount; i++) {
                 int blocks = (i == 0) ? (int) reach : currentHeight;
+
+                // ★ 天花板检测：每次递增后重新计算可用高度
+                if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling && blocks > 0) {
+                    Vec3 currentPos = mc.player != null ? mc.player.position() : startPos;
+                    double safeH = getSafeCeilingHeight(currentPos, blocks, cfg.ceilingScanStep);
+                    if (safeH <= currentPos.y + 1) break; // 已贴天花板
+                    blocks = Math.min(blocks, (int) (safeH - currentPos.y));
+                }
 
                 if (mc.level != null) {
                     int worldTop = mc.level.getMaxBuildHeight() - 1;
@@ -572,8 +603,13 @@ public class TpAuraFeature {
         if (mc.player == null) return;
         if (cfg.returnPos) {
             if ("Paper".equals(cfg.mode) && cfg.goUp) {
-                Vec3 highStart = startPos.add(0, cfg.maxRange, 0);
-                Vec3 highTarget = finalPos.add(0, cfg.maxRange, 0);
+                double returnReach = cfg.maxRange;
+                if (cfg.limitCeiling) {
+                    double safeH = getSafeCeilingHeight(startPos, returnReach, cfg.ceilingScanStep);
+                    returnReach = Math.max(0, safeH - startPos.y);
+                }
+                Vec3 highStart = startPos.add(0, Math.min(cfg.maxRange, returnReach), 0);
+                Vec3 highTarget = finalPos.add(0, Math.min(cfg.maxRange, returnReach), 0);
                 sendMove(highTarget);
                 sendMove(highStart);
             }
@@ -650,6 +686,170 @@ public class TpAuraFeature {
         return null;
     }
 
+    /**
+     * ★ 天花板检测：从 startPos 向上扫描，返回安全传送高度
+     *
+     * 玩家高度1.8格（判定2格），传送点必须在天花板下方至少2格，
+     * 否则头部卡入方块触发服务端拉回。
+     *
+     * @param startPos  起始位置
+     * @param maxHeight 最大扫描高度
+     * @param step      扫描步长（1=精确，2=快速）
+     * @return 安全传送高度（Y坐标），最低不小于 startPos.y
+     */
+    private double getSafeCeilingHeight(Vec3 startPos, double maxHeight, int step) {
+        if (mc.level == null) return startPos.y + maxHeight;
+
+        for (int y = step; y <= (int) maxHeight; y += step) {
+            BlockPos checkPos = BlockPos.containing(startPos.x, startPos.y + y, startPos.z);
+            BlockState state = mc.level.getBlockState(checkPos);
+            if (!state.isAir() && !state.getCollisionShape(mc.level, checkPos).isEmpty()) {
+                // 天花板下方至少留2格给玩家高度（1.8格≈判定2格）
+                return Math.max(startPos.y, startPos.y + y - 2.0);
+            }
+        }
+        return startPos.y + maxHeight;
+    }
+
+    /**
+     * ★ 在目标周围 tpOffset 格范围内随机选择加权安全落点
+     *
+     * 权重优先级（从高到低）：
+     *   1. 无实体 + 无方块阻挡 → 权重最高，首选
+     *   2. 有实体（但无方块）→ 权重中等
+     *   3. 目标实体正上方/旁边 → 权重较低
+     *   4. 有方块阻挡 → 权重最低，尽量避免
+     *
+     * @param center    目标实体位置
+     * @param offset    搜索半径（格）
+     * @return 选中的落点位置，null 表示没有可用点
+     */
+    private Vec3 findRandomLandingPoint(Vec3 center, int offset, double maxRange) {
+        if (mc.level == null || mc.player == null) return null;
+
+        // 收集所有候选点及其权重
+        List<LandingCandidate> candidates = new ArrayList<>();
+        int radius = Math.max(0, offset);
+
+        // 遍历以目标为中心的立方体区域（包含Y轴±1微调）
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    Vec3 testPos = center.add(dx, dy, 0);
+                    // ★ 约束：候选落点不能超出最大TP范围（防瞬移过远）
+                    if (mc.player.distanceToSqr(testPos) > maxRange * maxRange) continue;
+                    LandingCandidate candidate = evaluateLandingPoint(testPos);
+                    if (candidate != null) {
+                        candidates.add(candidate);
+                    }
+                }
+            }
+        }
+
+        if (candidates.isEmpty()) return null;
+
+        // ★ 按权重随机选择：权重越高，被选中概率越大
+        return weightedRandomSelect(candidates);
+    }
+
+    /**
+     * 评估单个落点的安全性和质量，返回候选对象（含权重）
+     * null 表示该点不可用
+     */
+    private LandingCandidate evaluateLandingPoint(Vec3 pos) {
+        if (mc.level == null || mc.player == null) return null;
+
+        // 基础检查：世界边界 + 区块加载
+        BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
+        if (bp.getY() < mc.level.getMinBuildHeight() || bp.getY() >= mc.level.getMaxBuildHeight()) return null;
+        if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return null;
+
+        // ★ 检查方块碰撞
+        boolean hasBlockCollision = checkBlockCollision(pos);
+        if (hasBlockCollision) {
+            // 方块阻挡的点也纳入候选，但给最低权重（极端情况下总比没有好）
+            return new LandingCandidate(pos, 1);
+        }
+
+        // ★ 检查该位置是否有其他实体（排除自己）
+        boolean hasEntity = checkEntityAtPosition(pos);
+
+        // ★ 计算权重
+        int weight;
+        if (!hasEntity) {
+            weight = 100; // 无实体+无方块 → 最佳落点
+        } else {
+            weight = 50;  // 有实体 → 中等权重
+        }
+
+        return new LandingCandidate(pos, weight);
+    }
+
+    /** 检查位置是否有方块碰撞（与 invalid() 同逻辑但不检查岩浆） */
+    private boolean checkBlockCollision(Vec3 pos) {
+        if (mc.level == null || mc.player == null) return true;
+        AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
+        for (BlockPos bPos : BlockPos.betweenClosed(
+                BlockPos.containing(box.minX, box.minY, box.minZ),
+                BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
+            var state = mc.level.getBlockState(bPos);
+            if (!state.getCollisionShape(mc.level, bPos).isEmpty()
+                    || state.getBlock() == net.minecraft.world.level.block.Blocks.LAVA) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 检查位置是否有其他实体存在 */
+    private boolean checkEntityAtPosition(Vec3 pos) {
+        if (mc.level == null || mc.player == null) return false;
+        AABB checkArea = new AABB(pos.x - 0.5, pos.y, pos.z - 0.5,
+                                   pos.x + 0.5, pos.y + 2, pos.z + 0.5);
+        for (Entity e : mc.level.getEntities(null, checkArea)) {
+            if (e != mc.player && e.isAlive()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 加权随机选择 */
+    private Vec3 weightedRandomSelect(List<LandingCandidate> candidates) {
+        if (candidates.isEmpty()) return null;
+        if (candidates.size() == 1) return candidates.get(0).pos;
+
+        // 计算总权重
+        long totalWeight = 0;
+        for (LandingCandidate c : candidates) {
+            totalWeight += c.weight;
+        }
+
+        // 加权随机
+        long rand = ThreadLocalRandom.current().nextLong(totalWeight);
+        long cumulative = 0;
+        for (LandingCandidate c : candidates) {
+            cumulative += c.weight;
+            if (rand < cumulative) {
+                return c.pos;
+            }
+        }
+        // 兜底返回最后一个
+        return candidates.get(candidates.size() - 1).pos;
+    }
+
+    /**
+     * 落点候选内部类：位置 + 权重
+     */
+    private static class LandingCandidate {
+        final Vec3 pos;
+        final int weight;
+        LandingCandidate(Vec3 pos, int weight) {
+            this.pos = pos;
+            this.weight = weight;
+        }
+    }
+
     /** 查找最近的有效目标 */
     private Entity findTarget(TpAuraConfig cfg) {
         if (mc.level == null || mc.player == null) return null;
@@ -662,7 +862,9 @@ public class TpAuraFeature {
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (!entityFilter(entity, cfg, allowedTypes)) continue;
             double dist = mc.player.distanceTo(entity);
-            if (dist < bestDist && dist <= cfg.maxRange) {
+            // ★ 玩家目标使用 attackDistance（攻击距离），其他实体使用 maxRange
+            double effectiveRange = (entity instanceof Player) ? cfg.attackDistance : cfg.maxRange;
+            if (dist < bestDist && dist <= effectiveRange) {
                 bestDist = dist;
                 best = entity;
             }
@@ -681,6 +883,9 @@ public class TpAuraFeature {
         }
 
         if (mc.player.distanceTo(entity) > cfg.maxRange) return false;
+
+        // ★ 玩家额外使用 attackDistance 限制
+        if (entity instanceof Player && mc.player.distanceTo(entity) > cfg.attackDistance) return false;
 
         // 忽略条件
         if (cfg.ignoreNamed && entity.hasCustomName()) return false;

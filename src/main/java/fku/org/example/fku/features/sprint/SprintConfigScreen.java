@@ -10,6 +10,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Supplier;
+
 /**
  * 强制疾跑配置界面
  *
@@ -168,9 +170,9 @@ public class SprintConfigScreen extends Screen {
         ).bounds(cx + COL_WIDGET, cy(ROW_MODE), 85, 18).build());
 
         // ── 忽略条件 ──
-        addToggle(cy(ROW_IGNORE_BLINDNESS), cfg.ignoreBlindness, v -> cfg.ignoreBlindness = v);
-        addToggle(cy(ROW_IGNORE_HUNGER), cfg.ignoreHunger, v -> cfg.ignoreHunger = v);
-        addToggle(cy(ROW_IGNORE_COLLISION), cfg.ignoreCollision, v -> cfg.ignoreCollision = v);
+        addToggle(cy(ROW_IGNORE_BLINDNESS), () -> cfg.ignoreBlindness, v -> cfg.ignoreBlindness = v);
+        addToggle(cy(ROW_IGNORE_HUNGER), () -> cfg.ignoreHunger, v -> cfg.ignoreHunger = v);
+        addToggle(cy(ROW_IGNORE_COLLISION), () -> cfg.ignoreCollision, v -> cfg.ignoreCollision = v);
     }
 
     // ════════════════════════════════════════════════════════════
@@ -181,14 +183,14 @@ public class SprintConfigScreen extends Screen {
         int cx = cx();
 
         // ── Legit 模式选项 ──
-        addToggle(cy(ROW_STOP_GROUND), cfg.stopOnGround, v -> cfg.stopOnGround = v);
-        addToggle(cy(ROW_STOP_AIR), cfg.stopOnAir, v -> cfg.stopOnAir = v);
+        addToggle(cy(ROW_STOP_GROUND), () -> cfg.stopOnGround, v -> cfg.stopOnGround = v);
+        addToggle(cy(ROW_STOP_AIR), () -> cfg.stopOnAir, v -> cfg.stopOnAir = v);
 
         // ── 鞘翅旋转修正 ──
-        addToggle(cy(ROW_ELYTRA), cfg.elytraRotation, v -> cfg.elytraRotation = v);
+        addToggle(cy(ROW_ELYTRA), () -> cfg.elytraRotation, v -> cfg.elytraRotation = v);
 
         // ── 平滑旋转开关 + 速度输入 ──
-        addToggle(cy(ROW_SMOOTH_SWITCH), cfg.smoothRotation, v -> {
+        addToggle(cy(ROW_SMOOTH_SWITCH), () -> cfg.smoothRotation, v -> {
             cfg.smoothRotation = v;
             SprintConfig.save();
             rebuildWidgets();
@@ -209,13 +211,13 @@ public class SprintConfigScreen extends Screen {
     // ★ 辅助方法
     // ════════════════════════════════════════════════════════════
 
-    /** 添加开关按钮（即时保存，不触发 rebuildWidgets） */
-    private void addToggle(int y, boolean currentValue, java.util.function.Consumer<Boolean> setter) {
+    /** 添加开关按钮（即时保存，使用 Supplier 实时读取当前值，不会因 lambda 闭包过时而失效） */
+    private void addToggle(int y, Supplier<Boolean> getter, java.util.function.Consumer<Boolean> setter) {
         int cx = cx();
         addRenderableWidget(Button.builder(
-            Component.literal(currentValue ? "开" : "关"),
+            Component.literal(getter.get() ? "开" : "关"),
             btn -> {
-                boolean newVal = !currentValue;
+                boolean newVal = !getter.get();
                 setter.accept(newVal);
                 SprintConfig.save();
                 btn.setMessage(Component.literal(newVal ? "开" : "关"));

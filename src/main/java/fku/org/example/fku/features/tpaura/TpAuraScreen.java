@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public class TpAuraScreen extends Screen {
 
     private static final int WIDTH = 340;
-    private static final int HEIGHT = 520;
+    private static final int HEIGHT = 540;
 
     // ════════ 行偏移常量（重新排版，间距保持整齐） ════════
     private static final int ROW_TITLE = 10;
@@ -36,22 +36,26 @@ public class TpAuraScreen extends Screen {
     private static final int ROW_SWING = 118;
     private static final int ROW_MODE = 144;
     private static final int ROW_RANGE = 170;
-    private static final int ROW_TRANSPORT = 198;
-    private static final int ROW_RENDER = 224;
-    private static final int ROW_ALL_ENTITIES = 250;      // ★ 新增：全生物开关
-    private static final int ROW_ENTITY_TYPES = 276;
-    private static final int ROW_IGNORE = 306;
-    private static final int ROW_WHITELIST = 330;
-    private static final int ROW_WHITELIST_INPUT = 356;
-    private static final int ROW_HOTKEY = 390;
-    private static final int ROW_TOTEM = 414;
-    private static final int ROW_TOTEM_INPUT = 440;
-    private static final int ROW_BUTTONS = 470;
+    private static final int ROW_TRANSPORT = 198;           // V-Clip + 回传按钮
+    private static final int ROW_CEILING = 226;              // ★ 天花板限制开关 + 步长
+    private static final int ROW_TRANSPORT_INPUTS = 254;     // 攻击距离 + TP偏移输入框
+    private static final int ROW_RENDER = 280;               // 渲染开关
+    private static final int ROW_ALL_ENTITIES = 306;
+    private static final int ROW_ENTITY_TYPES = 332;
+    private static final int ROW_IGNORE = 362;
+    private static final int ROW_WHITELIST = 386;
+    private static final int ROW_WHITELIST_INPUT = 412;
+    private static final int ROW_HOTKEY = 446;
+    private static final int ROW_TOTEM = 470;
+    private static final int ROW_TOTEM_INPUT = 496;
+    private static final int ROW_BUTTONS = 518;
 
     // ════════ 控件 ════════
     private EditBox cooldownInput;
     private EditBox delayInput;
     private EditBox rangeInput;
+    private EditBox attackDistInput;
+    private EditBox tpOffsetInput;
     private EditBox packetsInput;
     private EditBox totemAtkInput;
     private EditBox totemHeightInput;
@@ -161,6 +165,20 @@ public class TpAuraScreen extends Screen {
         packetsInput.setFilter(s -> s.matches("\\d*"));
         addRenderableWidget(packetsInput);
 
+        // ── 玩家攻击距离 (3~6) ──
+        attackDistInput = new EditBox(font, cx + 80, cy(ROW_TRANSPORT_INPUTS), 50, 14, Component.literal(""));
+        attackDistInput.setValue(String.valueOf(cfg.attackDistance));
+        attackDistInput.setMaxLength(1);
+        attackDistInput.setFilter(s -> s.isEmpty() || s.matches("[3-6]"));
+        addRenderableWidget(attackDistInput);
+
+        // ── TP落点偏移 (0~6) ──
+        tpOffsetInput = new EditBox(font, cx + 200, cy(ROW_TRANSPORT_INPUTS), 50, 14, Component.literal(""));
+        tpOffsetInput.setValue(String.valueOf(cfg.tpOffset));
+        tpOffsetInput.setMaxLength(1);
+        tpOffsetInput.setFilter(s -> s.isEmpty() || s.matches("[0-6]"));
+        addRenderableWidget(tpOffsetInput);
+
         // ── V-Clip + 回传 ──
         goUpButton = toggleButton(cx + 10, cy(ROW_TRANSPORT), 90, "V-Clip",
                 () -> cfg.goUp, v -> cfg.setGoUp(v));
@@ -168,6 +186,12 @@ public class TpAuraScreen extends Screen {
         returnPosButton = toggleButton(cx + 110, cy(ROW_TRANSPORT), 110, "攻击后回传",
                 () -> cfg.returnPos, v -> cfg.setReturnPos(v));
         addRenderableWidget(returnPosButton);
+
+        // ── 天花板限制 + 扫描步长 ──
+        addRenderableWidget(toggleButton(cx + 10, cy(ROW_CEILING), 120, "限制天花板",
+                () -> cfg.limitCeiling, v -> cfg.setLimitCeiling(v)));
+        addRenderableWidget(toggleButton(cx + 140, cy(ROW_CEILING), 110, "精细扫描",
+                () -> cfg.ceilingScanStep == 1, v -> cfg.setCeilingScanStep(v ? 1 : 2)));
 
         // ── 偏移同步 + 显示路径 ──
         offsetFixButton = toggleButton(cx + 10, cy(ROW_RENDER), 110, "偏移同步",
@@ -428,6 +452,18 @@ public class TpAuraScreen extends Screen {
         // ── 模式说明 ──
         g.drawString(font, "§7| Paper=垫包+上升 | Vanilla=仅瞬移", cx + 165, cy(ROW_MODE + 2), 0x666666);
 
+        // ── 天花板提示 ──
+        g.drawString(font, "§7限制天花板: 传送高度不超天花板下2格(防拉回)", cx + 10, cy(ROW_CEILING + 18), 0x666666);
+        if (cfg.limitCeiling) {
+            g.drawString(font, "§7扫描步长1=精确 2=快速", cx + 255, cy(ROW_CEILING + 2), 0x666666);
+        }
+
+        // ── 攻击距离 + TP偏移 ──
+        g.drawString(font, "攻击距离:", cx + 10, cy(ROW_TRANSPORT_INPUTS), 0xAAAAAA);
+        g.drawString(font, "§7(3~6)", cx + 132, cy(ROW_TRANSPORT_INPUTS), 0x666666);
+        g.drawString(font, "TP落点偏:", cx + 155, cy(ROW_TRANSPORT_INPUTS), 0xAAAAAA);
+        g.drawString(font, "§7(0~6)格", cx + 252, cy(ROW_TRANSPORT_INPUTS), 0x666666);
+
         super.render(g, mx, my, pt);
     }
 
@@ -436,6 +472,8 @@ public class TpAuraScreen extends Screen {
         if (cooldownInput.mouseClicked(mx, my, button)) { setEditBoxFocus(cooldownInput); return true; }
         if (delayInput.mouseClicked(mx, my, button)) { setEditBoxFocus(delayInput); return true; }
         if (rangeInput.mouseClicked(mx, my, button)) { setEditBoxFocus(rangeInput); return true; }
+        if (attackDistInput.mouseClicked(mx, my, button)) { setEditBoxFocus(attackDistInput); return true; }
+        if (tpOffsetInput.mouseClicked(mx, my, button)) { setEditBoxFocus(tpOffsetInput); return true; }
         if (packetsInput.mouseClicked(mx, my, button)) { setEditBoxFocus(packetsInput); return true; }
         if (totemAtkInput.mouseClicked(mx, my, button)) { setEditBoxFocus(totemAtkInput); return true; }
         if (totemHeightInput.mouseClicked(mx, my, button)) { setEditBoxFocus(totemHeightInput); return true; }
@@ -446,6 +484,8 @@ public class TpAuraScreen extends Screen {
         cooldownInput.setFocused(false);
         delayInput.setFocused(false);
         rangeInput.setFocused(false);
+        attackDistInput.setFocused(false);
+        tpOffsetInput.setFocused(false);
         packetsInput.setFocused(false);
         totemAtkInput.setFocused(false);
         totemHeightInput.setFocused(false);
@@ -471,6 +511,8 @@ public class TpAuraScreen extends Screen {
         if (cooldownInput.isFocused() && cooldownInput.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (delayInput.isFocused() && delayInput.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (rangeInput.isFocused() && rangeInput.keyPressed(keyCode, scanCode, modifiers)) return true;
+        if (attackDistInput.isFocused() && attackDistInput.keyPressed(keyCode, scanCode, modifiers)) return true;
+        if (tpOffsetInput.isFocused() && tpOffsetInput.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (packetsInput.isFocused() && packetsInput.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (totemAtkInput.isFocused() && totemAtkInput.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (totemHeightInput.isFocused() && totemHeightInput.keyPressed(keyCode, scanCode, modifiers)) return true;
@@ -483,6 +525,8 @@ public class TpAuraScreen extends Screen {
         if (cooldownInput.isFocused() && cooldownInput.charTyped(codePoint, modifiers)) return true;
         if (delayInput.isFocused() && delayInput.charTyped(codePoint, modifiers)) return true;
         if (rangeInput.isFocused() && rangeInput.charTyped(codePoint, modifiers)) return true;
+        if (attackDistInput.isFocused() && attackDistInput.charTyped(codePoint, modifiers)) return true;
+        if (tpOffsetInput.isFocused() && tpOffsetInput.charTyped(codePoint, modifiers)) return true;
         if (packetsInput.isFocused() && packetsInput.charTyped(codePoint, modifiers)) return true;
         if (totemAtkInput.isFocused() && totemAtkInput.charTyped(codePoint, modifiers)) return true;
         if (totemHeightInput.isFocused() && totemHeightInput.charTyped(codePoint, modifiers)) return true;
@@ -493,6 +537,8 @@ public class TpAuraScreen extends Screen {
         try { cfg.setCooldownThreshold(Double.parseDouble(cooldownInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setAttackDelay(Integer.parseInt(delayInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setMaxRange(Double.parseDouble(rangeInput.getValue())); } catch (Exception ignored) {}
+        try { cfg.setAttackDistance(Integer.parseInt(attackDistInput.getValue())); } catch (Exception ignored) {}
+        try { cfg.setTpOffset(Integer.parseInt(tpOffsetInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setPaperPackets(Integer.parseInt(packetsInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setTotemAttacks(Integer.parseInt(totemAtkInput.getValue())); } catch (Exception ignored) {}
         try { cfg.setTotemHeightIncrease(Integer.parseInt(totemHeightInput.getValue())); } catch (Exception ignored) {}

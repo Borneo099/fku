@@ -47,6 +47,10 @@ public class TpAuraConfig {
     public boolean goUp = true;
     /** 垫包数量 (1~20) */
     public int paperPackets = 8;
+    /** 限制天花板高度：传送高度不超过天花板下方2格（防穿墙拉回） */
+    public boolean limitCeiling = true;
+    /** 天花板扫描步长 (1~2)：1=精确但略耗性能，2=快速但可能漏检薄天花板 */
+    public int ceilingScanStep = 1;
     /** 攻击后回传 */
     public boolean returnPos = true;
     /** 偏移同步 */
@@ -57,6 +61,10 @@ public class TpAuraConfig {
     public boolean attackAllEntities = true;
     /** 目标实体类型（逗号分隔，如 PLAYER, ZOMBIE） */
     public String entityTypes = "PLAYER";
+    /** 玩家攻击距离 (3~6)：仅对玩家目标生效，实际攻击时TP到该距离内 */
+    public int attackDistance = 3;
+    /** TP落点偏移 (0~6)：在目标周围tpOffset格范围内随机选择安全落点 */
+    public int tpOffset = 0;
     public boolean ignoreFriends = false;
     public boolean ignoreNamed = true;
     public boolean ignoreTamed = false;
@@ -164,10 +172,14 @@ public class TpAuraConfig {
     public void setMaxRange(double v) { this.maxRange = Math.max(1, Math.min(99, v)); save(); }
     public void setGoUp(boolean v) { this.goUp = v; save(); }
     public void setPaperPackets(int v) { this.paperPackets = Math.max(1, Math.min(20, v)); save(); }
+    public void setLimitCeiling(boolean v) { this.limitCeiling = v; save(); }
+    public void setCeilingScanStep(int v) { this.ceilingScanStep = Math.max(1, Math.min(2, v)); save(); }
     public void setReturnPos(boolean v) { this.returnPos = v; save(); }
     public void setOffsetFix(boolean v) { this.offsetFix = v; save(); }
     public void setEntityTypes(String v) { this.entityTypes = (v != null && !v.isEmpty()) ? v : "player"; save(); }
     public void setAttackAllEntities(boolean v) { this.attackAllEntities = v; save(); }
+    public void setAttackDistance(int v) { this.attackDistance = Math.max(3, Math.min(6, v)); save(); }
+    public void setTpOffset(int v) { this.tpOffset = Math.max(0, Math.min(6, v)); save(); }
     public void setIgnoreFriends(boolean v) { this.ignoreFriends = v; save(); }
     public void setIgnoreNamed(boolean v) { this.ignoreNamed = v; save(); }
     public void setIgnoreTamed(boolean v) { this.ignoreTamed = v; save(); }

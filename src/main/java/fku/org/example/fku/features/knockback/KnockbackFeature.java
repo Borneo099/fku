@@ -45,6 +45,7 @@ public class KnockbackFeature {
         if (event.phase != TickEvent.Phase.END) return;
 
         FakeRotationManager.tick();
-        QuickSwitchFeature.tick(); // ★ 秒切恢复定时器（照搬击退方向模式）
+        // ★ 状态机秒切：tick 驱动状态机（切换到切回的延迟等待）
+        QuickSwitchFeature.tick();
     }
 }

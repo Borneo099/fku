@@ -15,29 +15,22 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
  * MixinConnectionAttackInterceptor — 在 Connection.send() 层拦截攻击包
  *
  * ★ 职责：
- *   当 ServerboundInteractPacket（攻击包）即将发送到网络时，
- *   通过 netty channel 直接发送 pending 的假旋转+假位置包，
- *   确保 PosRot 包在攻击包之前到达服务端。
+ *   攻击包发出前，通过 netty channel 发送假旋转包和秒切换包。
  *
- * ★ 设计思想（抓主要矛盾：时序精度）：
- *   旧方案（MixinMultiPlayerGameMode at HEAD）虽然先发 PosRot 再 attack()，
- *   但在跨服场景下，两个包可能因网络排队/反代重新排序而乱序。
+ * ★ v6 变更（状态机版）：
+ *   - 秒切调用 QuickSwitchFeature.onAttackPacket(channel) 状态机入口
+ *   - 不再有 RETURN 注入（状态机由 ClientTick 驱动）
  *
- *   新方案在 Connection.send() 的 HEAD 注入，这是包离开客户端前的最后一道关卡。
- *   通过 channel.writeAndFlush() 直接将 PosRot 写入 netty 管道，
- *   确保物理顺序上 PosRot 紧贴攻击包前发出，显著提高跨服可靠性。
- *
- * ★ 注意（否定之否定）：
- *   不能使用 connection.send() 发送 PosRot 包（会触发本 Mixin 递归），
- *   必须通过 @Shadow channel 直接 writeAndFlush。
- *
- * ★ 参考：
- *   Connection 类的 send() 方法源码
- *   net.minecraft.network.Connection#send(Packet)
+ * ★ 设计思想：
+ *   channel.writeAndFlush 确保切换包在攻击包之前写入 netty 管道。
+ *   攻击包由 Connection.send() 正常发送。
+ *   切回包由状态机在延迟后通过 connection.send() 发送。
  */
 @OnlyIn(Dist.CLIENT)
 @Mixin(Connection.class)
@@ -46,52 +39,51 @@ public abstract class MixinConnectionAttackInterceptor {
     @Shadow
     private Channel channel;
 
-    /**
-     * 内部递归保护锁
-     * 防止 writeAndFlush(pendingPosRot) → channel.write → pipeline → send() → 再次触发本 Mixin
-     */
     @Unique
     private static boolean fku$sendingPending = false;
 
     /**
- * 在 Connection.send(Packet) HEAD 注入
- *
- * 检测到攻击包 + 有 pending 假旋转 → 通过 channel 直发假旋转
- */
-@Inject(
-        method = "send(Lnet/minecraft/network/protocol/Packet;)V",
-        at = @At(value = "HEAD")
-        ,
-        cancellable = true
-)
-private void fku$onSendPacket(Packet<?> packet, CallbackInfo ci) {
-    // ★ 递归保护
-    if (fku$sendingPending) return;
-    // ★ 只拦截 ServerboundInteractPacket（攻击/交互包），其他包放行
-    if (!(packet instanceof ServerboundInteractPacket)) return;
+     * HEAD 注入：攻击包发出前，写入假旋转/秒切换包
+     *
+     * ★ 冗余发送优化（抗网络延迟）：
+     *   假旋转 PosRot 包发送 2~3 份（相同角度），即使某份因网络抖动延迟，
+     *   备份份仍能覆盖攻击包到达的时间窗口，提高击退方向控制成功率。
+     */
+    @Inject(
+            method = "send(Lnet/minecraft/network/protocol/Packet;)V",
+            at = @At(value = "HEAD"),
+            cancellable = true
+    )
+    private void fku$onSendPacket(Packet<?> packet, CallbackInfo ci) {
+        if (fku$sendingPending) return;
+        if (!(packet instanceof ServerboundInteractPacket)) return;
 
-    boolean hasRotation = FakeRotationManager.hasPending();
-    boolean hasQuickSwitch = QuickSwitchFeature.canHandle();
+        boolean hasRotation = FakeRotationManager.hasPending();
+        // ★ 状态机：仅 IDLE 状态下才走秒切
+        boolean hasQuickSwitch = QuickSwitchFeature.isIdle() && QuickSwitchFeature.isEnabled();
 
-    if (!hasRotation && !hasQuickSwitch) return;
+        if (!hasRotation && !hasQuickSwitch) return;
 
-    // ★ 通过 netty channel 直接发送假旋转/秒切换包，确保在攻击包前到达服务端
-    fku$sendingPending = true;
-    try {
-        Channel ch = this.channel;
-        if (ch != null && ch.isOpen()) {
-            if (hasRotation) {
-                ch.writeAndFlush(FakeRotationManager.createPendingPacket());
-                FakeRotationManager.clearPending();
+        fku$sendingPending = true;
+        try {
+            Channel ch = this.channel;
+            if (ch != null && ch.isOpen()) {
+                if (hasRotation) {
+                    // ★ 冗余发送：2~3 份相同角度的假旋转包
+                    int burstCount = 2 + ThreadLocalRandom.current().nextInt(2); // 2 或 3
+                    for (int i = 0; i < burstCount; i++) {
+                        ch.writeAndFlush(FakeRotationManager.createPendingPacket());
+                    }
+                    FakeRotationManager.clearPending();
+                }
+                // ★ 状态机入口：channel 传入，在内部发切换包
+                if (hasQuickSwitch) {
+                    QuickSwitchFeature.onAttackPacket(ch);
+                }
             }
-            if (hasQuickSwitch) {
-                QuickSwitchFeature.handlePreAttackViaChannel(ch);
-            }
+        } catch (Exception ignored) {
+        } finally {
+            fku$sendingPending = false;
         }
-    } catch (Exception ignored) {
-        // channel 异常不影响攻击包正常发送
-    } finally {
-        fku$sendingPending = false;
     }
-}
 }

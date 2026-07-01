@@ -5,7 +5,6 @@ import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -17,11 +16,11 @@ import org.jetbrains.annotations.NotNull;
  *   提供完整的秒切配置修改界面，遵循 ClickGUI 风格（带面板边框）。
  *   所有修改即时保存到 QuickSwitchConfig 并持久化到 config/fku/quickswitch.json。
  *
- * ★ 版本变更 v2：
- *   - 新增 SILENT（静默秒切）模式选项
- *   - 自定义物品列表改为按钮→弹出 MultiLineEditBox 大编辑界面
- *     （参考 BedrockBreaker.HelperBlockListScreen）
- *   - 模式循环: OFF → SILENT → NINE_SLOT → CUSTOM → OFF
+ * ★ 版本变更 v3：
+ *   - SILENT 改名为 SMART（智能秒切：自动查找攻击力最高武器）
+ *   - 删除 NINE_SLOT（九切）模式
+ *   - 模式循环: OFF → SMART → CUSTOM → OFF
+ *   - 删除爆裂延迟（不再需要延迟逻辑）
  *
  * ★ 界面由赛博教员实现
  */
@@ -34,14 +33,10 @@ public class QuickSwitchConfigScreen extends Screen {
     private static final int ROW_TITLE = 10;
     private static final int ROW_MODE = 36;
     private static final int ROW_CUSTOM_ITEMS = 66;
-    private static final int ROW_RESTORE = 96;
-    private static final int ROW_BURST = 126;
-    private static final int ROW_VISUAL = 156;
-    private static final int ROW_BUTTONS = 196;
+    private static final int ROW_VISUAL = 96;
+    private static final int ROW_BUTTONS = 126;
 
     private Button modeButton;
-    private Button restoreButton;
-    private EditBox burstDelayInput;
     private Button visualButton;
 
     private final QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
@@ -73,25 +68,7 @@ public class QuickSwitchConfigScreen extends Screen {
                 btn -> Minecraft.getInstance().setScreen(new QuickSwitchCustomItemsScreen(this))
         ).bounds(cx + 10, cy(ROW_CUSTOM_ITEMS), 160, 18).build());
 
-        // ── 行3：恢复原槽位 ──
-        restoreButton = Button.builder(
-                Component.literal("恢复原槽位: " + (cfg.restoreSlot ? "开" : "关")),
-                btn -> {
-                    cfg.restoreSlot = !cfg.restoreSlot;
-                    cfg.save();
-                    btn.setMessage(Component.literal("恢复原槽位: " + (cfg.restoreSlot ? "开" : "关")));
-                }
-        ).bounds(cx + 10, cy(ROW_RESTORE), 160, 18).build();
-        addRenderableWidget(restoreButton);
-
-        // ── 行4：爆裂延迟 ──
-        burstDelayInput = new EditBox(font, cx + 120, cy(ROW_BURST + 14), 50, 14, Component.literal(""));
-        burstDelayInput.setValue(String.valueOf(cfg.burstDelay));
-        burstDelayInput.setMaxLength(2);
-        burstDelayInput.setFilter(s -> s.matches("\\d*"));
-        addRenderableWidget(burstDelayInput);
-
-        // ── 行5：视觉反馈 ──
+        // ── 行3：视觉反馈 ──
         visualButton = Button.builder(
                 Component.literal("视觉反馈: " + (cfg.visualFeedback ? "开" : "关")),
                 btn -> {
@@ -124,9 +101,8 @@ public class QuickSwitchConfigScreen extends Screen {
         // ── 模式说明 ──
         g.drawString(font, "秒切模式:", cx + 10, cy(ROW_MODE + 1), 0xAAAAAA);
         String modeDesc = switch (cfg.mode) {
-            case "SILENT" -> "静默秒切: 攻击前切武器, 攻击后立即恢复";
-            case "NINE_SLOT" -> "九切: 遍历9个热栏槽位发送攻击";
-            case "CUSTOM" -> "自定义: 遍历自定义物品列表中物品发送攻击";
+            case "SMART" -> "智能秒切: 附魔优先! 有附魔物品>无附魔, 选附魔评分最高者直接攻击";
+            case "CUSTOM" -> "自定义: 按 prioritySlots 顺序秒切后立即切回";
             default -> "关闭: 功能未启用";
         };
         g.drawString(font, "§7" + modeDesc, cx + 175, cy(ROW_MODE + 2), 0x666666);
@@ -135,15 +111,8 @@ public class QuickSwitchConfigScreen extends Screen {
         g.drawString(font, "自定义物品列表:", cx + 10, cy(ROW_CUSTOM_ITEMS + 17), 0xAAAAAA);
         g.drawString(font, "§7(点击按钮打开大编辑界面)", cx + 180, cy(ROW_CUSTOM_ITEMS + 17), 0x666666);
 
-        // ── 恢复原槽位说明 ──
-        g.drawString(font, "§7SILENT/九切/自定义模式攻击后是否切回原槽", cx + 175, cy(ROW_RESTORE + 2), 0x666666);
-
-        // ── 爆裂延迟说明 ──
-        g.drawString(font, "爆裂延迟:", cx + 10, cy(ROW_BURST + 1), 0xAAAAAA);
-        g.drawString(font, "§7每组切换+攻击间的延迟Tick (0~2)", cx + 175, cy(ROW_BURST + 15), 0x666666);
-
         // ── 使用提示 ──
-        g.drawString(font, "§7左键组件开关/右键打开配置  |  自定义物品列表对所有模式生效", cx + 10, cy(ROW_BUTTONS - 12), 0x666666);
+        g.drawString(font, "§7左键组件开关/右键打开配置  |  所有模式秒切后立即切回原槽位", cx + 10, cy(ROW_BUTTONS - 12), 0x666666);
 
         super.render(g, mx, my, pt);
     }
@@ -167,8 +136,7 @@ public class QuickSwitchConfigScreen extends Screen {
 
     private String getModeLabel(String mode) {
         return switch (mode) {
-            case "SILENT" -> "静默秒切";
-            case "NINE_SLOT" -> "九切";
+            case "SMART" -> "智能秒切";
             case "CUSTOM" -> "自定义";
             default -> "关闭";
         };
@@ -176,25 +144,24 @@ public class QuickSwitchConfigScreen extends Screen {
 
     private String cycleMode(String current) {
         return switch (current) {
-            case "OFF" -> "SILENT";
-            case "SILENT" -> "NINE_SLOT";
-            case "NINE_SLOT" -> "CUSTOM";
+            case "OFF" -> "SMART";
+            case "SMART" -> "CUSTOM";
             case "CUSTOM" -> "OFF";
             default -> "OFF";
         };
     }
 
     private void saveConfig() {
-        // 保存爆裂延迟
-        try {
-            int d = Integer.parseInt(burstDelayInput.getValue());
-            cfg.burstDelay = Math.max(0, Math.min(2, d));
-        } catch (NumberFormatException ignored) {}
-
         cfg.save();
     }
 
-    /** 计算相对于面板顶部的 Y 坐标 */
+    /**
+     * ★ 布局规范（随配置项调整，当前已移除 restoreSlot 和 burstDelay）：
+     *   - 行1：秒切模式选择
+     *   - 行2：自定义物品列表编辑
+     *   - 行3：视觉反馈开关
+     *   - 底部：完成按钮
+     */
     private int cy(int rowOffset) {
         return (height - HEIGHT) / 2 + rowOffset;
     }
