@@ -17,6 +17,7 @@ import fku.org.example.fku.features.pearlphase.PearlPhaseFeature;
 import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import fku.org.example.fku.features.loot.LootConfig;
 import fku.org.example.fku.features.loot.LootFeature;
+import fku.org.example.fku.features.worldedit.WorldEditFeature;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -49,6 +50,7 @@ public class Fku
         MinecraftForge.EVENT_BUS.register(PearlPhaseFeature.class);
         MinecraftForge.EVENT_BUS.register(FakePlayerFeature.class);
         // KillFXFeature 使用 @Mod.EventBusSubscriber 自动注册，无需手动 register
+        // WorldEditFeature 也使用 @Mod.EventBusSubscriber 自动注册
     }
 
     private void commonSetup(final FMLCommonSetupEvent event)
@@ -70,5 +72,6 @@ public class Fku
         SprintHandler.init();
         FakePlayerFeature.init();
         QuickSwitchFeature.init();
+        WorldEditFeature.init();
     }
 }
