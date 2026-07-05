@@ -4,13 +4,19 @@ import fku.org.example.fku.Fku;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
+import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -48,18 +54,32 @@ public class TaskQueue {
 
     /**
      * 添加批量设置任务
+     * targetState=air → 改为 BREAK 操作（破坏方块）
      */
     public void submitSet(List<BlockPos> positions, BlockState targetState, String commandName) {
         List<BlockSnapshot> snapshots = new ArrayList<>();
+        boolean isAir = targetState.isAir();
 
         for (BlockPos pos : positions) {
             if (mc.level == null) continue;
             BlockState oldState = mc.level.getBlockState(pos);
             snapshots.add(new BlockSnapshot(pos, oldState, null));
-            queue.add(new BlockOperation(pos, targetState, null, BlockOperation.Type.SET));
+            queue.add(new BlockOperation(pos, targetState, null, isAir ? BlockOperation.Type.BREAK : BlockOperation.Type.SET));
         }
 
         HistoryManager.getInstance().pushSnapshot(snapshots);
+
+        // ★ 如果是放置操作，确保物品在快捷栏（自动 give）
+        if (!isAir) {
+            ItemStack item = findItemForBlock(targetState);
+            if (!item.isEmpty()) {
+                int slot = ensureInHotbarSlot(item.getItem());
+                if (slot >= 0 && originalSlot < 0) {
+                    originalSlot = mc.player != null ? mc.player.getInventory().selected : -1;
+                }
+            }
+        }
+
         startQueue(commandName);
     }
 
@@ -150,64 +170,152 @@ public class TaskQueue {
     private void executeOperation(BlockOperation op) {
         if (mc.player == null || mc.level == null) return;
 
+        boolean isCreative = mc.player.getAbilities().instabuild;
+
         switch (op.type) {
             case SET:
             case REPLACE:
+                // 先破坏已有方块，再放置目标方块
+                breakBlockPacket(op.pos, isCreative);
+                if (op.targetState != null && !op.targetState.isAir()) {
+                    placeBlockPacket(op.pos, op.targetState, false);
+                }
+                break;
             case PASTE:
-                placeBlockPacket(op.pos, op.targetState);
+                // 粘贴：先破坏，再带朝向放置
+                breakBlockPacket(op.pos, isCreative);
+                if (op.targetState != null && !op.targetState.isAir()) {
+                    placeBlockPacket(op.pos, op.targetState, true);
+                }
+                // 恢复 BlockEntity NBT（容器内容等）
+                if (op.blockEntityData instanceof CompoundTag && !((CompoundTag)op.blockEntityData).isEmpty()) {
+                    restoreBlockEntity(op.pos, (CompoundTag) op.blockEntityData);
+                }
                 break;
             case BREAK:
-                breakBlockPacket(op.pos);
+                breakBlockPacket(op.pos, isCreative);
                 break;
-        }
-
-        // 客户端预测性更新
-        if (op.targetState != null && op.type != BlockOperation.Type.BREAK) {
-            mc.level.setBlock(op.pos, op.targetState, 3);
-        } else if (op.type == BlockOperation.Type.BREAK) {
-            mc.level.removeBlock(op.pos, false);
         }
     }
 
+    /** 当前操作的原始槽位（用于恢复） */
+    private int originalSlot = -1;
+
     /**
-     * 发送放置方块包
+     * 发送放置方块包 — 支持朝向控制
+     *
+     * @param orient true=使用 BlockState 的朝向属性（用于粘贴），false=自动朝向玩家
+     * 包序列：Swing → FakeRot → SetCarriedItem → PRESS_SHIFT → UseItemOn → RELEASE_SHIFT
      */
-    private void placeBlockPacket(BlockPos pos, BlockState state) {
+    private void placeBlockPacket(BlockPos pos, BlockState state, boolean orient) {
         if (mc.player == null || mc.player.connection == null) return;
 
-        // 找到合适的物品
         ItemStack item = findItemForBlock(state);
         if (item.isEmpty()) return;
 
-        int slot = findHotbarSlot(item);
-        if (slot < 0) return;
+        int targetSlot = ensureInHotbarSlot(item.getItem());
+        if (targetSlot < 0) return;
 
-        // 切换物品
-        mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(slot));
+        if (originalSlot < 0) {
+            originalSlot = mc.player.getInventory().selected;
+        }
 
-        // 计算点击位置 — 从玩家位置往目标方向射线的命中面
+        int seq = getSequence();
+
+        // ① 挥动手
+        mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+
+        // ② 假旋转
         Vec3 eyePos = mc.player.getEyePosition(1.0f);
         Vec3 blockCenter = Vec3.atCenterOf(pos);
-        Vec3 hitDir = blockCenter.subtract(eyePos).normalize();
+        Vec3 dir = blockCenter.subtract(eyePos).normalize();
+        float yaw, pitch;
+        Direction placeFace;
 
-        // 找到最佳点击面
-        Direction bestFace = Direction.getNearest(hitDir.x, hitDir.y, hitDir.z).getOpposite();
-        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(bestFace.getNormal()).scale(-0.5));
+        if (orient) {
+            // 使用 BlockState 的朝向属性
+            float[] orientation = ClipboardManager.getPlacementYawPitch(state);
+            yaw = orientation[0];
+            pitch = orientation[1];
+            // 计算点击面
+            placeFace = ClipboardManager.getPlacementFace(state);
+            if (placeFace.getAxis() == Direction.Axis.Y && !Float.isNaN(yaw)) {
+                // 水平方块用它原来的朝向决定点击面
+            }
+        } else {
+            yaw = (float) (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
+            pitch = (float) (-Math.asin(dir.y) * 180.0 / Math.PI);
+            placeFace = Direction.getNearest(dir.x, dir.y, dir.z).getOpposite();
+        }
 
-        BlockHitResult hitResult = new BlockHitResult(clickPos, bestFace, pos, false);
-        mc.player.connection.send(new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, getSequence()));
+        // 发送假旋转包
+        if (!Float.isNaN(yaw) && !Float.isNaN(pitch)) {
+            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, mc.player.onGround()));
+        }
+
+        // ③ 切物品
+        mc.player.connection.send(new ServerboundSetCarriedItemPacket(targetSlot));
+
+        // ④ 放置
+        if (!orient || placeFace == null) {
+            placeFace = Direction.getNearest(dir.x, dir.y, dir.z).getOpposite();
+        }
+        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(placeFace.getNormal()).scale(-0.5));
+        BlockHitResult hitResult = new BlockHitResult(clickPos, placeFace, pos, false);
+
+        mc.player.connection.send(new ServerboundPlayerCommandPacket(
+                mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+        mc.player.connection.send(new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, seq));
+        mc.player.connection.send(new ServerboundPlayerCommandPacket(
+                mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
+    }
+
+    /**
+     * 恢复 BlockEntity NBT（容器内容、木牌文字等）
+     */
+    private void restoreBlockEntity(BlockPos pos, CompoundTag tag) {
+        if (mc.player == null || mc.level == null) return;
+        // 客户端预测：直接设置 BlockEntity 数据
+        if (mc.level.getBlockEntity(pos) != null) {
+            try {
+                mc.level.getBlockEntity(pos).load(tag);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
     }
 
     /**
      * 发送破坏方块包
+     *
+     * 创造模式：仅 START_DESTROY（服务端即时破坏）
+     * 生存模式：START_DESTROY + STOP_DESTROY（需完整挖掘序列）
      */
-    private void breakBlockPacket(BlockPos pos) {
+    private void breakBlockPacket(BlockPos pos, boolean isCreative) {
         if (mc.player == null || mc.player.connection == null) return;
+
         int seq = getSequence();
+
+        // ① 挥动手
+        mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+
+        // ② 假旋转
+        Vec3 eyePos = mc.player.getEyePosition(1.0f);
+        Vec3 blockCenter = Vec3.atCenterOf(pos);
+        Vec3 dir = blockCenter.subtract(eyePos).normalize();
+        float yaw = (float) (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
+        float pitch = (float) (-Math.asin(dir.y) * 180.0 / Math.PI);
+        mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, mc.player.onGround()));
+
+        // ③ 破坏包
         mc.player.connection.send(new ServerboundPlayerActionPacket(
                 ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
-        mc.player.connection.send(new ServerboundPlayerActionPacket(
-                ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+
+        if (!isCreative) {
+            // 非创造模式需要 STOP_DESTROY（同序列号）
+            mc.player.connection.send(new ServerboundPlayerActionPacket(
+                    ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+        }
     }
 
     private int getSequence() {
@@ -217,6 +325,54 @@ public class TaskQueue {
         int num = handler.currentSequence();
         handler.close();
         return num;
+    }
+
+    /**
+     * 确保目标物品在当前主手槽位
+     * 1. 主手已是目标 → 直接返回
+     * 2. 快捷栏有 → 切过去
+     * 3. 背包有 → 交换到主手
+     * 4. 创造模式 → 自动 give 到主手
+     * 不限制9格槽位，适用于大量不同方块的粘贴
+     */
+    private int ensureInHotbarSlot(net.minecraft.world.item.Item item) {
+        if (mc.player == null) return -1;
+        var inv = mc.player.getInventory();
+        int curr = inv.selected;
+
+        // 主手已是目标物品
+        if (inv.getItem(curr).is(item)) return curr;
+
+        // 快捷栏搜索
+        for (int i = 0; i < 9; i++) {
+            if (inv.getItem(i).is(item)) {
+                inv.selected = i;
+                mc.player.connection.send(new ServerboundSetCarriedItemPacket(i));
+                return i;
+            }
+        }
+
+        // 背包搜索 → 交换到主手槽
+        for (int i = 9; i < 36; i++) {
+            if (inv.getItem(i).is(item)) {
+                var temp = inv.getItem(curr).copy();
+                inv.setItem(curr, inv.getItem(i).copy());
+                inv.setItem(i, temp);
+                mc.player.connection.send(new ServerboundSetCarriedItemPacket(curr));
+                return curr;
+            }
+        }
+
+        // 创造模式自动 give
+        if (mc.player.getAbilities().instabuild) {
+            var stack = new net.minecraft.world.item.ItemStack(item, 64);
+            inv.setItem(curr, stack);
+            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket(curr + 36, stack));
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(curr));
+            return curr;
+        }
+
+        return curr; // 回退：可能无物品也无法给
     }
 
     /**
@@ -264,6 +420,12 @@ public class TaskQueue {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         cfg.taskRunning = false;
 
+        // 恢复原始快捷栏槽位
+        if (originalSlot >= 0 && mc.player != null) {
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(originalSlot));
+            originalSlot = -1;
+        }
+
         if (success) {
             cfg.taskStatus = "§a完成: " + currentCommand + " (" + completedTasks + " 个方块)";
             sendStatus("§a✔ " + currentCommand + " 完成 §7(" + completedTasks + " 个方块)");
@@ -289,6 +451,7 @@ public class TaskQueue {
     public boolean isPaused() { return paused; }
     public void setPaused(boolean p) { this.paused = p; }
     public void cancel() { finishQueue(false); }
+    public void setOnComplete(Consumer<Boolean> callback) { this.onComplete = callback; }
     public int getProgress() { return totalTasks > 0 ? completedTasks * 100 / totalTasks : 0; }
     public String getStatusText() { return currentCommand + " " + completedTasks + "/" + totalTasks; }
 

@@ -4,11 +4,12 @@ import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.features.loot.LootComponent;
 import fku.org.example.fku.features.pearlphase.PearlPhaseComponent;
 import fku.org.example.fku.features.fakeplayer.FakePlayerComponent;
+import fku.org.example.fku.features.worldedit.WorldEditComponent;
 
 public class ToolPanel extends GuiPanel {
 
     public ToolPanel() {
-        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 120, 200);
+        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 120, 250);
     }
 
     @Override
@@ -21,6 +22,7 @@ public class ToolPanel extends GuiPanel {
         addComponent(new AntiLagComponent(0, 0, 110, 25));
         addComponent(new PearlPhaseComponent(0, 0, 110, 25));
         addComponent(new FakePlayerComponent(0, 0, 110, 25));
+        addComponent(new WorldEditComponent(0, 0, 110, 25));
     }
 
     @Override

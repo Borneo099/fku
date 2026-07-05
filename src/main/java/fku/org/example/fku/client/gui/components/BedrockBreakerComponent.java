@@ -4,6 +4,7 @@ import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerManager;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerScreen;
+import fku.org.example.fku.client.KeyBindings;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -43,6 +44,16 @@ public class BedrockBreakerComponent extends GuiComponent {
         String displayStr = "基岩破坏器: " + status;
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
+
+        // 显示绑定的热键
+        String triggerKey = BedrockBreakerConfig.getInstance().triggerKey;
+        if (triggerKey != null && !triggerKey.isEmpty()) {
+            String keyName = triggerKey.replace("key.keyboard.", "");
+            guiGraphics.drawString(Minecraft.getInstance().font, "[" + keyName + "]", x + width - 45, y + (height - 8) / 2 - 4, 0x888888);
+        } else {
+            guiGraphics.drawString(Minecraft.getInstance().font, "[B]", x + width - 45, y + (height - 8) / 2 - 4, 0x888888);
+        }
+
         // ★ 右键打开配置提示
         guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
     }

@@ -123,19 +123,19 @@ Reading Input: /workspace/fku/build/libs/fku-1.1.jar
 Adding input to inheritance map
 Processing entries
 Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
-Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/DisableTimeoutConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
-Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
-Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/DisableTimeoutConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/DisableTimeoutConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/DisableTimeoutConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/GuiStyleScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
-Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/GuiStyleScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
-Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/GuiStyleScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/GuiStyleScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/ClickGuiScreen/mouseReleased(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseReleased(DDI)Z: mouseReleased -> m_6348_
 Conflicting propagated mapping for fku/org/example/fku/client/gui/components/GuiStyleScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
 Conflicting propagated mapping for fku/org/example/fku/features/antilag/AntiLagScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
@@ -152,11 +152,22 @@ Conflicting propagated mapping for fku/org/example/fku/features/displaymodel/Dis
 Conflicting propagated mapping for fku/org/example/fku/features/displaymodel/DisplayModelScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/features/displaymodel/DisplayModelScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/features/displaymodel/DisplayModelScreen/tick()V from net/minecraft/client/gui/screens/Screen/tick()V: tick -> m_86600_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
+Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/BedrockBreakerScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/BedrockBreakerScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/BedrockBreakerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/BedrockBreakerScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/BedrockBreakerScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/HelperBlockListScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/HelperBlockListScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/HelperBlockListScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
@@ -166,33 +177,22 @@ Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/H
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/HelperBlockListScreen/tick()V from net/minecraft/client/gui/screens/Screen/tick()V: tick -> m_86600_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/HelperBlockListScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
 Conflicting propagated mapping for fku/org/example/fku/features/bedrockbreaker/HelperBlockListScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
-Conflicting propagated mapping for fku/org/example/fku/features/knockback/KnockbackConfigScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
-Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
-Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
-Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
-Conflicting propagated mapping for fku/org/example/fku/features/duplicator/DuplicatorConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
-Conflicting propagated mapping for net/minecraft/world/entity/LivingEntity/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V from net/minecraft/world/entity/player/Player/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V: lambda$addAdditionalSaveData$3 -> m_219754_
 Conflicting propagated mapping for fku/org/example/fku/features/healthtag/HealthTagConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/healthtag/HealthTagConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/features/healthtag/HealthTagConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
 Conflicting propagated mapping for fku/org/example/fku/features/healthtag/HealthTagConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
-Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerFeature$FakePlayerEntity/onGround()Z from net/minecraft/world/entity/Entity/onGround()Z: onGround -> m_20096_
-Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerFeature$FakePlayerEntity/isSpectator()Z from net/minecraft/client/player/AbstractClientPlayer/isSpectator()Z: isSpectator -> m_5833_
-Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerFeature$FakePlayerEntity/isCreative()Z from net/minecraft/client/player/AbstractClientPlayer/isCreative()Z: isCreative -> m_7500_
 Conflicting propagated mapping for fku/org/example/fku/features/killfx/KillFXConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/killfx/KillFXConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/features/killfx/KillFXConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
 Conflicting propagated mapping for fku/org/example/fku/features/killfx/KillFXConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/features/killfx/KillFXConfigScreen/rebuildWidgets()V from net/minecraft/client/gui/screens/Screen/rebuildWidgets()V: rebuildWidgets -> m_232761_
+Conflicting propagated mapping for net/minecraft/world/entity/LivingEntity/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V from net/minecraft/world/entity/player/Player/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V: lambda$addAdditionalSaveData$3 -> m_219754_
+Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerFeature$FakePlayerEntity/onGround()Z from net/minecraft/world/entity/Entity/onGround()Z: onGround -> m_20096_
+Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerFeature$FakePlayerEntity/isSpectator()Z from net/minecraft/client/player/AbstractClientPlayer/isSpectator()Z: isSpectator -> m_5833_
+Conflicting propagated mapping for fku/org/example/fku/features/fakeplayer/FakePlayerFeature$FakePlayerEntity/isCreative()Z from net/minecraft/client/player/AbstractClientPlayer/isCreative()Z: isCreative -> m_7500_
 Conflicting propagated mapping for fku/org/example/fku/features/loot/LootScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
 Conflicting propagated mapping for fku/org/example/fku/features/loot/LootScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/loot/LootScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
@@ -205,9 +205,6 @@ Conflicting propagated mapping for fku/org/example/fku/features/pearlphase/Pearl
 Conflicting propagated mapping for fku/org/example/fku/features/pearlphase/PearlPhaseConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
-Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
-Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
-Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchCustomItemsScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/Screen/keyPressed(III)Z: keyPressed -> m_7933_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchCustomItemsScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchCustomItemsScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
@@ -217,6 +214,9 @@ Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/Quic
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchCustomItemsScreen/tick()V from net/minecraft/client/gui/screens/Screen/tick()V: tick -> m_86600_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchCustomItemsScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
 Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchCustomItemsScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
+Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for fku/org/example/fku/features/quickswitch/QuickSwitchConfigScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
 Conflicting propagated mapping for fku/org/example/fku/features/sprint/SprintConfigScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
 Conflicting propagated mapping for fku/org/example/fku/features/sprint/SprintConfigScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
 Conflicting propagated mapping for fku/org/example/fku/features/sprint/SprintConfigScreen/onClose()V from net/minecraft/client/gui/screens/Screen/onClose()V: onClose -> m_7379_
@@ -238,7 +238,6 @@ Conflicting propagated mapping for fku/org/example/fku/features/tpaura/TpAuraScr
 Conflicting propagated mapping for fku/org/example/fku/features/tpaura/TpAuraScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
 Conflicting propagated mapping for fku/org/example/fku/features/tpaura/TpAuraScreen/charTyped(CI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/charTyped(CI)Z: charTyped -> m_5534_
 Conflicting propagated mapping for net/minecraftforge/entity/PartEntity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet; from net/minecraft/world/entity/Entity/getAddEntityPacket()Lnet/minecraft/network/protocol/Packet;: getAddEntityPacket -> m_5654_
-Conflicting propagated mapping for fku/org/example/fku/features/worldedit/ClipboardManager$1/copy()Lnet/minecraft/nbt/Tag; from net/minecraft/nbt/ListTag/copy()Lnet/minecraft/nbt/Tag;: copy -> m_6426_
 Conflicting propagated mapping for net/minecraft/world/entity/projectile/FireworkRocketEntity/onHit(Lnet/minecraft/world/phys/HitResult;)V from net/minecraft/world/entity/projectile/Projectile/onHit(Lnet/minecraft/world/phys/HitResult;)V: onHit -> m_6532_
 Conflicting propagated mapping for net/minecraft/world/item/ShearsItem/interactLivingEntity(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/item/Item/interactLivingEntity(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;: interactLivingEntity -> m_6880_
 Adding extras
@@ -252,6 +251,12 @@ Writing Output: /workspace/fku/build/reobfJar/output.jar
   assets/fku/lang/
   assets/fku/lang/en_us.json
   assets/fku/lang/zh_cn.json
+  assets/fku/shaders/
+  assets/fku/shaders/post/
+  assets/fku/shaders/post/blackhole.json
+  assets/fku/shaders/program/
+  assets/fku/shaders/program/blackhole.frag
+  assets/fku/shaders/program/blackhole.vert
   fku.mixins.json
   fku.png
   fku.refmap.json
@@ -364,6 +369,9 @@ Writing Output: /workspace/fku/build/reobfJar/output.jar
   fku/org/example/fku/features/killfx/KillFXConfig.class
   fku/org/example/fku/features/killfx/KillFXConfigScreen.class
   fku/org/example/fku/features/killfx/KillFXFeature.class
+  fku/org/example/fku/features/killfx/KillFXShaderManager$ShaderEffect.class
+  fku/org/example/fku/features/killfx/KillFXShaderManager$ShaderType.class
+  fku/org/example/fku/features/killfx/KillFXShaderManager.class
   fku/org/example/fku/features/knockback/
   fku/org/example/fku/features/knockback/FakeRotationManager.class
   fku/org/example/fku/features/knockback/KnockbackConfig.class
@@ -427,6 +435,8 @@ Writing Output: /workspace/fku/build/reobfJar/output.jar
   fku/org/example/fku/features/worldedit/TaskQueue$BlockOperation.class
   fku/org/example/fku/features/worldedit/TaskQueue.class
   fku/org/example/fku/features/worldedit/ToolManager.class
+  fku/org/example/fku/features/worldedit/WorldEditCommands.class
+  fku/org/example/fku/features/worldedit/WorldEditComponent.class
   fku/org/example/fku/features/worldedit/WorldEditConfig.class
   fku/org/example/fku/features/worldedit/WorldEditFeature.class
   fku/org/example/fku/features/yposoverlay/
@@ -436,6 +446,7 @@ Writing Output: /workspace/fku/build/reobfJar/output.jar
   fku/org/example/fku/mixin/ClientLevelAccessor.class
   fku/org/example/fku/mixin/ConnectionMixin.class
   fku/org/example/fku/mixin/LivingEntityMixin.class
+  fku/org/example/fku/mixin/MixinChatScreen.class
   fku/org/example/fku/mixin/MixinClientPacketListener.class
   fku/org/example/fku/mixin/MixinConnectionAttackInterceptor.class
   fku/org/example/fku/mixin/MixinMultiPlayerGameMode.class

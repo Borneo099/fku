@@ -7,16 +7,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import com.mojang.brigadier.CommandDispatcher;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 
 /**
  * WorldEdit Lite 主控类
@@ -81,25 +76,6 @@ public class WorldEditFeature {
     }
 
     /**
-     * 聊天事件 — 拦截 // 命令
-     */
-    @SubscribeEvent
-    public static void onClientChat(ClientChatEvent event) {
-        String msg = event.getMessage();
-        if (msg.startsWith("//")) {
-            event.setCanceled(true); // 阻止发送到服务器
-
-            // 在玩家聊天栏显示命令
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                        Component.literal("§7[WorldEdit] §f" + msg), false);
-            }
-
-            CommandRegistry.getInstance().execute(msg);
-        }
-    }
-
-    /**
      * 鼠标点击事件 — 工具处理 + 超远交互
      */
     @SubscribeEvent
@@ -138,48 +114,6 @@ public class WorldEditFeature {
             event.setCanceled(true);
             event.setSwingHand(false);
         }
-    }
-
-    /**
-     * 注册客户端指令
-     */
-    @SubscribeEvent
-    public static void onRegisterCommands(RegisterClientCommandsEvent event) {
-        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-
-        dispatcher.register(Commands.literal("fku")
-                .then(Commands.literal("worldedit")
-                        .executes(ctx -> {
-                            WorldEditConfig cfg = WorldEditConfig.getInstance();
-                            cfg.setEnabled(!cfg.enabled);
-                            String status = cfg.enabled ? "§a开启" : "§c关闭";
-                            ctx.getSource().sendSuccess(() ->
-                                    Component.literal("WorldEdit 已 " + status), false);
-
-                            if (cfg.enabled) {
-                                SuperDistanceInteraction.getInstance().enable();
-                                ToolManager.getInstance().enableWand();
-                            } else {
-                                SuperDistanceInteraction.getInstance().disable();
-                                ToolManager.getInstance().disableAll();
-                            }
-                            return 1;
-                        })
-                )
-                .then(Commands.literal("sel")
-                        .executes(ctx -> {
-                            SelectionManager sel = SelectionManager.getInstance();
-                            if (sel.hasSelection()) {
-                                ctx.getSource().sendSuccess(() -> Component.literal(
-                                        "§e选区: " + sel.getMin() + " → " + sel.getMax()), false);
-                            } else {
-                                ctx.getSource().sendSuccess(() ->
-                                        Component.literal("§c未设置选区"), false);
-                            }
-                            return 1;
-                        })
-                )
-        );
     }
 
     /**

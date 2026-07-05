@@ -11,6 +11,8 @@ import net.minecraft.client.gui.GuiGraphics;
  * ★ 职责：
  *   左键切换启用/禁用，右键打开配置界面。
  *   启用后通过 ClientTickEvent 状态机执行容器扫描与取物。
+ *
+ * ★ 热键：中键绑定，GUI 上显示热键名称
  */
 public class LootComponent extends fku.org.example.fku.client.gui.components.GuiComponent {
 
@@ -43,6 +45,12 @@ public class LootComponent extends fku.org.example.fku.client.gui.components.Gui
         String displayStr = "一键取物: " + status;
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
+
+        // 显示已绑定的热键名称
+        LootConfig cfg = LootConfig.getInstance();
+        if (cfg.hotkeyKey >= 0 && !cfg.hotkeyName.isEmpty()) {
+            guiGraphics.drawString(Minecraft.getInstance().font, "[" + cfg.hotkeyName + "]", x + width - 45, y + (height - 8) / 2 - 4, 0x888888);
+        }
 
         // 运行时状态提示（仅运行时显示）
         if (LootFeature.isRunning()) {

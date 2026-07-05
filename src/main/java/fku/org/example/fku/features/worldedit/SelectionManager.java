@@ -126,6 +126,9 @@ public class SelectionManager {
 
     /**
      * 在 RenderLevelLastEvent 中调用 — 渲染选区边框
+     *
+     * 使用相机相对坐标 + PoseStack 矩阵渲染。
+     * 坐标 = 世界坐标 - 相机位置 → 相机相对坐标 → PoseStack 渲染
      */
     public void renderSelection(PoseStack poseStack, float partialTick) {
         if (!hasSelection() || !WorldEditConfig.getInstance().renderSelection) return;
@@ -135,16 +138,21 @@ public class SelectionManager {
         BlockPos max = getMax();
         if (min == null || max == null) return;
 
-        Vec3 cameraPos = mc.gameRenderer.getMainCamera().getPosition();
-        double camX = cameraPos.x;
-        double camY = cameraPos.y;
-        double camZ = cameraPos.z;
+        // 相机位置
+        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
 
-        AABB aabb = new AABB(
-                min.getX() - camX, min.getY() - camY, min.getZ() - camZ,
-                max.getX() + 1 - camX, max.getY() + 1 - camY, max.getZ() + 1 - camZ);
+        // 计算相机相对坐标
+        float x1 = (float)(min.getX() - camPos.x);
+        float y1 = (float)(min.getY() - camPos.y);
+        float z1 = (float)(min.getZ() - camPos.z);
+        float x2 = (float)(max.getX() + 1 - camPos.x);
+        float y2 = (float)(max.getY() + 1 - camPos.y);
+        float z2 = (float)(max.getZ() + 1 - camPos.z);
 
         int color = parseColor(WorldEditConfig.getInstance().selectionColor);
+
+        // 获取 PoseStack 的矩阵
+        Matrix4f matrix = poseStack.last().pose();
 
         RenderSystem.disableDepthTest();
         RenderSystem.enableBlend();
@@ -161,25 +169,21 @@ public class SelectionManager {
         float b = (color & 0xFF) / 255.0f;
         float a = 0.8f;
 
-        // 12条边
-        double x1 = aabb.minX, y1 = aabb.minY, z1 = aabb.minZ;
-        double x2 = aabb.maxX, y2 = aabb.maxY, z2 = aabb.maxZ;
-
         // 底部矩形
-        addLine(buffer, x1, y1, z1, x2, y1, z1, r, g, b, a);
-        addLine(buffer, x2, y1, z1, x2, y1, z2, r, g, b, a);
-        addLine(buffer, x2, y1, z2, x1, y1, z2, r, g, b, a);
-        addLine(buffer, x1, y1, z2, x1, y1, z1, r, g, b, a);
+        addLine(matrix, buffer, x1, y1, z1, x2, y1, z1, r, g, b, a);
+        addLine(matrix, buffer, x2, y1, z1, x2, y1, z2, r, g, b, a);
+        addLine(matrix, buffer, x2, y1, z2, x1, y1, z2, r, g, b, a);
+        addLine(matrix, buffer, x1, y1, z2, x1, y1, z1, r, g, b, a);
         // 顶部矩形
-        addLine(buffer, x1, y2, z1, x2, y2, z1, r, g, b, a);
-        addLine(buffer, x2, y2, z1, x2, y2, z2, r, g, b, a);
-        addLine(buffer, x2, y2, z2, x1, y2, z2, r, g, b, a);
-        addLine(buffer, x1, y2, z2, x1, y2, z1, r, g, b, a);
+        addLine(matrix, buffer, x1, y2, z1, x2, y2, z1, r, g, b, a);
+        addLine(matrix, buffer, x2, y2, z1, x2, y2, z2, r, g, b, a);
+        addLine(matrix, buffer, x2, y2, z2, x1, y2, z2, r, g, b, a);
+        addLine(matrix, buffer, x1, y2, z2, x1, y2, z1, r, g, b, a);
         // 垂直线
-        addLine(buffer, x1, y1, z1, x1, y2, z1, r, g, b, a);
-        addLine(buffer, x2, y1, z1, x2, y2, z1, r, g, b, a);
-        addLine(buffer, x2, y1, z2, x2, y2, z2, r, g, b, a);
-        addLine(buffer, x1, y1, z2, x1, y2, z2, r, g, b, a);
+        addLine(matrix, buffer, x1, y1, z1, x1, y2, z1, r, g, b, a);
+        addLine(matrix, buffer, x2, y1, z1, x2, y2, z1, r, g, b, a);
+        addLine(matrix, buffer, x2, y1, z2, x2, y2, z2, r, g, b, a);
+        addLine(matrix, buffer, x1, y1, z2, x1, y2, z2, r, g, b, a);
 
         tesselator.end();
 
@@ -189,10 +193,10 @@ public class SelectionManager {
         RenderSystem.disableBlend();
     }
 
-    private void addLine(BufferBuilder buffer, double x1, double y1, double z1,
-                         double x2, double y2, double z2, float r, float g, float b, float a) {
-        buffer.vertex(x1, y1, z1).color(r, g, b, a).endVertex();
-        buffer.vertex(x2, y2, z2).color(r, g, b, a).endVertex();
+    private void addLine(Matrix4f matrix, BufferBuilder buffer, float x1, float y1, float z1,
+                         float x2, float y2, float z2, float r, float g, float b, float a) {
+        buffer.vertex(matrix, x1, y1, z1).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x2, y2, z2).color(r, g, b, a).endVertex();
     }
 
     /**

@@ -18,6 +18,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -25,6 +26,7 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * KillFX（击杀特效）v5 — 防卡死版
@@ -97,6 +99,8 @@ public class KillFXFeature {
         } else if (event.phase == TickEvent.Phase.END) {
             // ★ END：渲染队列中的特效（此时遍历已结束，安全）
             renderQueued(cfg);
+            // ★ 更新着色器特效进度
+            KillFXShaderManager.tick();
         }
 
         // 缓存清理
@@ -108,6 +112,15 @@ public class KillFXFeature {
             Fku.LOGGER.warn("[KillFX] processedEntities 过大, 清理");
             processedEntities.clear();
         }
+    }
+
+    /**
+     * 渲染着色器特效 — 在世界坐标中绘制死亡位置特效
+     */
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        KillFXShaderManager.renderEffects(event.getPoseStack(), event.getPartialTick());
     }
 
     /** 只检测死亡，不渲染——解决遍历实体列表时修改列表导致的卡死 */
@@ -165,6 +178,17 @@ public class KillFXFeature {
             try {
                 renderEffects(entity, cfg);
                 rendered++;
+
+                // ★ 触发位置着色器特效
+                if (cfg.useShader && !cfg.shaderType.equals("NONE")) {
+                    KillFXShaderManager.ShaderType shaderType = KillFXShaderManager.ShaderType.valueOf(cfg.shaderType);
+                    KillFXShaderManager.trigger(
+                        shaderType,
+                        entity.position(),
+                        (float) cfg.shaderIntensity,
+                        cfg.shaderDuration
+                    );
+                }
             } catch (Exception e) {
                 Fku.LOGGER.error("[KillFX] 渲染异常", e);
             }

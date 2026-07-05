@@ -44,7 +44,7 @@ public class KillFXConfigScreen extends Screen {
         super(Component.literal("击杀特效配置"));
         this.cfg = KillFXConfig.getInstance();
         // 初始化所有分类的缓存
-        for (String cat : new String[]{"通用", "闪电", "粒子", "音效", "额外"}) {
+        for (String cat : new String[]{"通用", "闪电", "粒子", "音效", "额外", "着色器"}) {
             floatingValues.put(cat, new java.util.HashMap<>());
         }
     }
@@ -101,7 +101,7 @@ public class KillFXConfigScreen extends Screen {
         int row = cy + 35;
 
         // ── 分类标签行 ──
-        String[] categories = {"通用", "闪电", "粒子", "音效", "额外"};
+        String[] categories = {"通用", "闪电", "粒子", "音效", "额外", "着色器"};
         int tabX = cx + 5;
         for (String cat : categories) {
             final String fcat = cat;
@@ -132,6 +132,7 @@ public class KillFXConfigScreen extends Screen {
             case "粒子" -> buildParticleSettings(cx, cy, row);
             case "音效" -> buildSoundSettings(cx, cy, row);
             case "额外" -> buildExtraSettings(cx, cy, row);
+            case "着色器" -> buildShaderSettings(cx, cy, row);
         }
 
         // ── 底部按钮 ──
@@ -164,6 +165,10 @@ public class KillFXConfigScreen extends Screen {
                 cfg.pitch = 1.0;
                 cfg.useFirework = false;
                 cfg.useExplosion = false;
+                cfg.useShader = false;
+                cfg.shaderType = "NONE";
+                cfg.shaderIntensity = 1.0;
+                cfg.shaderDuration = 20;
                 cfg.onlyTargeted = true;
                 cfg.targetTimeout = 3.5;
                 KillFXConfig.save();
@@ -512,6 +517,59 @@ public class KillFXConfigScreen extends Screen {
         addToggle(row, "爆炸烟雾", cfg.useExplosion, v -> cfg.useExplosion = v);
     }
 
+    private void buildShaderSettings(int cx, int cy, int row) {
+        addToggle(row, "启用着色器", cfg.useShader, v -> cfg.useShader = v);
+        row += 24;
+
+        drawLabel("特效类型:", cx, row);
+        String[] types = {"BLACKHOLE"};
+        int tx = cx + 135;
+        for (String type : types) {
+            final String fType = type;
+            boolean isActive = type.equals(cfg.shaderType);
+            addRenderableWidget(Button.builder(
+                Component.literal(isActive ? "▶ " + fType : fType),
+                btn -> {
+                    cfg.shaderType = fType;
+                    KillFXConfig.save();
+                    rebuildWidgets();
+                }
+            ).bounds(tx, row, 85, 20).build());
+            tx += 88;
+        }
+        row += 24;
+
+        double[] intensity = {cfg.shaderIntensity};
+        drawLabel("扭曲强度:", cx, row);
+        addRenderableWidget(Button.builder(
+            Component.literal(String.format("%.1f", intensity[0])),
+            btn -> {
+                intensity[0] += 0.2;
+                if (intensity[0] > 2.0) intensity[0] = 0.2;
+                cfg.shaderIntensity = intensity[0];
+                KillFXConfig.save();
+                rebuildWidgets();
+            }
+        ).bounds(cx + 135, row, 50, 20).build());
+        row += 24;
+
+        int[] duration = {cfg.shaderDuration};
+        drawLabel("持续Tick:", cx, row);
+        addRenderableWidget(Button.builder(
+            Component.literal(duration[0] + " tick"),
+            btn -> {
+                if (duration[0] >= 60) duration[0] = 5;
+                else duration[0] += 5;
+                cfg.shaderDuration = duration[0];
+                KillFXConfig.save();
+                rebuildWidgets();
+            }
+        ).bounds(cx + 135, row, 65, 20).build());
+        row += 30;
+        drawLabel("§7提示: 击杀生物后会在死亡位置", cx, row);
+        drawLabel("§7生成黑洞扭曲效果", cx, row + 12);
+    }
+
     // ════════════════════════════════════════════════════════════
     // ★ 通用控件构建方法
     // ════════════════════════════════════════════════════════════
@@ -714,6 +772,7 @@ public class KillFXConfigScreen extends Screen {
             case "粒子" -> new String[][]{{"启用粒子:", "35"}, {"粒子分类:", "59"}, {"具体粒子:", "95"}, {"粒子形状:", "119"}, {"粒子数量:", "171"}, {"粒子速度:", "195"}};
             case "音效" -> new String[][]{{"启用音效:", "35"}, {"音效分类:", "55"}, {"具体音效:", "75"}, {"音量:", "99"}, {"音调:", "123"}};
             case "额外" -> new String[][]{{"生成烟花:", "35"}, {"爆炸烟雾:", "59"}};
+            case "着色器" -> new String[][]{{"启用着色器:", "35"}, {"特效类型:", "59"}, {"扭曲强度:", "83"}, {"持续Tick:", "107"}, {"§7提示: 击杀生物后会在", "135"}, {"§7死亡位置生成黑洞效果", "147"}};
             default -> new String[][]{};
         };
 

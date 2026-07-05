@@ -6,6 +6,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
+import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -47,6 +49,9 @@ public class SuperDistanceInteraction {
 
     /**
      * 激活超远距离交互
+     * 1. 保存原头盔
+     * 2. 创建橡木按钮 + BLOCK_REACH +9999
+     * 3. 装备到头盔槽 + 发包同步到服务端
      */
     public void enable() {
         if (mc.player == null) return;
@@ -58,7 +63,7 @@ public class SuperDistanceInteraction {
         ItemStack button = new ItemStack(Items.OAK_BUTTON, 1);
         AttributeModifier modifier = new AttributeModifier(
                 RANGE_MODIFIER_UUID, RANGE_MODIFIER_NAME,
-                114514.0, AttributeModifier.Operation.ADDITION);
+                9999.0, AttributeModifier.Operation.ADDITION);
 
         // 添加属性到物品
         button.addAttributeModifier(
@@ -66,21 +71,28 @@ public class SuperDistanceInteraction {
                 modifier,
                 EquipmentSlot.HEAD);
 
-        // 装备到头盔槽
+        // 装备到头盔槽（客户端）
         mc.player.setItemSlot(EquipmentSlot.HEAD, button);
 
-        // 确保属性已应用
+        // ★ 发包同步到服务端（创造模式）：
+        //   容器槽 5 = 头盔位，同时发送 armor slot 100+ 兼容不同服务端实现
+        if (mc.player.getAbilities().instabuild) {
+            mc.player.connection.send(new ServerboundSetCreativeModeSlotPacket(5, button));
+            mc.player.connection.send(new ServerboundSetCreativeModeSlotPacket(103, button)); // armor slot fallback
+        }
+
+        // 确保属性已应用（客户端）
         AttributeInstance attr = mc.player.getAttribute(ForgeMod.BLOCK_REACH.get());
         if (attr != null && !attr.hasModifier(modifier)) {
             attr.addTransientModifier(modifier);
         }
 
         helmetEquipped = true;
-        Fku.LOGGER.info("[WorldEdit] 超远距离交互已激活");
+        Fku.LOGGER.info("[WorldEdit] 超远距离交互已激活 (BLOCK_REACH +9999)");
     }
 
     /**
-     * 停用超远距离交互 — 恢复原头盔
+     * 停用超远距离交互 — 恢复原头盔 + 发包同步服务端
      */
     public void disable() {
         if (mc.player == null) return;
@@ -91,8 +103,14 @@ public class SuperDistanceInteraction {
             attr.removeModifier(RANGE_MODIFIER_UUID);
         }
 
-        // 恢复原头盔
+        // 恢复原头盔（客户端）
         mc.player.setItemSlot(EquipmentSlot.HEAD, originalHelmet);
+
+        // ★ 发包同步到服务端
+        if (mc.player.getAbilities().instabuild) {
+            mc.player.connection.send(new ServerboundSetCreativeModeSlotPacket(5, originalHelmet));
+        }
+
         originalHelmet = ItemStack.EMPTY;
         helmetEquipped = false;
 
@@ -130,6 +148,7 @@ public class SuperDistanceInteraction {
 
         if (button == 0) {
             // 左键 — 破坏方块
+            mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
             int seq = getSequence();
             mc.player.connection.send(new ServerboundPlayerActionPacket(
                     ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
@@ -140,7 +159,7 @@ public class SuperDistanceInteraction {
             mc.level.destroyBlock(targetPos, false);
         } else if (button == 1) {
             // 右键 — 放置/交互方块
-            // 计算点击位置：目标方块中心的朝向面
+            mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
             Vec3 blockCenter = Vec3.atCenterOf(targetPos);
             Vec3 hitVec = blockCenter.add(
                     Vec3.atLowerCornerOf(hitResult.getDirection().getNormal()).scale(0.5));

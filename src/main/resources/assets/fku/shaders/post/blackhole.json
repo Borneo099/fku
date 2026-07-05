@@ -1,0 +1,14 @@
+{
+    "targets": [
+        "swap",
+        "blackhole"
+    ],
+    "passes": [
+        {
+            "name": "blackhole",
+            "intarget": "minecraft:main",
+            "outtarget": "swap",
+            "shader": "blackhole"
+        }
+    ]
+}

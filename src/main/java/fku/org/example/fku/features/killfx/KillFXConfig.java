@@ -84,6 +84,16 @@ public class KillFXConfig {
     /** 生成爆炸烟雾 */
     public boolean useExplosion = false;
 
+    // ===== 着色器特效 =====
+    /** 启用着色器特效 */
+    public boolean useShader = false;
+    /** 着色器类型: NONE, BLACKHOLE */
+    public String shaderType = "NONE";
+    /** 着色器强度 (0.1-2.0) */
+    public double shaderIntensity = 1.0;
+    /** 着色器持续时长 (ticks) */
+    public int shaderDuration = 20;
+
     private static KillFXConfig instance;
 
     public static KillFXConfig getInstance() {

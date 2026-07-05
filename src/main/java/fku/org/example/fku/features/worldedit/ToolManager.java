@@ -41,7 +41,7 @@ public class ToolManager {
     private ToolManager() {}
 
     /**
-     * 处理鼠标点击事件
+     * 处理鼠标点击事件 — 支持超远距离选区
      * @return true 如果点击已被工具处理
      */
     public boolean handleClick(int button, InteractionHand hand) {
@@ -53,8 +53,10 @@ public class ToolManager {
         String itemId = ForgeRegistries.ITEMS.getKey(heldItem.getItem()).toString();
 
         if (itemId.equals(WorldEditConfig.getInstance().toolItem) && currentTool.equals("wand")) {
-            if (mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return false;
-            BlockPos targetPos = ((BlockHitResult) mc.hitResult).getBlockPos();
+            // ★ 使用自定义射线追踪（超远距离）
+            BlockHitResult hitResult = customRayTrace();
+            if (hitResult == null || hitResult.getType() != HitResult.Type.BLOCK) return false;
+            BlockPos targetPos = hitResult.getBlockPos();
 
             if (button == 0) {
                 // 左键 → Pos1
@@ -68,6 +70,25 @@ public class ToolManager {
         }
 
         return handleToolAction(button, hand);
+    }
+
+    /**
+     * 自定义射线追踪 — 支持超远距离（使用 BLOCK_REACH 属性值）
+     */
+    private BlockHitResult customRayTrace() {
+        if (mc.player == null || mc.level == null) return null;
+        Vec3 eyePos = mc.player.getEyePosition(1.0f);
+        Vec3 lookVec = mc.player.getLookAngle();
+
+        // 使用配置的距离倍率
+        double range = WorldEditConfig.getInstance().rangeMultiplier;
+        Vec3 endPos = eyePos.add(lookVec.scale(range));
+
+        return mc.level.clip(new net.minecraft.world.level.ClipContext(
+                eyePos, endPos,
+                net.minecraft.world.level.ClipContext.Block.OUTLINE,
+                net.minecraft.world.level.ClipContext.Fluid.NONE,
+                mc.player));
     }
 
     /**
