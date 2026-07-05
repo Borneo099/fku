@@ -2,6 +2,7 @@ package fku.org.example.fku.features.killfx; /* water */
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.ColorWheelPicker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -27,26 +28,35 @@ import java.util.function.Consumer;
 public class KillFXConfigScreen extends Screen {
     private static final int WIDTH = 300;
     private static final int VISIBLE_HEIGHT = 255;
+    private static final int CONTENT_HEIGHT = 800;
     private static final int BTN_ON = 0x006600;
     private static final int BTN_OFF = 0x660000;
 
     private final KillFXConfig cfg;
     private String activeCategory = "通用";
 
-    // ★ 输入框浮动值缓存：分类名 → {输入框标识 → 字符串值}
-    //   矛盾定性：rebuildWidgets() 时 clearWidgets() 会销毁所有 EditBox，
-    //   切换分类后再切换回来，EditBox 会使用 cfg 的默认值（重建时 setValue），
-    //   导致用户在输入框中未保存的数值丢失。
-    //   实践路线：切换前保存 EditBox 的值到浮动缓存，重建时从缓存恢复。
+    /** 滚轮偏移量 */
+    private int scrollOffset = 0;
+    /** 内容总高度 */
+    private int contentMaxRow = 0;
+
+    // ★ 彩色圆盘选择器
+    private ColorWheelPicker colorWheelPicker;
+
+    // ★ 输入框浮动值缓存
     private final java.util.Map<String, java.util.Map<String, String>> floatingValues = new java.util.HashMap<>();
 
     public KillFXConfigScreen() {
         super(Component.literal("击杀特效配置"));
         this.cfg = KillFXConfig.getInstance();
-        // 初始化所有分类的缓存
         for (String cat : new String[]{"通用", "闪电", "粒子", "音效", "额外", "着色器"}) {
             floatingValues.put(cat, new java.util.HashMap<>());
         }
+        // 初始化彩色圆盘
+        colorWheelPicker = new ColorWheelPicker(cfg.crystalTintColor, hex -> {
+            cfg.crystalTintColor = hex;
+            KillFXConfig.save();
+        });
     }
 
     @Override
@@ -98,7 +108,8 @@ public class KillFXConfigScreen extends Screen {
         int cx = (width - WIDTH) / 2;
         int cy = (height - VISIBLE_HEIGHT) / 2;
         int col1 = cx + 135;
-        int row = cy + 35;
+        int row = cy + 35 - scrollOffset;
+        contentMaxRow = row;
 
         // ── 分类标签行 ──
         String[] categories = {"通用", "闪电", "粒子", "音效", "额外", "着色器"};
@@ -166,9 +177,16 @@ public class KillFXConfigScreen extends Screen {
                 cfg.useFirework = false;
                 cfg.useExplosion = false;
                 cfg.useShader = false;
-                cfg.shaderType = "NONE";
+                cfg.shaderType = "无";
                 cfg.shaderIntensity = 1.0;
                 cfg.shaderDuration = 20;
+                cfg.blackholeScale = 1.0;
+                cfg.crystalStyle = "基础晶体";
+                cfg.crystalTintColor = "88CCFF";
+                cfg.crystalRadius = 1.0;
+                cfg.crystalGlowIntensity = 0.8;
+                cfg.crystalRotationSpeed = 1.5;
+                cfg.crystalPulse = true;
                 cfg.onlyTargeted = true;
                 cfg.targetTimeout = 3.5;
                 KillFXConfig.save();
@@ -519,55 +537,144 @@ public class KillFXConfigScreen extends Screen {
 
     private void buildShaderSettings(int cx, int cy, int row) {
         addToggle(row, "启用着色器", cfg.useShader, v -> cfg.useShader = v);
-        row += 24;
+        row += 22;
 
+        // ★ 特效类型：两行显示，每行2个按钮
         drawLabel("特效类型:", cx, row);
-        String[] types = {"BLACKHOLE"};
-        int tx = cx + 135;
-        for (String type : types) {
-            final String fType = type;
-            boolean isActive = type.equals(cfg.shaderType);
+        String[] types = {"黑洞", "水晶", "天光光束", "天光环"};
+        int btW = 56;
+        for (int i = 0; i < types.length; i++) {
+            final String fType = types[i];
+            boolean isActive = fType.equals(cfg.shaderType);
+            int bx = cx + 130 + (i % 2) * (btW + 4);
+            int by = row + (i / 2) * 18;
             addRenderableWidget(Button.builder(
-                Component.literal(isActive ? "▶ " + fType : fType),
-                btn -> {
-                    cfg.shaderType = fType;
-                    KillFXConfig.save();
-                    rebuildWidgets();
-                }
-            ).bounds(tx, row, 85, 20).build());
-            tx += 88;
+                Component.literal(isActive ? "▶" + fType : fType),
+                btn -> { cfg.shaderType = fType; KillFXConfig.save(); rebuildWidgets(); }
+            ).bounds(bx, by, btW, 16).build());
         }
-        row += 24;
+        row += 40;
 
-        double[] intensity = {cfg.shaderIntensity};
-        drawLabel("扭曲强度:", cx, row);
-        addRenderableWidget(Button.builder(
-            Component.literal(String.format("%.1f", intensity[0])),
-            btn -> {
-                intensity[0] += 0.2;
-                if (intensity[0] > 2.0) intensity[0] = 0.2;
-                cfg.shaderIntensity = intensity[0];
-                KillFXConfig.save();
-                rebuildWidgets();
-            }
-        ).bounds(cx + 135, row, 50, 20).build());
-        row += 24;
+        if ("黑洞".equals(cfg.shaderType)) buildBlackholeSettings(cx, row);
+        else if ("水晶".equals(cfg.shaderType)) buildCrystalSettings(cx, row);
+        else if ("天光光束".equals(cfg.shaderType)) buildBeamRingSettings(cx, row);
+        else if ("天光环".equals(cfg.shaderType)) buildBeamRingSettings(cx, row);
+    }
 
-        int[] duration = {cfg.shaderDuration};
+    /** 黑洞配置：各控件独立一行防重叠 */
+    private void buildBlackholeSettings(int cx, int row) {
+        int[] dur = {cfg.shaderDuration};
         drawLabel("持续Tick:", cx, row);
         addRenderableWidget(Button.builder(
-            Component.literal(duration[0] + " tick"),
+            Component.literal(dur[0] + "t"),
+            btn -> { dur[0] = dur[0] >= 80 ? 5 : dur[0] + 5;
+                cfg.shaderDuration = dur[0]; KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 135, row, 45, 18).build());
+        row += 22;
+        double[] sc = {cfg.blackholeScale};
+        drawLabel("黑洞大小:", cx, row);
+        addRenderableWidget(Button.builder(Component.literal(String.format("%.1f",sc[0])),
+            btn -> { sc[0] += 0.25; if (sc[0] > 3.0) sc[0] = 0.5;
+                cfg.blackholeScale = sc[0]; KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 135, row, 45, 18).build());
+    }
+
+    /** 水晶配置：严格分行不重叠 */
+    private void buildCrystalSettings(int cx, int row) {
+        // 行1：持续Tick
+        drawLabel("持续Tick:", cx, row);
+        addRenderableWidget(Button.builder(Component.literal(cfg.shaderDuration + "t"),
+            btn -> { cfg.shaderDuration = cfg.shaderDuration >= 80 ? 5 : cfg.shaderDuration + 5;
+                KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 135, row, 45, 18).build());
+        row += 22;
+
+        // 行2：风格（4个按钮横向排列，从cx+135开始）
+        drawLabel("风格:", cx, row);
+        String[] styles = {"基础晶体", "发光", "玻璃折射", "极光"};
+        int sx = cx + 130;
+        for (String s : styles) {
+            boolean act = s.equals(cfg.crystalStyle);
+            addRenderableWidget(Button.builder(Component.literal(act ? "▶" + s : s),
+                btn -> { cfg.crystalStyle = s; KillFXConfig.save(); rebuildWidgets(); }
+            ).bounds(sx, row, 40, 16).build());
+            sx += 42;
+        }
+        row += 22;
+
+        // 行3：色调 — 显示当前HEX颜色方块 + 选色按钮
+        drawLabel("色调:", cx, row);
+        int colorInt;
+        try { colorInt = Integer.parseInt(cfg.crystalTintColor, 16); } catch (Exception e) { colorInt = 0x88CCFF; }
+        int finalColorInt = colorInt;
+        addRenderableWidget(Button.builder(
+            Component.literal("§" + (cfg.crystalTintColor.length() == 6 ? "a●" : "7?")),
             btn -> {
-                if (duration[0] >= 60) duration[0] = 5;
-                else duration[0] += 5;
-                cfg.shaderDuration = duration[0];
-                KillFXConfig.save();
-                rebuildWidgets();
+                int cx2 = (width - WIDTH) / 2;
+                int cy2 = (height - VISIBLE_HEIGHT) / 2;
+                colorWheelPicker.open(cx2 + WIDTH / 2, cy2 + VISIBLE_HEIGHT / 2);
             }
-        ).bounds(cx + 135, row, 65, 20).build());
-        row += 30;
-        drawLabel("§7提示: 击杀生物后会在死亡位置", cx, row);
-        drawLabel("§7生成黑洞扭曲效果", cx, row + 12);
+        ).bounds(cx + 85, row, 18, 16).build());
+        addRenderableWidget(Button.builder(
+            Component.literal("#" + cfg.crystalTintColor),
+            btn -> {
+                int cx2 = (width - WIDTH) / 2;
+                int cy2 = (height - VISIBLE_HEIGHT) / 2;
+                colorWheelPicker.open(cx2 + WIDTH / 2, cy2 + VISIBLE_HEIGHT / 2);
+            }
+        ).bounds(cx + 105, row, 65, 16).build());
+        row += 22;
+
+        // 行4：半径 + 发光（同行，左右分开）
+        drawLabel("半径:", cx, row);
+        double[] radius = {cfg.crystalRadius};
+        addRenderableWidget(Button.builder(Component.literal(String.format("%.1f",radius[0])),
+            btn -> { radius[0] += 0.25; if (radius[0] > 3.0) radius[0] = 0.5;
+                cfg.crystalRadius = radius[0]; KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 55, row, 40, 16).build());
+        drawLabel("发光:", cx + 130, row);
+        double[] glow = {cfg.crystalGlowIntensity};
+        addRenderableWidget(Button.builder(Component.literal(String.format("%.1f",glow[0])),
+            btn -> { glow[0] += 0.2; if (glow[0] > 2.0) glow[0] = 0.0;
+                cfg.crystalGlowIntensity = glow[0]; KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 175, row, 40, 16).build());
+        row += 22;
+
+        // 行5：转速 + 脉冲（同行）
+        drawLabel("转速:", cx, row);
+        double[] speed = {cfg.crystalRotationSpeed};
+        addRenderableWidget(Button.builder(Component.literal(String.format("%.1f",speed[0])),
+            btn -> { speed[0] += 0.5; if (speed[0] > 5.0) speed[0] = 0.0;
+                cfg.crystalRotationSpeed = speed[0]; KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 55, row, 40, 16).build());
+        if ("基础晶体".equals(cfg.crystalStyle) || "发光".equals(cfg.crystalStyle)) {
+            addToggleSimple(cx + 130, row, "脉冲", cfg.crystalPulse, v -> cfg.crystalPulse = v);
+        }
+    }
+
+    /** 天光/光环配置：严格分行 */
+    private void buildBeamRingSettings(int cx, int row) {
+        drawLabel("持续Tick:", cx, row);
+        addRenderableWidget(Button.builder(Component.literal(cfg.shaderDuration + "t"),
+            btn -> { cfg.shaderDuration = cfg.shaderDuration >= 80 ? 5 : cfg.shaderDuration + 5;
+                KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 135, row, 45, 18).build());
+        row += 22;
+        double[] sz = {cfg.shaderIntensity};
+        drawLabel("大小:", cx, row);
+        addRenderableWidget(Button.builder(Component.literal(String.format("%.1f",sz[0])),
+            btn -> { sz[0] += 0.25; if (sz[0] > 3.0) sz[0] = 0.5;
+                cfg.shaderIntensity = sz[0]; KillFXConfig.save(); rebuildWidgets(); }
+        ).bounds(cx + 135, row, 45, 18).build());
+    }
+
+    /** 同行内小开关（不触发 rebuildWidgets 只刷新按钮文字） */
+    private void addToggleSimple(int x, int y, String label, boolean current, java.util.function.Consumer<Boolean> setter) {
+        drawLabel(label, x, y);
+        addRenderableWidget(Button.builder(Component.literal(current ? "开" : "关"),
+            btn -> { boolean nv = !current; setter.accept(nv);
+                KillFXConfig.save(); btn.setMessage(Component.literal(nv ? "开" : "关")); }
+        ).bounds(x + 35, y, 30, 16).build());
     }
 
     // ════════════════════════════════════════════════════════════
@@ -752,6 +859,21 @@ public class KillFXConfigScreen extends Screen {
     // ════════════════════════════════════════════════════════════
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int cx = (width - WIDTH) / 2, cy = (height - VISIBLE_HEIGHT) / 2;
+        // 只在面板区域内响应滚轮
+        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy && mouseY <= cy + VISIBLE_HEIGHT) {
+            int newScroll = scrollOffset - (int)(delta * 16);
+            // 限制滚动范围：最多滚动到内容底部
+            int maxScroll = Math.max(0, contentMaxRow - (cy + VISIBLE_HEIGHT - 60));
+            scrollOffset = Math.max(0, Math.min(newScroll, maxScroll));
+            rebuildWidgets();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
 
@@ -764,26 +886,55 @@ public class KillFXConfigScreen extends Screen {
         // 绘制标题
         guiGraphics.drawString(font, "击杀特效配置 - " + activeCategory, cx + 10, cy + 25, 0xFFFFFF);
 
-        // 绘制当前分类的标签
-        int row = cy + 35;
+        // 启用裁剪，防止内容超出面板
+        guiGraphics.enableScissor(cx + 2, cy + 35, cx + WIDTH - 2, cy + VISIBLE_HEIGHT - 32);
+
+        // 绘制当前分类的标签（行号已包含 scrollOffset）
+        int row = cy + 35 - scrollOffset;
         String[][] labelDefs = switch (activeCategory) {
             case "通用" -> new String[][]{{"功能开关:", "35"}, {"仅限攻击目标:", "59"}, {"记忆时间(秒):", "83"}};
             case "闪电" -> new String[][]{{"启用闪电:", "35"}, {"闪电数量:", "59"}, {"闪电音效:", "83"}};
             case "粒子" -> new String[][]{{"启用粒子:", "35"}, {"粒子分类:", "59"}, {"具体粒子:", "95"}, {"粒子形状:", "119"}, {"粒子数量:", "171"}, {"粒子速度:", "195"}};
             case "音效" -> new String[][]{{"启用音效:", "35"}, {"音效分类:", "55"}, {"具体音效:", "75"}, {"音量:", "99"}, {"音调:", "123"}};
             case "额外" -> new String[][]{{"生成烟花:", "35"}, {"爆炸烟雾:", "59"}};
-            case "着色器" -> new String[][]{{"启用着色器:", "35"}, {"特效类型:", "59"}, {"扭曲强度:", "83"}, {"持续Tick:", "107"}, {"§7提示: 击杀生物后会在", "135"}, {"§7死亡位置生成黑洞效果", "147"}};
+            case "着色器" -> {
+                // ★ Y坐标：启用(35)→+22→类型(57)→+40→配置(97)→每行+22
+                String type = cfg.shaderType;
+                if ("黑洞".equals(type)) {
+                    yield new String[][]{{"启用着色器:", "35"}, {"特效类型:", "57"}, {"持续Tick:", "97"}, {"黑洞大小:", "119"}};
+                } else if ("水晶".equals(type)) {
+                    yield new String[][]{{"启用着色器:", "35"}, {"特效类型:", "57"}, {"持续Tick:", "97"}, {"风格:", "119"}, {"色调:", "141"}, {"半径/发光:", "163"}, {"转速/脉冲:", "185"}};
+                } else if ("天光光束".equals(type) || "天光环".equals(type)) {
+                    yield new String[][]{{"启用着色器:", "35"}, {"特效类型:", "57"}, {"持续Tick:", "97"}, {"大小:", "119"}};
+                } else {
+                    yield new String[][]{{"启用着色器:", "35"}};
+                }
+            }
             default -> new String[][]{};
         };
 
         for (String[] pair : labelDefs) {
-            int yRow = cy + Integer.parseInt(pair[1]);
-            if (yRow >= cy + 35 && yRow < cy + VISIBLE_HEIGHT - 35) {
+            int yRow = cy + Integer.parseInt(pair[1]) - scrollOffset;
+            if (yRow + 4 >= cy + 35 && yRow < cy + VISIBLE_HEIGHT - 35) {
                 guiGraphics.drawString(font, pair[0], cx + 10, yRow + 4, 0xAAAAAA);
             }
         }
 
+        guiGraphics.disableScissor();
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+        // 彩色圆盘渲染在最上层
+        colorWheelPicker.render(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // ★ 彩色圆盘优先处理点击
+        if (colorWheelPicker.isOpen()) {
+            if (colorWheelPicker.mouseClicked(mouseX, mouseY, button)) return true;
+            // 如果圆盘关闭了（点击外部），刷新界面
+            rebuildWidgets();
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

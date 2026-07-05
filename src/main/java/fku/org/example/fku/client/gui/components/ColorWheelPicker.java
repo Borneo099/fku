@@ -1,238 +1,221 @@
 package fku.org.example.fku.client.gui.components;
 
-import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * 颜色轮盘选择器组件
+ * 彩色圆盘选择器 — 完整的HSV彩色圆盘（饱和度和色相二维渐变）
+ *
+ * ★ 工作原理：
+ *   圆盘中心 = 白色（饱和度S=0），圆盘边缘 = 纯色（饱和度S=1）
+ *   色相H沿圆周变化（0°~360°）
+ *   亮度V通过外部滑块控制
+ *
+ * ★ 绘制方式：
+ *   逐像素遍历圆盘区域，根据像素到中心的距离计算饱和度，
+ *   根据角度计算色相，HSV→RGB 得到最终颜色
  */
 public class ColorWheelPicker {
-    private static final int WHEEL_RADIUS = 80;
-    private static final int CENTER_RADIUS = 20;
-    
-    private int x, y;
-    private int currentR, currentG, currentB;
+    private static final int WHEEL_RADIUS = 60;
+    private static final int WHEEL_DIAMETER = WHEEL_RADIUS * 2;
+
+    private int centerX, centerY;
+    private float hue = 0f;        // 0~1
+    private float saturation = 1f; // 0~1
+    private float value = 1f;      // 0~1
     private boolean isOpen = false;
     private OnColorChangedListener listener;
-    
+    private String hexColor = "88CCFF";
+
     public interface OnColorChangedListener {
-        void onColorChanged(int r, int g, int b);
+        void onColorChanged(String hexColor);
     }
 
-    public ColorWheelPicker(int currentR, int currentG, int currentB, OnColorChangedListener listener) {
-        this.currentR = currentR;
-        this.currentG = currentG;
-        this.currentB = currentB;
+    public ColorWheelPicker(String initialHex, OnColorChangedListener listener) {
+        this.hexColor = initialHex;
         this.listener = listener;
+        float[] hsv = hexToHsv(initialHex);
+        this.hue = hsv[0];
+        this.saturation = hsv[1];
+        this.value = hsv[2];
+    }
+
+    public void setColor(String hex) {
+        this.hexColor = hex;
+        float[] hsv = hexToHsv(hex);
+        this.hue = hsv[0];
+        this.saturation = hsv[1];
+        this.value = hsv[2];
     }
 
     public void open(int x, int y) {
-        this.x = x;
-        this.y = y;
+        this.centerX = x;
+        this.centerY = y;
         this.isOpen = true;
     }
 
-    public void close() {
-        this.isOpen = false;
-    }
+    public void close() { this.isOpen = false; }
+    public boolean isOpen() { return isOpen; }
+    public String getHexColor() { return hexColor; }
 
-    public boolean isOpen() {
-        return isOpen;
-    }
-
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    public void render(GuiGraphics g, int mouseX, int mouseY) {
         if (!isOpen) return;
-        
-        GuiStyleConfig config = GuiStyleConfig.getInstance();
-        
-        // 绘制背景面板
-        GuiRenderHelper.drawPanelBackground(guiGraphics, x - WHEEL_RADIUS - 10, y - WHEEL_RADIUS - 10, WHEEL_RADIUS * 2 + 20, WHEEL_RADIUS * 2 + 20, false);
-        
-        // 绘制颜色轮盘
-        drawColorWheel(guiGraphics);
-        
-        // 绘制中心颜色选择区域
-        drawCenterPanel(guiGraphics);
-        
-        // 绘制当前颜色预览
-        drawColorPreview(guiGraphics);
+
+        int px = centerX - WHEEL_RADIUS - 8;
+        int py = centerY - WHEEL_RADIUS - 8;
+        int size = WHEEL_DIAMETER + 16;
+
+        // 背景面板
+        GuiRenderHelper.drawPanelBackground(g, px, py, size, size + 40, false);
+
+        // 1. 绘制完整的彩色圆盘（逐像素填充）
+        drawFullColorWheel(g);
+
+        // 2. 绘制亮度条（下方）
+        drawBrightnessBar(g);
+
+        // 3. 绘制HEX值和当前颜色预览
+        String hex = "#" + hexColor.toUpperCase();
+        g.drawString(Minecraft.getInstance().font, hex, px + 5, py + size + 12, 0xFFFFFF);
+        // 当前颜色小方块
+        GuiRenderHelper.drawRoundedRect(g, px + size - 30, py + size + 8, 24, 16, hexToInt(hexColor), 3);
     }
 
-    private void drawColorWheel(GuiGraphics guiGraphics) {
-        int centerX = x;
-        int centerY = y;
-        
-        // 绘制颜色轮盘（使用线段绘制）
-        for (int angle = 0; angle < 360; angle += 2) {
-            double rad = Math.toRadians(angle);
-            int px = (int) (centerX + WHEEL_RADIUS * Math.cos(rad));
-            int py = (int) (centerY + WHEEL_RADIUS * Math.sin(rad));
-            
-            // 获取HSV颜色（不使用AWT）
-            float[] rgb = hsvToRgb(angle / 360f, 1f, 1f);
-            int r = (int) (rgb[0] * 255);
-            int g = (int) (rgb[1] * 255);
-            int b = (int) (rgb[2] * 255);
-            
-            // 绘制像素点
-            guiGraphics.fill(px - 2, py - 2, px + 2, py + 2, (255 << 24) | (r << 16) | (g << 8) | b);
-        }
-        
-        // 绘制轮盘边框（使用矩形模拟）
-        drawCircleOutline(guiGraphics, centerX, centerY, WHEEL_RADIUS, 0xFFFFFFFF);
-    }
+    /** 绘制完整的HSV彩色圆盘 — 逐像素绘制 */
+    private void drawFullColorWheel(GuiGraphics g) {
+        int cx = centerX, cy = centerY;
+        int r2 = WHEEL_RADIUS * WHEEL_RADIUS;
 
-    private void drawCircleOutline(GuiGraphics guiGraphics, int centerX, int centerY, int radius, int color) {
-        // 使用多个线段绘制圆形边框
-        for (int angle = 0; angle < 360; angle += 4) {
-            double rad = Math.toRadians(angle);
-            int px = (int) (centerX + radius * Math.cos(rad));
-            int py = (int) (centerY + radius * Math.sin(rad));
-            guiGraphics.fill(px, py, px + 1, py + 1, color);
+        // 遍历圆盘外接正方形区域
+        for (int dx = -WHEEL_RADIUS; dx <= WHEEL_RADIUS; dx++) {
+            for (int dy = -WHEEL_RADIUS; dy <= WHEEL_RADIUS; dy++) {
+                int dist2 = dx * dx + dy * dy;
+                if (dist2 > r2) continue; // 跳过圆盘外部
+
+                float dist = (float) Math.sqrt(dist2) / WHEEL_RADIUS;
+                float angle = (float) Math.atan2(dy, dx);
+                if (angle < 0) angle += Math.PI * 2;
+
+                float h = angle / (float)(Math.PI * 2);
+                float s = dist;              // 中心饱和度0，边缘饱和度1
+                float v = this.value;        // 使用当前亮度
+
+                int rgb = hsvToInt(h, s, v);
+                g.fill(cx + dx, cy + dy, cx + dx + 1, cy + dy + 1, rgb);
+            }
         }
     }
 
-    private void drawCenterPanel(GuiGraphics guiGraphics) {
-        int centerX = x;
-        int centerY = y;
-        
-        // 绘制中心圆形区域（黑白渐变）
-        for (int i = CENTER_RADIUS; i > 0; i--) {
-            float brightness = i / (float) CENTER_RADIUS;
-            int gray = (int) (brightness * 255);
-            guiGraphics.fill(centerX - i, centerY - i, centerX + i, centerY + i, (255 << 24) | (gray << 16) | (gray << 8) | gray);
+    /** 亮度条（下方） */
+    private void drawBrightnessBar(GuiGraphics g) {
+        int barX = centerX - WHEEL_RADIUS;
+        int barY = centerY + WHEEL_RADIUS + 10;
+        int barW = WHEEL_DIAMETER;
+        int barH = 12;
+
+        // 绘制渐变亮度条：左黑右白
+        for (int i = 0; i < barW; i++) {
+            float t = (float) i / barW;
+            int gray = (int)(t * 255);
+            int color = (255 << 24) | (gray << 16) | (gray << 8) | gray;
+            g.fill(barX + i, barY, barX + i + 1, barY + barH, color);
         }
-        
-        // 绘制中心边框
-        drawCircleOutline(guiGraphics, centerX, centerY, CENTER_RADIUS, 0xFFFFFFFF);
+        // 亮度指示器
+        int indX = barX + (int)(this.value * barW);
+        g.fill(indX - 2, barY - 1, indX + 3, barY + barH + 1, 0xFFFFFFFF);
     }
 
-    private void drawColorPreview(GuiGraphics guiGraphics) {
-        int previewX = x + WHEEL_RADIUS + 15;
-        int previewY = y - 30;
-        
-        // 绘制预览框
-        GuiRenderHelper.drawRoundedRect(guiGraphics, previewX, previewY, 60, 60, (255 << 24) | (currentR << 16) | (currentG << 8) | currentB, 4);
-        GuiRenderHelper.drawRoundedOutline(guiGraphics, previewX, previewY, 60, 60, 0xFFFFFFFF, 4, 1);
-        
-        // 绘制RGB值
-        String rgbStr = String.format("%d, %d, %d", currentR, currentG, currentB);
-        guiGraphics.drawString(Minecraft.getInstance().font, rgbStr, previewX, previewY + 70, 0xFFFFFF);
-    }
-
+    /** 鼠标点击处理 */
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!isOpen) return false;
-        
-        int centerX = x;
-        int centerY = y;
-        
-        // 检查是否点击在轮盘外部（关闭）
-        double distToCenter = Math.sqrt(Math.pow(mouseX - centerX, 2) + Math.pow(mouseY - centerY, 2));
-        if (distToCenter > WHEEL_RADIUS + 10) {
+        int px = centerX - WHEEL_RADIUS - 8;
+        int py = centerY - WHEEL_RADIUS - 8;
+        int size = WHEEL_DIAMETER + 16;
+
+        // 点击关闭（点击面板外部）
+        if (mouseX < px || mouseX > px + size || mouseY < py || mouseY > py + size + 40) {
             close();
             return true;
         }
-        
-        if (button == 0) {
-            // 检查是否点击在中心区域
-            if (distToCenter <= CENTER_RADIUS) {
-                // 在中心区域，调整亮度
-                float brightness = (float) (distToCenter / CENTER_RADIUS);
-                adjustBrightness(brightness);
-            } else {
-                // 在轮盘区域，选择颜色
-                double angle = Math.atan2(mouseY - centerY, mouseX - centerX);
-                if (angle < 0) angle += Math.PI * 2;
-                float hue = (float) (angle / (Math.PI * 2));
-                
-                // 设置新颜色（不使用AWT）
-                float[] rgb = hsvToRgb(hue, 1f, 1f);
-                currentR = (int) (rgb[0] * 255);
-                currentG = (int) (rgb[1] * 255);
-                currentB = (int) (rgb[2] * 255);
-                
-                notifyListener();
-            }
+
+        // 点击圆盘
+        double dx = mouseX - centerX;
+        double dy = mouseY - centerY;
+        double dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= WHEEL_RADIUS) {
+            float angle = (float) Math.atan2(dy, dx);
+            if (angle < 0) angle += Math.PI * 2;
+            this.hue = angle / (float)(Math.PI * 2);
+            this.saturation = (float) Math.min(dist / WHEEL_RADIUS, 1.0);
+            updateHex();
             return true;
         }
-        
+
+        // 点击亮度条
+        int barX = centerX - WHEEL_RADIUS;
+        int barY = centerY + WHEEL_RADIUS + 10;
+        int barW = WHEEL_DIAMETER;
+        if (mouseY >= barY && mouseY < barY + 12 && mouseX >= barX && mouseX < barX + barW) {
+            this.value = (float) ((mouseX - barX) / barW);
+            updateHex();
+            return true;
+        }
+
         return false;
     }
 
-    private void adjustBrightness(float brightness) {
-        // 将当前RGB转换为HSV（不使用AWT）
-        float[] hsv = rgbToHsv(currentR, currentG, currentB);
-        hsv[2] = brightness;
-        
-        float[] rgb = hsvToRgb(hsv[0], hsv[1], hsv[2]);
-        currentR = (int) (rgb[0] * 255);
-        currentG = (int) (rgb[1] * 255);
-        currentB = (int) (rgb[2] * 255);
-        
-        notifyListener();
+    private void updateHex() {
+        int rgb = hsvToInt(hue, saturation, value);
+        this.hexColor = String.format("%02X%02X%02X", (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+        if (listener != null) listener.onColorChanged(hexColor);
     }
 
-    private void notifyListener() {
-        if (listener != null) {
-            listener.onColorChanged(currentR, currentG, currentB);
-        }
-    }
+    // ═══════ HSV ↔ RGB/HEX 工具方法 ═══════
 
-    public void setColor(int r, int g, int b) {
-        this.currentR = r;
-        this.currentG = g;
-        this.currentB = b;
-    }
-    
-    /**
-     * HSV转RGB（不使用AWT）
-     */
-    private float[] hsvToRgb(float h, float s, float v) {
-        float r, g, b;
-        
-        int i = (int) (h * 6);
+    private static int hsvToInt(float h, float s, float v) {
+        int i = (int)(h * 6);
         float f = h * 6 - i;
         float p = v * (1 - s);
         float q = v * (1 - f * s);
         float t = v * (1 - (1 - f) * s);
-        
+        float r, g, b2;
         switch (i % 6) {
-            case 0: r = v; g = t; b = p; break;
-            case 1: r = q; g = v; b = p; break;
-            case 2: r = p; g = v; b = t; break;
-            case 3: r = p; g = q; b = v; break;
-            case 4: r = t; g = p; b = v; break;
-            default: r = v; g = p; b = q; break;
+            case 0: r=v; g=t; b2=p; break;
+            case 1: r=q; g=v; b2=p; break;
+            case 2: r=p; g=v; b2=t; break;
+            case 3: r=p; g=q; b2=v; break;
+            case 4: r=t; g=p; b2=v; break;
+            default: r=v; g=p; b2=q; break;
         }
-        
-        return new float[]{r, g, b};
+        return (255 << 24) | ((int)(r*255) << 16) | ((int)(g*255) << 8) | (int)(b2*255);
     }
-    
-    /**
-     * RGB转HSV（不使用AWT）
-     */
-    private float[] rgbToHsv(int r, int g, int b) {
-        float rf = r / 255f;
-        float gf = g / 255f;
-        float bf = b / 255f;
-        
-        float max = Math.max(rf, Math.max(gf, bf));
-        float min = Math.min(rf, Math.min(gf, bf));
-        float h, s, v = max;
-        
-        float d = max - min;
-        s = max == 0 ? 0 : d / max;
-        
-        if (max == min) {
-            h = 0; // achromatic
-        } else {
-            if (max == rf) h = ((gf - bf) / d + (gf < bf ? 6 : 0)) / 6;
-            else if (max == gf) h = ((bf - rf) / d + 2) / 6;
-            else h = ((rf - gf) / d + 4) / 6;
-        }
-        
-        return new float[]{h, s, v};
+
+    private static float[] hexToHsv(String hex) {
+        if (hex == null || hex.length() < 6) return new float[]{0f, 0.8f, 0.8f};
+        try {
+            int r = Integer.parseInt(hex.substring(0, 2), 16);
+            int g = Integer.parseInt(hex.substring(2, 4), 16);
+            int b = Integer.parseInt(hex.substring(4, 6), 16);
+            float rf = r/255f, gf = g/255f, bf = b/255f;
+            float max = Math.max(rf, Math.max(gf, bf)), min = Math.min(rf, Math.min(gf, bf));
+            float h, s, v = max;
+            float d = max - min;
+            s = max == 0 ? 0 : d / max;
+            if (max == min) h = 0;
+            else if (max == rf) h = ((gf-bf)/d + (gf<bf?6:0)) / 6f;
+            else if (max == gf) h = ((bf-rf)/d + 2) / 6f;
+            else h = ((rf-gf)/d + 4) / 6f;
+            return new float[]{h, s, v};
+        } catch (Exception e) { return new float[]{0f, 0.8f, 0.8f}; }
+    }
+
+    private static int hexToInt(String hex) {
+        try {
+            int r = Integer.parseInt(hex.substring(0, 2), 16);
+            int g = Integer.parseInt(hex.substring(2, 4), 16);
+            int b = Integer.parseInt(hex.substring(4, 6), 16);
+            return (255 << 24) | (r << 16) | (g << 8) | b;
+        } catch (Exception e) { return 0xFF88CCFF; }
     }
 }

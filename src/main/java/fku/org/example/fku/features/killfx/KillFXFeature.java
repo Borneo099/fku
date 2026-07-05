@@ -180,14 +180,32 @@ public class KillFXFeature {
                 rendered++;
 
                 // ★ 触发位置着色器特效
-                if (cfg.useShader && !cfg.shaderType.equals("NONE")) {
-                    KillFXShaderManager.ShaderType shaderType = KillFXShaderManager.ShaderType.valueOf(cfg.shaderType);
-                    KillFXShaderManager.trigger(
-                        shaderType,
-                        entity.position(),
-                        (float) cfg.shaderIntensity,
-                        cfg.shaderDuration
-                    );
+                if (cfg.useShader && !cfg.shaderType.equals("无")) {
+                    KillFXShaderManager.ShaderType shaderType = shaderTypeFromChinese(cfg.shaderType);
+                    String extra = "";
+                    float intensity = (float) cfg.shaderIntensity;
+                    switch (shaderType) {
+                        case CRYSTAL -> {
+                            extra = String.format("%s,%s,%.1f,%.1f,%.1f,%s",
+                                    mapCrystalStyle(cfg.crystalStyle),
+                                    cfg.crystalTintColor,
+                                    cfg.crystalRadius,
+                                    cfg.crystalGlowIntensity,
+                                    cfg.crystalRotationSpeed,
+                                    cfg.crystalPulse);
+                            intensity = (float) cfg.crystalGlowIntensity;
+                        }
+                        case BLACKHOLE -> {
+                            extra = String.format("%.1f", cfg.blackholeScale);
+                        }
+                        case SKY_BEAM -> {
+                            extra = String.format("BEAM,%.1f", cfg.shaderIntensity);
+                        }
+                        case SKY_RING -> {
+                            extra = String.format("RING,%.1f", cfg.shaderIntensity);
+                        }
+                    }
+                    KillFXShaderManager.trigger(shaderType, entity.position(), intensity, cfg.shaderDuration, extra);
                 }
             } catch (Exception e) {
                 Fku.LOGGER.error("[KillFX] 渲染异常", e);
@@ -459,4 +477,36 @@ public class KillFXFeature {
     }
 
     public static int getProcessedCount() { return processedEntities.size(); }
+
+    /** 将中文名称映射为ShaderType枚举 */
+    public static KillFXShaderManager.ShaderType shaderTypeFromChinese(String cn) {
+        return switch (cn) {
+            case "黑洞" -> KillFXShaderManager.ShaderType.BLACKHOLE;
+            case "水晶" -> KillFXShaderManager.ShaderType.CRYSTAL;
+            case "天光光束" -> KillFXShaderManager.ShaderType.SKY_BEAM;
+            case "天光环" -> KillFXShaderManager.ShaderType.SKY_RING;
+            default -> KillFXShaderManager.ShaderType.NONE;
+        };
+    }
+
+    /** 将中文水晶风格映射为英文标识符 */
+    private static String mapCrystalStyle(String cn) {
+        return switch (cn) {
+            case "发光" -> "BLOOM";
+            case "玻璃折射" -> "GLASS";
+            case "极光" -> "AURORA";
+            default -> "CRYSTAL";
+        };
+    }
+
+    /** 将英文ShaderType映射为中文显示名 */
+    public static String chineseFromShaderType(KillFXShaderManager.ShaderType type) {
+        return switch (type) {
+            case BLACKHOLE -> "黑洞";
+            case CRYSTAL -> "水晶";
+            case SKY_BEAM -> "天光光束";
+            case SKY_RING -> "天光环";
+            default -> "无";
+        };
+    }
 }

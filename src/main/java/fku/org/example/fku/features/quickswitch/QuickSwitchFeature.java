@@ -93,25 +93,23 @@ public class QuickSwitchFeature {
     private static final int STEP_INTERVAL_MS = 10;
 
     // ════════════════════════════════════════════════════════════
-    // ★ 功能开关
+    // ★ 功能开关 — 始终从 Config 读取/保存（静默持久化）
     // ════════════════════════════════════════════════════════════
-
-    private static boolean enabled = false;
 
     public static void init() {
         QuickSwitchConfig.load();
-        enabled = QuickSwitchConfig.getInstance().enabled;
     }
 
-    public static boolean isEnabled() { return enabled; }
+    public static boolean isEnabled() { return QuickSwitchConfig.getInstance().enabled; }
 
     public static void setEnabled(boolean v) {
-        if (v && "OFF".equals(QuickSwitchConfig.getInstance().mode)) {
-            QuickSwitchConfig.getInstance().mode = "SMART";
+        QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
+        if (v && "OFF".equals(cfg.mode)) {
+            cfg.mode = "SMART";
             QuickSwitchConfig.save();
         }
-        enabled = v;
-        QuickSwitchConfig.getInstance().setEnabled(v);
+        cfg.enabled = v;
+        QuickSwitchConfig.save();
         if (mc.player != null) {
             mc.player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
@@ -123,7 +121,7 @@ public class QuickSwitchFeature {
         if (!v) forceReset();
     }
 
-    public static void toggle() { setEnabled(!enabled); }
+    public static void toggle() { setEnabled(!isEnabled()); }
 
     public static boolean isIdle() { return state == SwitchState.IDLE; }
 
@@ -411,7 +409,7 @@ public class QuickSwitchFeature {
     }
 
     private static boolean canHandle() {
-        if (!enabled) return false;
+        if (!isEnabled()) return false;
         if (mc.player == null) return false;
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
         return cfg.enabled && cfg.isActiveMode();

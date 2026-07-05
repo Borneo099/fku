@@ -83,6 +83,7 @@ public class TpAuraScreen extends Screen {
     private boolean waitingHotkey = false;
 
     private final TpAuraConfig cfg = TpAuraConfig.getInstance();
+    private int scrollOffset = 0;
 
     public TpAuraScreen() {
         super(Component.literal("如来神掌配置"));
@@ -464,6 +465,7 @@ public class TpAuraScreen extends Screen {
         g.drawString(font, "TP落点偏:", cx + 155, cy(ROW_TRANSPORT_INPUTS), 0xAAAAAA);
         g.drawString(font, "§7(0~6)格", cx + 252, cy(ROW_TRANSPORT_INPUTS), 0x666666);
 
+        g.disableScissor();
         super.render(g, mx, my, pt);
     }
 
@@ -546,7 +548,18 @@ public class TpAuraScreen extends Screen {
     }
 
     private int cy(int rowOffset) {
-        return (height - HEIGHT) / 2 + rowOffset;
+        return (height - HEIGHT) / 2 + rowOffset - scrollOffset;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int cx = (width - WIDTH) / 2, cy2 = (height - HEIGHT) / 2;
+        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy2 && mouseY <= cy2 + HEIGHT) {
+            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
+            init();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     /** 攻击模式显示名称（支持3种模式） */

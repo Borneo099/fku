@@ -57,6 +57,9 @@ public class SprintConfigScreen extends Screen {
     /** 当前分类：0=基础设置，1=高级设置 */
     private int activeTab = 0;
 
+    /** 滚轮滚动偏移 */
+    private int scrollOffset = 0;
+
     /** 当前tab名文字（不用存储，仅用于渲染） */
     private static final String[] TAB_NAMES = {"基础设置", "高级设置"};
 
@@ -79,13 +82,24 @@ public class SprintConfigScreen extends Screen {
     // ★ 统一布局辅助：标签Y & 按钮Y
     // ════════════════════════════════════════════════════════════
 
-    private int cy(int row) { return (height - HEIGHT) / 2 + row; }
+    private int cy(int row) { return (height - HEIGHT) / 2 + row - scrollOffset; }
     private int cx() { return (width - WIDTH) / 2; }
 
     @Override
     protected void init() {
         super.init();
         rebuildWidgets();
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int cx = cx(), cyb = (height - HEIGHT) / 2;
+        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cyb && mouseY <= cyb + HEIGHT) {
+            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
+            rebuildWidgets();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     protected void rebuildWidgets() {
@@ -250,6 +264,7 @@ public class SprintConfigScreen extends Screen {
         int cy = cy(0);
 
         GuiRenderHelper.drawPanelBackground(g, cx, cy, WIDTH, HEIGHT, false);
+        g.enableScissor(cx + 2, cy + 20, cx + WIDTH - 2, cy + HEIGHT - 32);
 
         // ── 标题 ──
         g.drawString(font, "强制疾跑配置 - " + TAB_NAMES[activeTab], cx + 10, cy + 2, 0xFFFFFF);
@@ -280,6 +295,7 @@ public class SprintConfigScreen extends Screen {
             }
         }
 
+        g.disableScissor();
         super.render(g, mx, my, pt);
     }
 

@@ -200,18 +200,34 @@ public class KnockbackConfigScreen extends Screen {
         KnockbackConfig.save();
     }
 
+    /** 滚轮滚动偏移 */
+    private int scrollOffset = 0;
+
     /** 计算相对于面板顶部的 Y 坐标 */
     private int cy(int rowOffset) {
-        return (height - HEIGHT) / 2 + rowOffset;
+        return (height - HEIGHT) / 2 + rowOffset - scrollOffset;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int cx = (width - WIDTH) / 2, cy2 = (height - HEIGHT) / 2;
+        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy2 && mouseY <= cy2 + HEIGHT) {
+            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
+            init();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
     public void render(@NotNull GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderBackground(g);
         int cx = (width - WIDTH) / 2;
+        int cy = cy(0);
 
         // ── 面板背景 ──
         GuiRenderHelper.drawPanelBackground(g, cx, cy(0), WIDTH, HEIGHT, false);
+        g.enableScissor(cx + 2, cy + 20, cx + WIDTH - 2, cy + HEIGHT - 30);
         g.drawString(font, "自由击退配置", cx + 10, cy(8), 0xFFFFFF);
 
         boolean isCustom = "CUSTOM".equals(cfg.mode);
@@ -256,6 +272,7 @@ public class KnockbackConfigScreen extends Screen {
         };
         g.drawString(font, modeHint, cx + 10, cy(ROW_MODE_LABEL), 0x888888);
 
+        g.disableScissor();
         super.render(g, mouseX, mouseY, partialTick);
     }
 

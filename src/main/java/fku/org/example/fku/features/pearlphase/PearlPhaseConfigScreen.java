@@ -40,6 +40,7 @@ public class PearlPhaseConfigScreen extends Screen {
     private static final int ROW_CLOSE = 245;
 
     private final PearlPhaseConfig cfg = PearlPhaseConfig.getInstance();
+    private int scrollOffset = 0;
 
     // 输入框
     private EditBox speedField;
@@ -61,7 +62,7 @@ public class PearlPhaseConfigScreen extends Screen {
     @Override
     protected void init() {
         int cx = (this.width - WIDTH) / 2;
-        int cy = (this.height - HEIGHT) / 2;
+        int cy = (this.height - HEIGHT) / 2 - scrollOffset;
 
         // ★ 开关按钮（toggle 型，每次点击切换）
         autoThrowButton = buildToggleButton(cx + 160, cy + ROW_AUTO_THROW, cfg.autoThrow, "自动投掷", (btn) -> {
@@ -134,12 +135,24 @@ public class PearlPhaseConfigScreen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int cx = (width - WIDTH) / 2, cy2 = (height - HEIGHT) / 2;
+        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy2 && mouseY <= cy2 + HEIGHT) {
+            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
+            init();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int cx = (this.width - WIDTH) / 2;
-        int cy = (this.height - HEIGHT) / 2;
+        int cy = (this.height - HEIGHT) / 2 - scrollOffset;
+        guiGraphics.enableScissor(cx + 2, cy + 5, cx + WIDTH - 2, cy + HEIGHT - 5);
 
         // ★ 绘制标题
         guiGraphics.drawString(font, "§l珍珠卡墙配置", cx, cy + 10, 0xFFFFFF);
@@ -154,6 +167,8 @@ public class PearlPhaseConfigScreen extends Screen {
         drawLabel(guiGraphics, cx, cy + ROW_EDGE_OFFSET, "边缘偏移（0.0001~0.1）");
         drawLabel(guiGraphics, cx, cy + ROW_REMOVE_OVERLAY, "移除窒息贴图");
         drawLabel(guiGraphics, cx, cy + ROW_NO_FRONT, "禁用前方第三人称");
+
+        guiGraphics.disableScissor();
     }
 
     private void drawLabel(GuiGraphics gui, int cx, int y, String text) {

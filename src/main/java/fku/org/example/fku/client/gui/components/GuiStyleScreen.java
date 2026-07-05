@@ -41,7 +41,12 @@ public class GuiStyleScreen extends Screen {
     public GuiStyleScreen() {
         super(Component.literal("GUI外观设置"));
         this.config = GuiStyleConfig.getInstance();
-        this.colorPicker = new ColorWheelPicker(0, 0, 0, this::onColorChanged);
+        this.colorPicker = new ColorWheelPicker("88CCFF", hex -> {
+            int r = Integer.parseInt(hex.substring(0, 2), 16);
+            int g = Integer.parseInt(hex.substring(2, 4), 16);
+            int b = Integer.parseInt(hex.substring(4, 6), 16);
+            onColorChanged(r, g, b);
+        });
         
         // 初始化当前颜色
         primaryColorR = config.primaryColorR;
@@ -98,10 +103,10 @@ public class GuiStyleScreen extends Screen {
         colorPickerOpen = true;
         
         switch (colorIndex) {
-            case 0 -> colorPicker.setColor(primaryColorR, primaryColorG, primaryColorB);
-            case 1 -> colorPicker.setColor(backgroundColorR, backgroundColorG, backgroundColorB);
-            case 2 -> colorPicker.setColor(borderColorR, borderColorG, borderColorB);
-            case 3 -> colorPicker.setColor(textColorR, textColorG, textColorB);
+            case 0 -> colorPicker.setColor(String.format("%02X%02X%02X", primaryColorR, primaryColorG, primaryColorB));
+            case 1 -> colorPicker.setColor(String.format("%02X%02X%02X", backgroundColorR, backgroundColorG, backgroundColorB));
+            case 2 -> colorPicker.setColor(String.format("%02X%02X%02X", borderColorR, borderColorG, borderColorB));
+            case 3 -> colorPicker.setColor(String.format("%02X%02X%02X", textColorR, textColorG, textColorB));
         }
         
         colorPicker.open(width / 2, height / 2);

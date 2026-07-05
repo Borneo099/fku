@@ -87,12 +87,30 @@ public class KillFXConfig {
     // ===== 着色器特效 =====
     /** 启用着色器特效 */
     public boolean useShader = false;
-    /** 着色器类型: NONE, BLACKHOLE */
-    public String shaderType = "NONE";
+    /** 着色器类型: 无, 黑洞, 水晶 */
+    public String shaderType = "无";
     /** 着色器强度 (0.1-2.0) */
     public double shaderIntensity = 1.0;
     /** 着色器持续时长 (ticks) */
     public int shaderDuration = 20;
+
+    // ===== 黑洞特效专用配置（仅 shaderType="黑洞" 时有效）=====
+    /** 黑洞缩放 */
+    public double blackholeScale = 1.0;
+
+    // ===== 水晶特效专用配置（仅 shaderType="水晶" 时有效）=====
+    /** 水晶风格: 基础晶体, 发光, 玻璃折射, 极光 */
+    public String crystalStyle = "基础晶体";
+    /** 水晶色调: RGB十六进制 (默认 88CCFF 蓝晶) */
+    public String crystalTintColor = "88CCFF";
+    /** 水晶半径缩放 (0.5-3.0) */
+    public double crystalRadius = 1.0;
+    /** 发光强度 (0.0-2.0) */
+    public double crystalGlowIntensity = 0.8;
+    /** 自转速度 (0.0-5.0 弧度/秒) */
+    public double crystalRotationSpeed = 1.5;
+    /** 脉冲动画: 是否启用呼吸式缩放 */
+    public boolean crystalPulse = true;
 
     private static KillFXConfig instance;
 
