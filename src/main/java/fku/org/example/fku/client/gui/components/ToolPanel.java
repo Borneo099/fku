@@ -1,6 +1,7 @@
 package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.features.fastjoin.FastJoinComponent;
 import fku.org.example.fku.features.loot.LootComponent;
 import fku.org.example.fku.features.pearlphase.PearlPhaseComponent;
 import fku.org.example.fku.features.fakeplayer.FakePlayerComponent;
@@ -19,6 +20,7 @@ public class ToolPanel extends GuiPanel {
         addComponent(new AutoDropComponent(0, 0, 110, 25));
         addComponent(new DuplicatorComponent(0, 0, 110, 25));
         addComponent(new DisableTimeoutComponent(0, 0, 110, 25));
+        addComponent(new FastJoinComponent(0, 0, 110, 25));
         addComponent(new AntiLagComponent(0, 0, 110, 25));
         addComponent(new PearlPhaseComponent(0, 0, 110, 25));
         addComponent(new FakePlayerComponent(0, 0, 110, 25));

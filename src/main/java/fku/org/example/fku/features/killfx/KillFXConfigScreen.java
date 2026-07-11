@@ -539,10 +539,11 @@ public class KillFXConfigScreen extends Screen {
         addToggle(row, "启用着色器", cfg.useShader, v -> cfg.useShader = v);
         row += 22;
 
-        // ★ 特效类型：两行显示，每行2个按钮
+        // ★ 特效类型：每行2个按钮
         drawLabel("特效类型:", cx, row);
-        String[] types = {"黑洞", "水晶", "天光光束", "天光环"};
+        String[] types = {"黑洞", "水晶", "天光光束", "天光环", "超新星", "光线爆发"};
         int btW = 56;
+        int typeRows = (types.length + 1) / 2; // 3行
         for (int i = 0; i < types.length; i++) {
             final String fType = types[i];
             boolean isActive = fType.equals(cfg.shaderType);
@@ -553,12 +554,13 @@ public class KillFXConfigScreen extends Screen {
                 btn -> { cfg.shaderType = fType; KillFXConfig.save(); rebuildWidgets(); }
             ).bounds(bx, by, btW, 16).build());
         }
-        row += 40;
+        row += typeRows * 18 + 4;
 
         if ("黑洞".equals(cfg.shaderType)) buildBlackholeSettings(cx, row);
         else if ("水晶".equals(cfg.shaderType)) buildCrystalSettings(cx, row);
         else if ("天光光束".equals(cfg.shaderType)) buildBeamRingSettings(cx, row);
         else if ("天光环".equals(cfg.shaderType)) buildBeamRingSettings(cx, row);
+        else if ("超新星".equals(cfg.shaderType) || "光线爆发".equals(cfg.shaderType)) buildBeamRingSettings(cx, row);
     }
 
     /** 黑洞配置：各控件独立一行防重叠 */
@@ -905,6 +907,8 @@ public class KillFXConfigScreen extends Screen {
                 } else if ("水晶".equals(type)) {
                     yield new String[][]{{"启用着色器:", "35"}, {"特效类型:", "57"}, {"持续Tick:", "97"}, {"风格:", "119"}, {"色调:", "141"}, {"半径/发光:", "163"}, {"转速/脉冲:", "185"}};
                 } else if ("天光光束".equals(type) || "天光环".equals(type)) {
+                    yield new String[][]{{"启用着色器:", "35"}, {"特效类型:", "57"}, {"持续Tick:", "97"}, {"大小:", "119"}};
+                } else if ("超新星".equals(type) || "光线爆发".equals(type)) {
                     yield new String[][]{{"启用着色器:", "35"}, {"特效类型:", "57"}, {"持续Tick:", "97"}, {"大小:", "119"}};
                 } else {
                     yield new String[][]{{"启用着色器:", "35"}};

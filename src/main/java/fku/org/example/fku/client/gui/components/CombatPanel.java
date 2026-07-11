@@ -1,6 +1,7 @@
 package fku.org.example.fku.client.gui.components; /* water */
 
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.features.arrowdmg.ArrowDmgComponent;
 import fku.org.example.fku.features.knockback.KnockbackConfig;
 import fku.org.example.fku.features.knockback.KnockbackConfigScreen;
 import fku.org.example.fku.features.quickswitch.QuickSwitchComponent;
@@ -62,6 +63,9 @@ public class CombatPanel extends GuiPanel {
 
         // ★ 鬼手秒切功能开关（左键开关，右键配置界面）
         addComponent(new QuickSwitchComponent(0, 0, 110, 20));
+
+        // ★ 32k弓功能开关
+        addComponent(new ArrowDmgComponent(0, 0, 110, 25));
     }
 
     @Override

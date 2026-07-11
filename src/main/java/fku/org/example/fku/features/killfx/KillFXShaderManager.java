@@ -34,7 +34,7 @@ public class KillFXShaderManager {
     private static final Minecraft mc = Minecraft.getInstance();
     private static final LinkedList<ShaderEffect> effects = new LinkedList<>();
 
-    public enum ShaderType { NONE, BLACKHOLE, CRYSTAL, SKY_BEAM, SKY_RING }
+    public enum ShaderType { NONE, BLACKHOLE, CRYSTAL, SKY_BEAM, SKY_RING, HYPERNOVA, RAY_BURST }
 
     /**
      * 触发特效 — 携带完整配置参数
@@ -247,8 +247,144 @@ public class KillFXShaderManager {
                     float ez = (float)(effect.pos.z - camPos.z);
                     renderSkyRing(poseStack, ex, ey, ez, p, effect, partialTick);
                 }
+                case HYPERNOVA -> {
+                    Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+                    float ex = (float)(effect.pos.x - camPos.x);
+                    float ey = (float)(effect.pos.y - camPos.y);
+                    float ez = (float)(effect.pos.z - camPos.z);
+                    renderHypernova(poseStack, ex, ey, ez, p, effect);
+                }
+                case RAY_BURST -> {
+                    Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+                    float ex = (float)(effect.pos.x - camPos.x);
+                    float ey = (float)(effect.pos.y - camPos.y);
+                    float ez = (float)(effect.pos.z - camPos.z);
+                    renderRayBurst(poseStack, ex, ey, ez, p, effect);
+                }
             }
         }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ★ 超新星爆炸（Gemini 移植）：辉光球体 + 膨胀 + 淡出
+    // ════════════════════════════════════════════════════════════
+    private static void renderHypernova(PoseStack ps, float ex, float ey, float ez,
+                                         float p, ShaderEffect effect) {
+        float sc = effect.intensity;
+        float fadeIn = Math.min(p * 4f, 1f);
+        float fadeOut = Math.max(1f - (p - 0.5f) / 0.5f, 0f);
+        float alpha = fadeIn * fadeOut;
+        if (alpha < 0.01f) return;
+
+        float sz = 1.5f * sc * (0.3f + p * 1.2f);
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+        RenderSystem.disableCull();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+        Tesselator t = Tesselator.getInstance();
+        BufferBuilder buf = t.getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+
+        int stacks = 12, slices = 16;
+        for (int i = 0; i < stacks; i++) {
+            float ph1 = (float)(Math.PI * i / stacks);
+            float ph2 = (float)(Math.PI * (i + 1) / stacks);
+            float r1 = sz * (float)Math.sin(ph1);
+            float r2 = sz * (float)Math.sin(ph2);
+            float y1 = sz * (float)Math.cos(ph1);
+            float y2 = sz * (float)Math.cos(ph2);
+            for (int j = 0; j < slices; j++) {
+                float th1 = (float)(2 * Math.PI * j / slices);
+                float th2 = (float)(2 * Math.PI * (j + 1) / slices);
+                float c1 = (float)Math.cos(th1), s1 = (float)Math.sin(th1);
+                float c2 = (float)Math.cos(th2), s2 = (float)Math.sin(th2);
+                float layer = (float)i / stacks;
+                float br = 1f - layer * 0.3f;
+                float ba = alpha * (1f - layer * 0.4f);
+                buf.vertex(ps.last().pose(), ex+r1*c1, ey+y1, ez+r1*s1).color(br,br*0.8f,br*0.3f,ba).endVertex();
+                buf.vertex(ps.last().pose(), ex+r2*c1, ey+y2, ez+r2*s1).color(br,br*0.8f,br*0.3f,ba).endVertex();
+                buf.vertex(ps.last().pose(), ex+r2*c2, ey+y2, ez+r2*s2).color(br,br*0.8f,br*0.3f,ba).endVertex();
+                buf.vertex(ps.last().pose(), ex+r1*c2, ey+y1, ez+r1*s2).color(br,br*0.8f,br*0.3f,ba).endVertex();
+            }
+        }
+        t.end();
+
+        // 外层光晕壳
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        int outerStacks = 8;
+        float outerSz = sz * 1.8f;
+        for (int i = 0; i < outerStacks; i++) {
+            float ph1 = (float)(Math.PI * i / outerStacks);
+            float ph2 = (float)(Math.PI * (i + 1) / outerStacks);
+            float r1 = outerSz * (float)Math.sin(ph1);
+            float r2 = outerSz * (float)Math.sin(ph2);
+            float y1 = outerSz * (float)Math.cos(ph1);
+            float y2 = outerSz * (float)Math.cos(ph2);
+            for (int j = 0; j < slices; j++) {
+                float th1 = (float)(2 * Math.PI * j / slices);
+                float th2 = (float)(2 * Math.PI * (j + 1) / slices);
+                float c1=(float)Math.cos(th1),s1=(float)Math.sin(th1),c2=(float)Math.cos(th2),s2=(float)Math.sin(th2);
+                float f = 0.5f+0.5f*(float)Math.sin(i*1.3f+j*0.7f+p*8f);
+                buf.vertex(ps.last().pose(), ex+r1*c1, ey+y1, ez+r1*s1).color(1f,0.5f,0f,alpha*0.2f*f).endVertex();
+                buf.vertex(ps.last().pose(), ex+r2*c1, ey+y2, ez+r2*s1).color(1f,0.5f,0f,alpha*0.2f*f).endVertex();
+                buf.vertex(ps.last().pose(), ex+r2*c2, ey+y2, ez+r2*s2).color(1f,0.5f,0f,alpha*0.2f*f).endVertex();
+                buf.vertex(ps.last().pose(), ex+r1*c2, ey+y1, ez+r1*s2).color(1f,0.5f,0f,alpha*0.2f*f).endVertex();
+            }
+        }
+        t.end();
+
+        RenderSystem.enableCull();
+        RenderSystem.enableDepthTest();
+        RenderSystem.disableBlend();
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ★ 光线爆发（Gemini 移植）：从死亡点向外辐射的光线
+    // ════════════════════════════════════════════════════════════
+    private static void renderRayBurst(PoseStack ps, float ex, float ey, float ez,
+                                        float p, ShaderEffect effect) {
+        float sc = effect.intensity;
+        float fadeIn = Math.min(p * 3f, 1f);
+        float fadeOut = Math.max(1f - (p - 0.6f) / 0.4f, 0f);
+        float alpha = fadeIn * fadeOut;
+        if (alpha < 0.01f) return;
+
+        float len = 4f * sc * (0.5f + p * 0.5f);
+        float rot = p * 4f;
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+        RenderSystem.disableCull();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+        Tesselator t = Tesselator.getInstance();
+        BufferBuilder buf = t.getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+
+        int rays = 36;
+        for (int i = 0; i < rays; i++) {
+            float ang = (float)(2*Math.PI*i/rays + rot);
+            float dx = (float)Math.cos(ang), dz = (float)Math.sin(ang);
+            float r = 0.2f+0.8f*(float)Math.sin(i*0.3f);
+            float g = 0.2f+0.6f*(float)Math.cos(i*0.5f);
+            float b = 0.4f+0.6f*(float)Math.sin(i*0.7f);
+            float ra = alpha * (0.2f+0.8f*(float)Math.sin(i*1.7f+p*6f));
+            float w = 0.06f * sc;
+            float hw = w*0.5f;
+            buf.vertex(ps.last().pose(), ex-dx*hw, ey-w, ez-dz*hw).color(r,g,b,ra).endVertex();
+            buf.vertex(ps.last().pose(), ex-dx*hw, ey+w, ez-dz*hw).color(r,g,b,ra).endVertex();
+            buf.vertex(ps.last().pose(), ex+dx*len, ey+w*0.3f, ez+dz*len).color(r,g,b,0f).endVertex();
+            buf.vertex(ps.last().pose(), ex+dx*len, ey-w*0.3f, ez+dz*len).color(r,g,b,0f).endVertex();
+        }
+        t.end();
+
+        RenderSystem.enableCull();
+        RenderSystem.enableDepthTest();
+        RenderSystem.disableBlend();
     }
 
     // ─── 空间扭曲光晕 ───

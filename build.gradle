@@ -139,7 +139,6 @@ repositories {
         url = "https://maven.aliyun.com/repository/central"
     }
     mavenCentral()
-    // 其他已有仓库保留即可
 }
 
 dependencies {

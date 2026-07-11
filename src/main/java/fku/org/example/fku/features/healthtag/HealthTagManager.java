@@ -34,6 +34,15 @@ public class HealthTagManager {
     }
 
     private static void findAndLockBestTarget(Minecraft mc) {
+        // ★ 32k弓自瞄目标优先显示 HealthTag
+        if (fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isEnabled()) {
+            Entity t = fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.getTarget();
+            if (t instanceof LivingEntity lt) {
+                targetEntity = lt;
+                lastAttackTime = System.currentTimeMillis();
+                return;
+            }
+        }
         Vec3 eyePos = mc.player.getEyePosition();
         Vec3 lookVec = mc.player.getLookAngle();
         

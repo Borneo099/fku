@@ -439,27 +439,33 @@ public class TpAuraFeature {
 
     /** 执行瞬移攻击内部逻辑（被 try-catch 包裹，防止异常卡死） */
     private void executeTrouserAttackInternal(Entity target, TpAuraConfig cfg) {
-        Vec3 startPos = mc.player.position();
+        // ★ 矛盾定性：Paper模式goUp每次攻击后Y坐标持续爬升的根本原因
+        //   在于高度计算锚点不一致——图腾绕过循环中 progressiveAbove 基于 finalPos.y，
+        //   而回传后玩家位置未完全复位，导致下一轮Tick的基准位置逐渐升高。
+        //   解决方案：一次性捕获固定基准位置 basePos，整个攻击流程（含所有子攻击）
+        //   的所有高度计算均锚定于此，攻击完成后强制复位到此位置。
+        Vec3 basePos = mc.player.position();
         Vec3 targetPos = target.position();
 
         // ★ NaN 防护：防止实体坐标异常导致后续计算卡死
-        if (Double.isNaN(startPos.x) || Double.isNaN(startPos.y) || Double.isNaN(startPos.z)) return;
+        if (Double.isNaN(basePos.x) || Double.isNaN(basePos.y) || Double.isNaN(basePos.z)) return;
         if (Double.isNaN(targetPos.x) || Double.isNaN(targetPos.y) || Double.isNaN(targetPos.z)) return;
         double reach = cfg.maxRange;
 
         // ★ 世界边界检查：防止虚空/Y轴越界导致卡死
         int worldMinY = mc.level.getMinBuildHeight();
         int worldMaxY = mc.level.getMaxBuildHeight() - 1;
-        if (startPos.y < worldMinY || startPos.y > worldMaxY) return;
+        if (basePos.y < worldMinY || basePos.y > worldMaxY) return;
 
         // ★ 天花板检测：V-Clip高度不超天花板下方2格（防穿墙拉回）
+        //   以固定 basePos 为锚点，确保每次Tick的检测结果一致
         if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling) {
-            double safeHeight = getSafeCeilingHeight(startPos, reach, cfg.ceilingScanStep);
-            if (safeHeight <= startPos.y + 1) {
+            double safeHeight = getSafeCeilingHeight(basePos, reach, cfg.ceilingScanStep);
+            if (safeHeight <= basePos.y + 1) {
                 // 头顶紧贴天花板，V-Clip无意义→回退到不开goUp
                 reach = 0;
             } else {
-                reach = Math.min(reach, safeHeight - startPos.y);
+                reach = Math.min(reach, safeHeight - basePos.y);
             }
         }
 
@@ -477,12 +483,12 @@ public class TpAuraFeature {
         }
         if (finalPos == null) return;
 
-        Vec3 highStart = startPos.add(0, reach, 0);
+        Vec3 highStart = basePos.add(0, reach, 0);
         Vec3 highTarget = finalPos.add(0, reach, 0);
 
         // 记录渲染路径
         renderPathNodes.clear();
-        renderPathNodes.add(startPos);
+        renderPathNodes.add(basePos);
         if ("Paper".equals(cfg.mode) && cfg.goUp) {
             renderPathNodes.add(highStart);
             renderPathNodes.add(highTarget);
@@ -505,35 +511,37 @@ public class TpAuraFeature {
         // B. 攻击阶段
         if (totemMode) {
             // 图腾绕过：多次递增高度攻击以突破无敌帧
+            // ★ 每次递增高度均基于 basePos.y 计算，杜绝累积偏移
             int attackCount = cfg.totemAttacks;
-            int currentHeight = (int) reach;
 
             for (int i = 0; i < attackCount; i++) {
-                int blocks = (i == 0) ? (int) reach : currentHeight;
+                // ★ 固定锚点：高度 = basePos.y + reach + i * totemHeightIncrease
+                //   不再使用动态累加的 currentHeight，确保基准始终为 basePos.y
+                int blocks = (int) reach + i * cfg.totemHeightIncrease;
 
-                // ★ 天花板检测：每次递增后重新计算可用高度
+                // ★ 天花板检测：基于 basePos 而非动态的 mc.player.position()
+                //   防止因前一次攻击导致玩家位置变化后检测结果不一致
                 if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling && blocks > 0) {
-                    Vec3 currentPos = mc.player != null ? mc.player.position() : startPos;
-                    double safeH = getSafeCeilingHeight(currentPos, blocks, cfg.ceilingScanStep);
-                    if (safeH <= currentPos.y + 1) break; // 已贴天花板
-                    blocks = Math.min(blocks, (int) (safeH - currentPos.y));
+                    double safeH = getSafeCeilingHeight(basePos, blocks, cfg.ceilingScanStep);
+                    if (safeH <= basePos.y + 1) break; // 已贴天花板
+                    blocks = Math.min(blocks, (int) (safeH - basePos.y));
                 }
 
                 if (mc.level != null) {
                     int worldTop = mc.level.getMaxBuildHeight() - 1;
-                    if (finalPos.y + blocks > worldTop) {
-                        blocks = (int) (worldTop - finalPos.y);
+                    if (basePos.y + blocks > worldTop) {
+                        blocks = (int) (worldTop - basePos.y);
                         if (blocks < 1) break;
                     }
                 }
 
-                Vec3 progressiveAbove = finalPos.add(0, blocks, 0);
+                // ★ progressiveAbove 基于 basePos 而非 finalPos，确保上升高度
+                //   始终以玩家原始位置为锚点，不会因目标位置不同而产生偏移
+                Vec3 progressiveAbove = new Vec3(basePos.x, basePos.y + blocks, basePos.z);
                 if (cfg.goUp) sendMove(progressiveAbove);
                 sendMove(finalPos);
 
                 performAttack(target, cfg);
-
-                currentHeight += cfg.totemHeightIncrease;
             }
         } else {
             // 单次攻击
@@ -546,8 +554,20 @@ public class TpAuraFeature {
             performAttack(target, cfg);
         }
 
-        // C. 回传
-        doReturn(startPos, finalPos, cfg);
+        // C. 回传（保持原有 returnPos 和 offsetFix 配置行为不变）
+        doReturn(basePos, finalPos, cfg);
+
+        // ★ 强化复位：在 doReturn 之外额外执行一次强制复位
+        //   连续发送2个位置包 + setPosition，增强服务端同步可靠性
+        if (cfg.returnPos && mc.player != null) {
+            mc.player.setPos(basePos.x, basePos.y, basePos.z);
+            if (mc.player.connection != null) {
+                mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
+                    basePos.x, basePos.y, basePos.z, false));
+                mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
+                    basePos.x, basePos.y, basePos.z, false));
+            }
+        }
     }
 
     /** 执行攻击发包 */

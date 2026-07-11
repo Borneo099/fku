@@ -13,7 +13,9 @@
     "MixinMultiPlayerGameMode",
     "MixinConnectionAttackInterceptor",
     "MixinClientPacketListener",
-    "ServerboundInteractPacketAccessor"
+    "ServerboundInteractPacketAccessor",
+    "accessor.RenderStateShardAccessor",
+    "MixinEntityPush"
   ],
   "injectors": {
     "defaultRequire": 1

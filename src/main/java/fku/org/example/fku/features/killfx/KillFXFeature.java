@@ -485,6 +485,8 @@ public class KillFXFeature {
             case "水晶" -> KillFXShaderManager.ShaderType.CRYSTAL;
             case "天光光束" -> KillFXShaderManager.ShaderType.SKY_BEAM;
             case "天光环" -> KillFXShaderManager.ShaderType.SKY_RING;
+            case "超新星" -> KillFXShaderManager.ShaderType.HYPERNOVA;
+            case "光线爆发" -> KillFXShaderManager.ShaderType.RAY_BURST;
             default -> KillFXShaderManager.ShaderType.NONE;
         };
     }
@@ -506,6 +508,8 @@ public class KillFXFeature {
             case CRYSTAL -> "水晶";
             case SKY_BEAM -> "天光光束";
             case SKY_RING -> "天光环";
+            case HYPERNOVA -> "超新星";
+            case RAY_BURST -> "光线爆发";
             default -> "无";
         };
     }
