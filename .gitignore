@@ -17,3 +17,18 @@ Thumbs.db
 *.log
 *.tmp
 gradle.properties.local
+
+# runtime
+run/logs/
+run/saves/
+run/screenshots/
+run/fku/*.json
+run/*.log
+run/*.dat
+run/*.dat_old
+run/usernamecache.json
+run/usercache.json
+run/servers.dat
+run/servers.dat_old
+run/fku-config.toml
+run/debug-quickswitch-no-effect.md

@@ -1,7 +1,0 @@
-{
-  "enabled": true,
-  "range": 10.0,
-  "cooldownTicks": 20,
-  "ignoreFullStack": false,
-  "packetCount": 100
-}

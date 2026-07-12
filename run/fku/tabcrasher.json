@@ -1,5 +1,0 @@
-{
-  "commandTemplate": "/msg",
-  "packetCount": 5000,
-  "delayMs": 1
-}
