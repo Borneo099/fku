@@ -32,3 +32,10 @@ run/servers.dat
 run/servers.dat_old
 run/fku-config.toml
 run/debug-quickswitch-no-effect.md
+run/config/
+run/crash-reports/
+run/fku/schematics/
+run/options.txt
+
+# projecte 源文件（参考代码，非项目依赖）
+projecte/
