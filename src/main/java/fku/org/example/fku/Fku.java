@@ -7,6 +7,7 @@ import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig;
 import fku.org.example.fku.features.bedrockbreaker.BedrockBreakerFeature;
+import fku.org.example.fku.features.killfx.KillFXConfig;
 import fku.org.example.fku.features.killfx.KillFXFeature;
 import fku.org.example.fku.features.knockback.KnockbackFeature;
 import fku.org.example.fku.features.sprint.SprintHandler;
@@ -22,6 +23,7 @@ import fku.org.example.fku.features.structure_locator.StructureLocatorConfig;
 import fku.org.example.fku.features.baritone.BaritoneConfig;
 import fku.org.example.fku.features.selfdamage.SelfDamageFeature;
 import fku.org.example.fku.util.FeatureHotkeyManager;
+import fku.org.example.fku.util.HotkeySystem;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -126,5 +128,26 @@ public class Fku
                     fku.org.example.fku.client.KeyBindings.updateBedrockBreakerKey(ik);
             },
             () -> fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig.save()));
+
+        // ★ 提前注册所有热键触发动作，确保 GUI 打开前也能响应
+        HotkeySystem.registerFeature("防推", () -> fku.org.example.fku.features.antipush.AntiPushFeature.toggleEnabled());
+        HotkeySystem.registerFeature("32k弓", () -> fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.toggleEnabled());
+        HotkeySystem.registerFeature("快速加入", () -> fku.org.example.fku.features.fastjoin.FastJoinFeature.toggleEnabled());
+        HotkeySystem.registerFeature("飞行", () -> fku.org.example.fku.features.flight.FlightFeature.toggleEnabled());
+        HotkeySystem.registerFeature("血量显示", () -> { var c = HealthTagConfig.getInstance(); c.enabled = !c.enabled; c.save(); });
+        HotkeySystem.registerFeature("击杀特效", () -> { var c = KillFXConfig.getInstance(); c.enabled = !c.enabled; c.save(); });
+        HotkeySystem.registerFeature("防摔", () -> fku.org.example.fku.features.nofall.NoFallFeature.toggleEnabled());
+        HotkeySystem.registerFeature("无跳跃延迟", () -> MovementConfig.getInstance().setNoJumpDelayEnabled(!MovementConfig.getInstance().noJumpDelayEnabled));
+        HotkeySystem.registerFeature("强制疾跑", () -> SprintHandler.setEnabled(!SprintHandler.isEnabled()));
+        HotkeySystem.registerFeature("Y坐标显示", () -> MovementConfig.getInstance().setYPosOverlayEnabled(!MovementConfig.getInstance().yPosOverlayEnabled));
+        HotkeySystem.registerFeature("基岩破坏器", () -> fku.org.example.fku.features.bedrockbreaker.BedrockBreakerManager.getInstance().process());
+        HotkeySystem.registerFeature("一键取物", () -> {
+            var c = loot;
+            c.setEnabled(!c.enabled);
+            if (c.enabled) LootFeature.start();
+        });
+        HotkeySystem.registerFeature("自伤", () -> SelfDamageFeature.applyDamage());
+        HotkeySystem.registerFeature("如来神掌", () -> TpAuraFeature.setEnabled(!TpAuraFeature.isEnabled()));
+        HotkeySystem.registerFeature("假人", () -> FakePlayerFeature.toggle());
     }
 }

@@ -67,6 +67,16 @@ public final class BaritoneBridge {
         reflectVoid("gotoCoord", x, y, z);
     }
 
+    /** 仅标记坐标（设置 Baritone 目标但不寻路），用 #goal 命令 */
+    public static void setGoalOnly(int x, int y, int z) {
+        exec("goal " + x + " " + y + " " + z);
+    }
+
+    /** 清除 Baritone 目标 */
+    public static void clearGoal() {
+        exec("cancel");
+    }
+
     /** 暂停 */
     public static void pause() {
         reflectVoid("pause");

@@ -10,10 +10,11 @@ import fku.org.example.fku.features.structure_locator.StructureLocatorComponent;
 import fku.org.example.fku.features.baritone.BaritoneComponent;
 import fku.org.example.fku.features.selfdamage.SelfDamageComponent;
 
+
 public class ToolPanel extends GuiPanel {
 
     public ToolPanel() {
-        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 135, 300);
+        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 120, 300);
     }
 
     @Override

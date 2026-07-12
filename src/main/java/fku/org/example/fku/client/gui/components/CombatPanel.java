@@ -19,7 +19,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public class CombatPanel extends GuiPanel {
 
     public CombatPanel() {
-        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 130, 90);
+        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 120, 90);
     }
 
     @Override

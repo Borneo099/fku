@@ -105,7 +105,19 @@ public class HotkeySystem {
             return;
         }
 
-        // ── 触发模式（参考 lexis: 每个按键独立跟踪 prevKeyState） ──
+        // ── 触发模式：有 GUI 打开时不触发（防误触，如打开箱子按 R 整理） ──
+        if (mc.screen != null) {
+            // 但保留按键状态跟踪，避免恢复后 key 状态错乱
+            for (var entry : triggers.entrySet()) {
+                IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(entry.getKey());
+                int keyCode = hk.getHotkeyKey();
+                if (keyCode < 0) continue;
+                boolean isDown = GLFW.glfwGetKey(window, keyCode) == GLFW.GLFW_PRESS;
+                prevKeyState.put(keyCode, isDown);
+            }
+            return;
+        }
+
         for (var entry : triggers.entrySet()) {
             IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(entry.getKey());
             int keyCode = hk.getHotkeyKey();

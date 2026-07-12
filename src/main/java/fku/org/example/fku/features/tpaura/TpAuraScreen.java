@@ -110,13 +110,13 @@ public class TpAuraScreen extends Screen {
                 ly += sp;
 
                 addLabel(cx+2, ly, "实体类型(逗号分隔):");
-                entityTypesInput = mkEdit(cx+155, ly, 130, cfg.entityTypes);
+                entityTypesInput = mkTextEdit(cx+155, ly, 130, cfg.entityTypes);
             }
             case 3 -> { // 白名单
                 addToggle(cx+2, ly, "启用白名单", () -> cfg.whitelistEnabled, v -> cfg.setWhitelistEnabled(v));
                 ly += sp;
                 addLabel(cx+2, ly, "白名单玩家(A,B):");
-                whitelistInput = mkEdit(cx+130, ly, 150, cfg.whitelist);
+                whitelistInput = mkTextEdit(cx+130, ly, 150, cfg.whitelist);
             }
             case 4 -> { // 其他
                 addToggle(cx+2, ly, "显示路径", () -> cfg.renderPath, v -> cfg.setRenderPath(v));
@@ -159,9 +159,17 @@ public class TpAuraScreen extends Screen {
         ).bounds(x, y, 90, 14).build());
     }
 
+    /** 数字输入框（仅允许数字和小数点） */
     private AbstractWidget mkEdit(int x, int y, int w, String val) {
         var b = new EditBox(font, x, y, w, 14, Component.literal(""));
         b.setValue(val); b.setMaxLength(8); b.setFilter(s -> s.matches("[\\d.]*"));
+        addWidget(b); return b;
+    }
+
+    /** 文本输入框（用于实体类型/白名单等） */
+    private AbstractWidget mkTextEdit(int x, int y, int w, String val) {
+        var b = new EditBox(font, x, y, w, 14, Component.literal(""));
+        b.setValue(val); b.setMaxLength(500); b.setFilter(s -> true); // ✅ 不能传 null，1.20.1 EditBox 会 NPE
         addWidget(b); return b;
     }
 

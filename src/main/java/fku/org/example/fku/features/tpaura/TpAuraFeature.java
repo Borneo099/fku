@@ -100,7 +100,6 @@ public class TpAuraFeature {
         cfg.save();
         overlayShowUntil = System.currentTimeMillis() + 3000;
         if (v) {
-            if (cfg.autoFlight) enableAutoFlight();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§6[TpAura] §a已启用 §7(范围=" + cfg.maxRange + ", 模式=" + cfg.mode + ")"),
@@ -108,7 +107,6 @@ public class TpAuraFeature {
                 );
             }
         } else {
-            disableAutoFlight();
             TpAuraFeature feature = instance;
             if (feature != null) {
                 feature.cleanup();
@@ -231,78 +229,51 @@ public class TpAuraFeature {
         // ── 热键绑定模式已在上方处理，触发模式由 HotkeySystem 统一管理 ──
     }
 
-    // ═══════════ 自动飞行管理 ═══════════
-    private static boolean flightWasActive = false;
-    private static boolean flightWasMayfly = false;
-    private static boolean flightManaged = false;
-
-    private static void enableAutoFlight() {
-        if (mc.player == null) return;
-        var abilities = mc.player.getAbilities();
-        flightWasActive = abilities.flying;
-        flightWasMayfly = abilities.mayfly;
-        abilities.mayfly = true;
-        abilities.flying = true;
-        flightManaged = true;
-        mc.player.onUpdateAbilities();
-    }
-
-    private static void disableAutoFlight() {
-        if (mc.player == null) return;
-        if (!flightManaged) return;
-        var abilities = mc.player.getAbilities();
-        abilities.mayfly = flightWasMayfly;
-        abilities.flying = flightWasMayfly && flightWasActive;
-        flightManaged = false;
-        mc.player.onUpdateAbilities();
-    }
+    // ═══════════ 自动飞行（照搬箭伤飞行：无状态，有目标时开无目标时关） ═══════════
 
     // ══════════════════════════════════════════════
     //  ClientTickEvent — 主循环
     // ══════════════════════════════════════════════
 
+    /** 自动飞行：完全照搬箭伤飞行（无状态，无条件覆盖） */
+    private static void autoFlight(boolean hasTarget) {
+        var p = mc.player;
+        if (p == null) return;
+        if (hasTarget) {
+            p.getAbilities().mayfly = true;
+            p.getAbilities().flying = true;
+            p.onUpdateAbilities();
+        } else if (!p.isCreative() && !p.isSpectator()) {
+            p.getAbilities().mayfly = false;
+            p.getAbilities().flying = false;
+            p.onUpdateAbilities();
+        }
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        if (mc.player == null || mc.level == null) return;
 
         TpAuraConfig cfg = TpAuraConfig.getInstance();
 
-        // ★ 自动飞行管理（独立于 enabled，确保开关正确）
-        if (cfg.autoFlight && cfg.enabled && mc.player != null) {
-            var abilities = mc.player.getAbilities();
-            if (!abilities.mayfly || !abilities.flying) {
-                abilities.mayfly = true;
-                abilities.flying = true;
-                flightManaged = true;
-                mc.player.onUpdateAbilities();
-            }
-        } else if (flightManaged) {
-            disableAutoFlight();
+        if (!isEnabled()) {
+            autoFlight(false);
+            return;
         }
-
-        if (!isEnabled()) return;
-        if (mc.player == null || mc.level == null) return;
 
         TpAuraFeature self = getInstance();
 
         // 1. 武器切换
-        if (cfg.autoSwitch) {
-            self.checkAndSwapWeapon(cfg);
-        }
+        if (cfg.autoSwitch) self.checkAndSwapWeapon(cfg);
 
-        // 2. 蓄力检查（Smart / Universal 模式：等待蓄力，适用于任何武器）
+        // 2. 蓄力检查
         if ("Smart".equals(cfg.attackMode) || "Universal".equals(cfg.attackMode)) {
-            if (mc.player.getAttackStrengthScale(0.5f) < (float) cfg.cooldownThreshold) {
-                return;
-            }
+            if (mc.player.getAttackStrengthScale(0.5f) < (float) cfg.cooldownThreshold) return;
         }
 
-        // 3. 额外延迟处理
-        if (self.delayTimer > 0) {
-            self.delayTimer--;
-            self.swapBackWeapon();
-            return;
-        }
+        // 3. 延迟
+        if (self.delayTimer > 0) { self.delayTimer--; self.swapBackWeapon(); return; }
 
         // 4. 索敌
         self.targets.clear();
@@ -310,16 +281,22 @@ public class TpAuraFeature {
         if (target == null) {
             self.currentTarget = null;
             self.swapBackWeapon();
-            // 不提示无目标（仅靠物品栏上方 HUD 文本显示状态，避免刷屏）
+            autoFlight(false);
             return;
         }
         self.currentTarget = target;
 
-        // 5. 执行瞬移轰炸
+        // ★ 自动飞行：搜到目标后、传送前，无条件开启（照搬箭伤飞行）
+        if (cfg.autoFlight) {
+            var a = mc.player.getAbilities();
+            a.mayfly = true;
+            a.flying = true;
+            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket(a));
+        }
+
+        // 5. 执行攻击
         self.executeTrouserAttack(target, cfg);
         self.swapBackWeapon();
-
-        // 6. 重置延迟计时器
         self.delayTimer = cfg.attackDelay;
     }
 
@@ -1062,6 +1039,5 @@ public class TpAuraFeature {
         targets.clear();
         renderPathNodes.clear();
         delayTimer = 0;
-        disableAutoFlight();
     }
 }

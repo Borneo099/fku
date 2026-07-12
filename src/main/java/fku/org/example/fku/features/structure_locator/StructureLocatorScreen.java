@@ -65,12 +65,14 @@ public class StructureLocatorScreen extends Screen {
         r1p  = mkBtn("+1",  rbX0 + (rbw+gap)*2, rbY, rbw, 16, () -> { cfg.searchRadius = Math.min(128, cfg.searchRadius + 1);  cfg.save(); });
         r10p = mkBtn("+10", rbX0 + (rbw+gap)*3, rbY, rbw, 16, () -> { cfg.searchRadius = Math.min(128, cfg.searchRadius + 10); cfg.save(); });
 
-        // ── 操作 ──
-        int bw2 = (W - 30) / 2, bh = 16;
-        locateBtn = mkBtn("§a定位并前往", cx + 10,       cy + 172, bw2, bh, () -> StructureLocatorFeature.locate(true));
-        coordBtn  = mkBtn("§7只显示坐标",  cx + 20 + bw2, cy + 172, bw2, bh, () -> StructureLocatorFeature.locate(false));
-        nextBtn   = mkBtn("§e空点→找下一个", cx + 10,       cy + 192, bw2, bh, () -> StructureLocatorFeature.skipAndNext());
-        clearBtn  = mkBtn("§7清空跳过记录", cx + 20 + bw2, cy + 192, bw2, bh, () -> StructureLocatorFeature.clearSkips());
+        // ── 操作（3 列布局） ──
+        int bw3 = (W - 40) / 3, bh = 16, gap3 = 5;
+        locateBtn = mkBtn("§a定位并前往", cx + 10,                  cy + 172, bw3, bh, () -> StructureLocatorFeature.locate(true));
+        coordBtn  = mkBtn("§7只显示坐标",  cx + 15 + bw3,            cy + 172, bw3, bh, () -> StructureLocatorFeature.locate(false));
+        mkBtn("§b标记结构",              cx + 20 + (bw3+gap3)*2, cy + 172, bw3, bh, () -> StructureLocatorFeature.markLocation());
+        nextBtn   = mkBtn("§e空点→找下一个", cx + 10,                  cy + 192, bw3, bh, () -> StructureLocatorFeature.skipAndNext());
+        clearBtn  = mkBtn("§7清空跳过记录",  cx + 15 + bw3,            cy + 192, bw3, bh, () -> StructureLocatorFeature.clearSkips());
+        mkBtn("§c清除标记",                 cx + 20 + (bw3+gap3)*2, cy + 192, bw3, bh, () -> StructureLocatorFeature.clearMark());
 
         rebuildStructList();
     }
