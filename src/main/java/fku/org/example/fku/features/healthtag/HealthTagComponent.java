@@ -12,6 +12,9 @@ import fku.org.example.fku.client.gui.components.ToggleComponent;
  */
 public class HealthTagComponent extends ToggleComponent {
 
+    @Override
+    protected String getFeatureName() { return "血量显示"; }
+
     public HealthTagComponent(int x, int y, int width, int height) {
         super(x, y, width, height, "HealthTag");
     }
@@ -34,13 +37,13 @@ public class HealthTagComponent extends ToggleComponent {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         if (!visible) return;
+        if (renderHotkeyWait(g)) return;
         GuiStyleConfig config = GuiStyleConfig.getInstance();
         boolean enabled = isEnabled();
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String displayStr = label + ": " + (enabled ? "ON" : "OFF");
+        String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
-        // ★ 右键打开配置提示
         g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
     }
 
@@ -54,6 +57,8 @@ public class HealthTagComponent extends ToggleComponent {
             } else if (button == 1) {
                 Minecraft.getInstance().setScreen(new HealthTagConfigScreen());
                 return true;
+            } else if (button == 2) {
+                return handleMiddleClick(mouseX, mouseY, button);
             }
         }
         return false;

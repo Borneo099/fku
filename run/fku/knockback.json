@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "mode": "PULLBACK",
+  "customYaw": 90.0,
+  "cliffSearchRadius": 20,
+  "rotationDelay": 0,
+  "aggressiveMode": true,
+  "smoothRotation": true,
+  "smoothSteps": 10
+}

@@ -5,6 +5,9 @@ import fku.org.example.fku.client.gui.components.ToggleComponent;
 
 public class NoJumpDelayComponent extends ToggleComponent {
 
+    @Override
+    protected String getFeatureName() { return "无跳跃延迟"; }
+
     public NoJumpDelayComponent(int x, int y, int width, int height) {
         super(x, y, width, height, "无跳跃延迟");
     }

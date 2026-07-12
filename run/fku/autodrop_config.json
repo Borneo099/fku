@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "dropAsEntity": true,
+  "scanInterval": 3,
+  "blacklist": []
+}

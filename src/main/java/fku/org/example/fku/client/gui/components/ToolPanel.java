@@ -6,11 +6,14 @@ import fku.org.example.fku.features.loot.LootComponent;
 import fku.org.example.fku.features.pearlphase.PearlPhaseComponent;
 import fku.org.example.fku.features.fakeplayer.FakePlayerComponent;
 import fku.org.example.fku.features.worldedit.WorldEditComponent;
+import fku.org.example.fku.features.structure_locator.StructureLocatorComponent;
+import fku.org.example.fku.features.baritone.BaritoneComponent;
+import fku.org.example.fku.features.selfdamage.SelfDamageComponent;
 
 public class ToolPanel extends GuiPanel {
 
     public ToolPanel() {
-        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 120, 250);
+        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 135, 300);
     }
 
     @Override
@@ -25,6 +28,9 @@ public class ToolPanel extends GuiPanel {
         addComponent(new PearlPhaseComponent(0, 0, 110, 25));
         addComponent(new FakePlayerComponent(0, 0, 110, 25));
         addComponent(new WorldEditComponent(0, 0, 110, 25));
+        addComponent(new StructureLocatorComponent(0, 0, 110, 25));
+        addComponent(new BaritoneComponent(0, 0, 110, 25));
+        addComponent(new SelfDamageComponent(0, 0, 110, 25));
     }
 
     @Override

@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "autoThrow": false,
+  "noClipEnabled": true,
+  "speed": 5.0,
+  "baseSpeed": 1.0E-4,
+  "aimTime": 100,
+  "maxWaitTicks": 100,
+  "edgeOffset": 0.001,
+  "removeOverlay": true,
+  "noFront": false
+}

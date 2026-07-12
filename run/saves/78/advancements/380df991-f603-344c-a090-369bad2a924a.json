@@ -29,6 +29,7 @@
       "minecraft:spider": "2026-05-17 00:36:21 +0800",
       "minecraft:creeper": "2026-05-05 15:58:17 +0800",
       "minecraft:slime": "2026-05-05 15:20:01 +0800",
+      "minecraft:enderman": "2026-07-12 13:23:34 +0800",
       "minecraft:zombie": "2026-05-17 00:26:49 +0800"
     },
     "done": false
@@ -959,6 +960,7 @@
   },
   "minecraft:husbandry/balanced_diet": {
     "criteria": {
+      "cooked_beef": "2026-07-12 13:14:20 +0800",
       "salmon": "2026-06-21 13:58:28 +0800"
     },
     "done": false
@@ -1326,6 +1328,54 @@
   "minecraft:recipes/building_blocks/white_stained_glass": {
     "criteria": {
       "has_glass": "2026-07-05 19:41:00 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/combat/bow": {
+    "criteria": {
+      "has_string": "2026-07-11 21:39:02 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/tools/fishing_rod": {
+    "criteria": {
+      "has_string": "2026-07-11 21:39:02 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/building_blocks/white_wool_from_string": {
+    "criteria": {
+      "has_string": "2026-07-11 21:39:02 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/redstone/tripwire_hook": {
+    "criteria": {
+      "has_string": "2026-07-11 21:39:02 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/decorations/candle": {
+    "criteria": {
+      "has_string": "2026-07-11 21:39:02 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/decorations/loom": {
+    "criteria": {
+      "has_string": "2026-07-11 21:39:02 +0800"
+    },
+    "done": true
+  },
+  "minecraft:adventure/sniper_duel": {
+    "criteria": {
+      "killed_skeleton": "2026-07-11 21:41:08 +0800"
+    },
+    "done": true
+  },
+  "minecraft:recipes/brewing/fermented_spider_eye": {
+    "criteria": {
+      "has_spider_eye": "2026-07-11 23:38:08 +0800"
     },
     "done": true
   },

@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "mode": "EXTREME",
+  "targetRenderDistance": 5,
+  "recoverSpeed": 1,
+  "showLoadingProgress": true,
+  "onTimeoutFallback": true
+}

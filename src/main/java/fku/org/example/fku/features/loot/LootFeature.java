@@ -252,28 +252,7 @@ public class LootFeature {
             return;
         }
 
-        // ── 开关模式：热键 toggle ──
-        if (cfg.hotkeyKey < 0) return;
-        if (event.getKey() != cfg.hotkeyKey) return;
-        if (event.getAction() != GLFW.GLFW_PRESS) return;
-        if (mc.screen != null) return;
-
-        if (cfg.enabled) {
-            cfg.setEnabled(false);
-            visitedContainers.clear();
-            overflowNotified = false;
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                    Component.literal("§6[一键取物] §c已关闭，清空容器标记"), false);
-            }
-        } else {
-            cfg.setEnabled(true);
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                    Component.literal("§6[一键取物] §a已开启，开始自动取物"), false);
-            }
-            start();
-        }
+        // ── 开关模式由 HotkeySystem GLFW 轮询统一管理（避免双触发） ──
     }
 
     // ════════ 扫描刷新（替代原 SCAN 状态） ════════

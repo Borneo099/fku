@@ -23,7 +23,6 @@ public class FastJoinFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
 
-    private static boolean enabled = false;
     private static boolean recovering = false;
     private static int targetRd = 12;
     private static int tickCounter = 0;
@@ -32,20 +31,20 @@ public class FastJoinFeature {
 
     public static void init() {
         FastJoinConfig.load();
-        if (FastJoinConfig.getInstance().enabled) enabled = true;
     }
 
-    public static void toggleEnabled() { setEnabled(!enabled); }
+    public static void toggleEnabled() { setEnabled(!isEnabled()); }
     public static void setEnabled(boolean v) {
-        enabled = v;
-        FastJoinConfig.getInstance().setEnabled(v);
+        FastJoinConfig cfg = FastJoinConfig.getInstance();
+        cfg.enabled = v;
+        cfg.save();
         if (!v) { recovering = false; tickCounter = 0; lockedRd = -1; }
     }
-    public static boolean isEnabled() { return enabled; }
+    public static boolean isEnabled() { return FastJoinConfig.getInstance().enabled; }
 
     @SubscribeEvent
     public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
-        if (!enabled) return;
+        if (!isEnabled()) return;
         FastJoinConfig cfg = FastJoinConfig.getInstance();
         if ("OFF".equals(cfg.mode)) return;
 
@@ -70,7 +69,7 @@ public class FastJoinFeature {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (!enabled || mc.player == null) return;
+        if (!isEnabled() || mc.player == null) return;
 
         FastJoinConfig cfg = FastJoinConfig.getInstance();
         int current = mc.options.renderDistance().get();
@@ -119,7 +118,7 @@ public class FastJoinFeature {
     }
 
     public static void fallbackToExtreme() {
-        if (!enabled) return;
+        if (!isEnabled()) return;
         FastJoinConfig cfg = FastJoinConfig.getInstance();
         if (!cfg.onTimeoutFallback) return;
         cfg.setMode("EXTREME"); cfg.setEnabled(true);

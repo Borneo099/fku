@@ -15,6 +15,9 @@ import fku.org.example.fku.client.gui.components.ToggleComponent;
  */
 public class FlightComponent extends ToggleComponent {
 
+    @Override
+    protected String getFeatureName() { return "飞行"; }
+
     public FlightComponent(int x, int y, int width, int height) {
         super(x, y, width, height, "飞行");
     }
@@ -37,10 +40,11 @@ public class FlightComponent extends ToggleComponent {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         if (!visible) return;
+        if (renderHotkeyWait(g)) return;
         GuiStyleConfig config = GuiStyleConfig.getInstance();
         boolean enabled = isEnabled();
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String displayStr = label + ": " + (enabled ? "开" : "关");
+        String displayStr = hotkeyAppend(label + ": " + (enabled ? "开" : "关"));
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
         g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
@@ -56,6 +60,8 @@ public class FlightComponent extends ToggleComponent {
             } else if (button == 1) {
                 Minecraft.getInstance().setScreen(new FlightConfigScreen());
                 return true;
+            } else if (button == 2) {
+                return handleMiddleClick(mouseX, mouseY, button);
             }
         }
         return false;

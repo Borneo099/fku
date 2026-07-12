@@ -22,34 +22,27 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class NoFallFeature {
 
-    /** 功能是否已启用 */
-    private static boolean enabled = false;
-
     /** ★ 从配置文件静默恢复开关状态 */
     public static void init() {
         NoFallConfig.load();
-        if (NoFallConfig.getInstance().enabled) {
-            enabled = true;
-        }
     }
 
-    public static void toggleEnabled() {
-        setEnabled(!enabled);
-    }
+    public static void toggleEnabled() { setEnabled(!isEnabled()); }
 
     public static void setEnabled(boolean val) {
-        enabled = val;
-        NoFallConfig.getInstance().setEnabled(val);
+        NoFallConfig cfg = NoFallConfig.getInstance();
+        cfg.enabled = val;
+        cfg.save();
     }
 
-    public static boolean isEnabled() { return enabled; }
+    public static boolean isEnabled() { return NoFallConfig.getInstance().enabled; }
 
     /**
      * LivingFallEvent — 拦截掉落伤害
      */
     @SubscribeEvent
     public static void onFall(LivingFallEvent event) {
-        if (!enabled) return;
+        if (!isEnabled()) return;
 
         // ★ 只处理玩家
         if (!(event.getEntity() instanceof net.minecraft.world.entity.player.Player)) return;

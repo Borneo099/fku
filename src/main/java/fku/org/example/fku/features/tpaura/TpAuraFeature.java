@@ -80,8 +80,7 @@ public class TpAuraFeature {
     private int silentSwapPrevSlot = -1;
     private int delayTimer = 0;
 
-    /** 功能是否启用（由 TpAuraComponent 控制） */
-    private static boolean enabled = false;
+    // ★ 功能开关：始终从 Config 读取，见 isEnabled()
 
     /** Overlay 显示截止时间戳（毫秒，超时后自动隐藏） */
     private static long overlayShowUntil = 0;
@@ -94,14 +93,14 @@ public class TpAuraFeature {
     /** 等待绑定的回调，绑定完成后调用 */
     private static Runnable onKeyBoundCallback;
 
-    public static boolean isEnabled() { return enabled; }
+    public static boolean isEnabled() { return TpAuraConfig.getInstance().enabled; }
     public static void setEnabled(boolean v) {
-        enabled = v;
         TpAuraConfig cfg = TpAuraConfig.getInstance();
-        cfg.setEnabled(v);
-        // 切换时显示 overlay 提示，3秒后自动消失
+        cfg.enabled = v;
+        cfg.save();
         overlayShowUntil = System.currentTimeMillis() + 3000;
         if (v) {
+            if (cfg.autoFlight) enableAutoFlight();
             if (mc.player != null) {
                 mc.player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§6[TpAura] §a已启用 §7(范围=" + cfg.maxRange + ", 模式=" + cfg.mode + ")"),
@@ -109,6 +108,7 @@ public class TpAuraFeature {
                 );
             }
         } else {
+            disableAutoFlight();
             TpAuraFeature feature = instance;
             if (feature != null) {
                 feature.cleanup();
@@ -228,16 +228,33 @@ public class TpAuraFeature {
             return;
         }
 
-        // ── 正常模式：检查热键触发（仅无GUI时生效） ──
-        TpAuraConfig cfg = TpAuraConfig.getInstance();
-        if (cfg.hotkeyKey < 0) return;
-        if (event.getKey() != cfg.hotkeyKey) return;
-        if (mc.screen != null) return; // 有GUI打开时不触发
+        // ── 热键绑定模式已在上方处理，触发模式由 HotkeySystem 统一管理 ──
+    }
 
-        // 边沿检测：只在按下时切换，忽略重复和释放
-        if (event.getAction() == GLFW.GLFW_PRESS) {
-            setEnabled(!enabled);
-        }
+    // ═══════════ 自动飞行管理 ═══════════
+    private static boolean flightWasActive = false;
+    private static boolean flightWasMayfly = false;
+    private static boolean flightManaged = false;
+
+    private static void enableAutoFlight() {
+        if (mc.player == null) return;
+        var abilities = mc.player.getAbilities();
+        flightWasActive = abilities.flying;
+        flightWasMayfly = abilities.mayfly;
+        abilities.mayfly = true;
+        abilities.flying = true;
+        flightManaged = true;
+        mc.player.onUpdateAbilities();
+    }
+
+    private static void disableAutoFlight() {
+        if (mc.player == null) return;
+        if (!flightManaged) return;
+        var abilities = mc.player.getAbilities();
+        abilities.mayfly = flightWasMayfly;
+        abilities.flying = flightWasMayfly && flightWasActive;
+        flightManaged = false;
+        mc.player.onUpdateAbilities();
     }
 
     // ══════════════════════════════════════════════
@@ -247,11 +264,26 @@ public class TpAuraFeature {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (!enabled) return;
+
+        TpAuraConfig cfg = TpAuraConfig.getInstance();
+
+        // ★ 自动飞行管理（独立于 enabled，确保开关正确）
+        if (cfg.autoFlight && cfg.enabled && mc.player != null) {
+            var abilities = mc.player.getAbilities();
+            if (!abilities.mayfly || !abilities.flying) {
+                abilities.mayfly = true;
+                abilities.flying = true;
+                flightManaged = true;
+                mc.player.onUpdateAbilities();
+            }
+        } else if (flightManaged) {
+            disableAutoFlight();
+        }
+
+        if (!isEnabled()) return;
         if (mc.player == null || mc.level == null) return;
 
         TpAuraFeature self = getInstance();
-        TpAuraConfig cfg = TpAuraConfig.getInstance();
 
         // 1. 武器切换
         if (cfg.autoSwitch) {
@@ -298,7 +330,7 @@ public class TpAuraFeature {
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
-        if (!enabled) return;
+        if (!isEnabled()) return;
         if (mc.player == null || mc.level == null) return;
 
         TpAuraFeature self = getInstance();
@@ -356,7 +388,7 @@ public class TpAuraFeature {
         // 只在切换后短时间内显示，超时自动隐藏，避免常驻干扰
         if (System.currentTimeMillis() > overlayShowUntil) return;
 
-        String text = "§6[TpAura " + (enabled ? "§aON" : "§cOFF") + "§6]";
+        String text = "§6[TpAura " + (isEnabled() ? "§aON" : "§cOFF") + "§6]";
 
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
@@ -1030,5 +1062,6 @@ public class TpAuraFeature {
         targets.clear();
         renderPathNodes.clear();
         delayTimer = 0;
+        disableAutoFlight();
     }
 }

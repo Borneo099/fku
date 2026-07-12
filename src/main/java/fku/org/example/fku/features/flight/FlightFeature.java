@@ -26,16 +26,12 @@ import net.minecraftforge.fml.common.Mod;
 public class FlightFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
-    private static boolean enabled = false;
     private static boolean active = false;
 
     /** ★ 从配置文件静默恢复开关状态 */
     public static void init() {
         FlightConfig.load();
-        if (FlightConfig.getInstance().enabled) {
-            enabled = true;
-            Fku.LOGGER.debug("[Flight] 配置恢复: 已启用");
-        }
+        if (isEnabled()) Fku.LOGGER.debug("[Flight] 配置恢复: 已启用");
     }
 
     // 双击检测
@@ -49,12 +45,12 @@ public class FlightFeature {
     // Sprint 模式还原
     private static String savedSprintMode = null;
 
-    public static void toggleEnabled() { setEnabled(!enabled); }
+    public static void toggleEnabled() { setEnabled(!isEnabled()); }
 
     public static void setEnabled(boolean val) {
         FlightConfig cfg = FlightConfig.getInstance();
-        enabled = val;
-        cfg.setEnabled(val);
+        cfg.enabled = val;
+        cfg.save();
         if (!val) deactivate();
         else {
             if (cfg.soundFeedback && mc.player != null)
@@ -64,7 +60,7 @@ public class FlightFeature {
         }
     }
 
-    public static boolean isEnabled() { return enabled; }
+    public static boolean isEnabled() { return FlightConfig.getInstance().enabled; }
     public static boolean isFlightActive() { return active; }
 
     @SubscribeEvent
@@ -73,7 +69,7 @@ public class FlightFeature {
         if (mc.player == null || mc.level == null) return;
         LocalPlayer player = mc.player;
         FlightConfig cfg = FlightConfig.getInstance();
-        if (!enabled) return;
+        if (!isEnabled()) return;
         if (cfg.onlyInCreative && !player.isCreative()) { deactivate(); return; }
 
         // ── 饥饿消耗 ──

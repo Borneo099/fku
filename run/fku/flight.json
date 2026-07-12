@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "flySpeed": 1.0,
+  "verticalSpeed": 0.5,
+  "doubleTapWindow": 500,
+  "disableCollision": false,
+  "onlyInCreative": false,
+  "consumeHunger": false,
+  "hungerCost": 1,
+  "allowSprint": true,
+  "smoothAcceleration": true,
+  "particleEffect": true,
+  "soundFeedback": true,
+  "antiKick": true,
+  "antiKickInterval": 70,
+  "antiKickDistance": 0.07
+}

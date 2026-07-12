@@ -8,6 +8,7 @@ import fku.org.example.fku.client.gui.components.VisualPanel;
 import fku.org.example.fku.client.gui.components.ToolPanel;
 import fku.org.example.fku.client.gui.components.EntertainmentPanel;
 import fku.org.example.fku.client.gui.components.CombatPanel;
+import fku.org.example.fku.util.HotkeySystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -17,13 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 主GUI界面
- * 支持打开动画、毛玻璃背景
+ * 主GUI界面 — 顶部提示中键可绑定热键
  */
 public class ClickGuiScreen extends Screen {
     private final List<GuiPanel> panels = new ArrayList<>();
     
-    // 打开动画相关
     private float openAnimationProgress = 0f;
     private long openAnimationStartTime = 0;
     private boolean animationComplete = false;
@@ -40,39 +39,33 @@ public class ClickGuiScreen extends Screen {
         openAnimationStartTime = System.currentTimeMillis();
     }
 
-    /**
-     * 更新打开动画
-     */
     private void updateOpenAnimation() {
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        
         if (!config.animationEnabled) {
             openAnimationProgress = 1f;
             animationComplete = true;
             return;
         }
-        
         long currentTime = System.currentTimeMillis();
         long elapsed = currentTime - openAnimationStartTime;
-        
         openAnimationProgress = Math.min(1f, elapsed / (float) config.animationSpeed);
-        
-        if (openAnimationProgress >= 1f) {
-            animationComplete = true;
-        }
+        if (openAnimationProgress >= 1f) animationComplete = true;
     }
 
     @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 更新动画
+    public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
         updateOpenAnimation();
-        
-        // 根据动画进度调整面板透明度
-        float alpha = animationComplete ? 1f : openAnimationProgress;
-        
+
         // 渲染面板
         for (GuiPanel panel : panels) {
-            panel.render(guiGraphics, mouseX, mouseY, partialTick);
+            panel.render(g, mx, my, pt);
+        }
+
+        // ★ 顶部提示：中键绑定热键
+        if (!HotkeySystem.isWaiting()) {
+            String hint = "§7§o中键点击组件可绑定热键";
+            int hw = font.width(hint.replace("§7§o", "").replace("§r", ""));
+            g.drawString(font, hint, (width - hw) / 2, 8, 0x888888);
         }
     }
 
@@ -80,10 +73,8 @@ public class ClickGuiScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!animationComplete) return false;
         
-        // Reverse order for clicking (topmost panel first)
         for (int i = panels.size() - 1; i >= 0; i--) {
             if (panels.get(i).mouseClicked(mouseX, mouseY, button)) {
-                // Move clicked panel to the end of the list (bring to front)
                 GuiPanel panel = panels.remove(i);
                 panels.add(panel);
                 return true;
@@ -95,31 +86,33 @@ public class ClickGuiScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (!animationComplete) return false;
-        
-        for (GuiPanel panel : panels) {
-            panel.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-        }
+        for (GuiPanel panel : panels) panel.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (!animationComplete) return false;
-        
-        for (GuiPanel panel : panels) {
-            panel.mouseReleased(mouseX, mouseY, button);
-        }
+        for (GuiPanel panel : panels) panel.mouseReleased(mouseX, mouseY, button);
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (!animationComplete) return false;
-        
+        // ★ ESC: 先取消热键绑定，再关闭 GUI
+        if (keyCode == 256) {
+            if (fku.org.example.fku.util.HotkeySystem.isWaiting()) {
+                fku.org.example.fku.util.HotkeySystem.cancelBinding();
+                return true; // 消耗事件，不关闭 GUI
+            }
+            this.onClose();
+            return true;
+        }
         for (GuiPanel panel : panels) {
             if (panel.keyPressed(keyCode, scanCode, modifiers)) return true;
         }
-        if (keyCode == 256 || fku.org.example.fku.client.KeyBindings.OPEN_GUI_KEY.matches(keyCode, scanCode)) {
+        if (fku.org.example.fku.client.KeyBindings.OPEN_GUI_KEY.matches(keyCode, scanCode)) {
             this.onClose();
             return true;
         }
@@ -127,12 +120,7 @@ public class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public void onClose() {
-        this.minecraft.setScreen(null);
-    }
-
+    public void onClose() { this.minecraft.setScreen(null); }
     @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
+    public boolean isPauseScreen() { return false; }
 }

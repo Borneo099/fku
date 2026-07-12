@@ -5,6 +5,9 @@ import fku.org.example.fku.client.gui.components.ToggleComponent;
 
 public class YPosOverlayComponent extends ToggleComponent {
 
+    @Override
+    protected String getFeatureName() { return "Y坐标显示"; }
+
     public YPosOverlayComponent(int x, int y, int width, int height) {
         super(x, y, width, height, "Y坐标显示");
     }

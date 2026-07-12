@@ -1,0 +1,11 @@
+{
+  "enabled": false,
+  "radius": 10,
+  "clickDelay": 0,
+  "containerDelay": 2,
+  "dropOverflow": true,
+  "autoCloseGUI": true,
+  "scanRefreshInterval": 20,
+  "hotkeyKey": 79,
+  "hotkeyName": "o"
+}

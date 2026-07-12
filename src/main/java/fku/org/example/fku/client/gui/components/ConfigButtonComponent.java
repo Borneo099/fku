@@ -2,17 +2,17 @@ package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.util.FeatureHotkeyManager;
+import fku.org.example.fku.util.HotkeySystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
-/**
- * 配置按钮组件
- * 用于打开配置界面
- */
 public class ConfigButtonComponent extends GuiComponent {
     
     private final String label;
     private final Runnable onClick;
+
+    protected String getFeatureName() { return null; }
 
     public ConfigButtonComponent(int x, int y, int width, int height, String label, Runnable onClick) {
         super(x, y, width, height, label);
@@ -21,29 +21,45 @@ public class ConfigButtonComponent extends GuiComponent {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics g, int mx, int my, float pt) {
         if (!visible) return;
-        
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        
-        // 绘制圆角背景（使用主色调）
+
+        String fn = getFeatureName();
+        boolean waiting = fn != null && HotkeySystem.isWaitingFor(fn);
+
+        if (waiting) {
+            int bgColor = config.getPrimaryColorWithAlpha(180);
+            GuiRenderHelper.drawRoundedRect(g, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
+            g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)",
+                    x + 5, y + (height - 8) / 2, 0xFFFF00);
+            return;
+        }
+
         int bgColor = config.getPrimaryColorWithAlpha(180);
-        GuiRenderHelper.drawRoundedRect(guiGraphics, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
-        
-        // 绘制边框
+        GuiRenderHelper.drawRoundedRect(g, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
         int borderColor = config.getPrimaryColor() | (255 << 24);
-        GuiRenderHelper.drawRoundedOutline(guiGraphics, x, y, width, height, borderColor, Math.max(2, config.cornerRadius / 2), 1);
-        
-        // 绘制文字
-        guiGraphics.drawString(Minecraft.getInstance().font, label, x + 5, y + (height - 8) / 2, config.getTextColor());
-        // ★ 右键配置提示
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        GuiRenderHelper.drawRoundedOutline(g, x, y, width, height, borderColor, Math.max(2, config.cornerRadius / 2), 1);
+
+        String display = label;
+        if (fn != null) {
+            var hk = FeatureHotkeyManager.getInstance().getHotkey(fn);
+            if (hk.getHotkeyKey() >= 0) display += " §7[" + hk.getHotkeyName() + "]";
+        }
+        g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, config.getTextColor());
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY) && button == 0) {
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (!isHovered(mx, my)) return false;
+        if (button == 0) {
+            if (HotkeySystem.isWaiting()) return false;
             onClick.run();
+            return true;
+        } else if (button == 2) {
+            String fn = getFeatureName();
+            if (fn != null) HotkeySystem.startBinding(fn, () -> {});
             return true;
         }
         return false;

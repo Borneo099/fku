@@ -1,0 +1,17 @@
+{
+  "allBlocks": true,
+  "enabled": true,
+  "targetBlockId": "bedrock",
+  "replaceBlockId": "",
+  "scanMode": false,
+  "autoFindRange": 3,
+  "breakTimeout": 50,
+  "extendTimeout": 10,
+  "leverBreakTimeout": 30,
+  "triggerKey": "key.keyboard.g",
+  "enableHelperBlocks": true,
+  "helperBlockList": "minecraft:cobbled_deepslate,minecraft:andesite,minecraft:granite,minecraft:diorite,minecraft:netherrack,minecraft:tuff,minecraft:sandstone,minecraft:cobblestone,minecraft:dirt\n",
+  "cleanupHelpers": true,
+  "pistonDirectionPriority": "HORIZONTAL_FIRST",
+  "ghostCleanupInterval": 1
+}

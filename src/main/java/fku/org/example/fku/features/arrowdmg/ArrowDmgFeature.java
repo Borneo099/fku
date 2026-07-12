@@ -32,7 +32,6 @@ import org.joml.Matrix4f;
 public class ArrowDmgFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
-    private static boolean enabled = false;
     private static boolean forcedPress = false;
     private static Entity target = null;
     /** 存储目标原始碰撞箱（渲染用） */
@@ -43,17 +42,16 @@ public class ArrowDmgFeature {
     /** ★ 从配置文件静默恢复开关状态 */
     public static void init() {
         ArrowDmgConfig.load();
-        if (ArrowDmgConfig.getInstance().enabled) {
-            enabled = true;
-        }
     }
 
-    public static void toggleEnabled() { setEnabled(!enabled); }
+    public static void toggleEnabled() { setEnabled(!isEnabled()); }
     public static void setEnabled(boolean v) {
-        enabled = v; ArrowDmgConfig.getInstance().setEnabled(v);
+        ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
+        cfg.enabled = v;
+        cfg.save();
         if (!v) { if (forcedPress) { mc.options.keyUse.setDown(false); forcedPress = false; } target = null; }
     }
-    public static boolean isEnabled() { return enabled; }
+    public static boolean isEnabled() { return ArrowDmgConfig.getInstance().enabled; }
     /** 获取当前自瞄目标（供 HealthTag 联动） */
     public static Entity getTarget() { return target; }
 
@@ -62,7 +60,7 @@ public class ArrowDmgFeature {
      *   返回 true = 取消原包由本方法发送，false = 走原版逻辑
      */
     public static boolean handleManualRelease() {
-        if (!enabled || mc.player == null || mc.player.connection == null) return false;
+        if (!isEnabled() || mc.player == null || mc.player.connection == null) return false;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (cfg.autoShoot) return false;
         if (mc.player.getMainHandItem().getItem() != Items.BOW) return false;
@@ -84,7 +82,7 @@ public class ArrowDmgFeature {
         if (mc.player == null || mc.level == null) return;
         LocalPlayer p = mc.player;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
-        if (!enabled) return;
+        if (!isEnabled()) return;
 
         findTarget(cfg);
 
@@ -312,7 +310,7 @@ public class ArrowDmgFeature {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
-        if (!enabled || target == null || !target.isAlive() || mc.player == null) return;
+        if (!isEnabled() || target == null || !target.isAlive() || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
 
@@ -352,7 +350,7 @@ public class ArrowDmgFeature {
     @SubscribeEvent
     public static void onRenderOverlay(net.minecraftforge.client.event.RenderGuiOverlayEvent.Pre event) {
         if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.type()) return;
-        if (!enabled || target == null || mc.player == null) return;
+        if (!isEnabled() || target == null || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
 

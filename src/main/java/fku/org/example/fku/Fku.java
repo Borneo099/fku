@@ -18,6 +18,10 @@ import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import fku.org.example.fku.features.loot.LootConfig;
 import fku.org.example.fku.features.loot.LootFeature;
 import fku.org.example.fku.features.worldedit.WorldEditFeature;
+import fku.org.example.fku.features.structure_locator.StructureLocatorConfig;
+import fku.org.example.fku.features.baritone.BaritoneConfig;
+import fku.org.example.fku.features.selfdamage.SelfDamageFeature;
+import fku.org.example.fku.util.FeatureHotkeyManager;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -73,5 +77,54 @@ public class Fku
         FakePlayerFeature.init();
         QuickSwitchFeature.init();
         WorldEditFeature.init();
+        StructureLocatorConfig.load();
+        BaritoneConfig.load();
+        SelfDamageFeature.init();
+
+        // ★ 热键互联：有独立 Config 的功能 ↔ 全局热键系统
+        var tpa = fku.org.example.fku.features.tpaura.TpAuraConfig.getInstance();
+        FeatureHotkeyManager.linkConfig("如来神掌", new FeatureHotkeyManager.LinkedConfig(
+            () -> tpa.hotkeyKey, v -> tpa.setHotkeyKey(v),
+            () -> tpa.hotkeyName, v -> tpa.setHotkeyName(v),
+            () -> fku.org.example.fku.features.tpaura.TpAuraConfig.save()));
+
+        var loot = fku.org.example.fku.features.loot.LootConfig.getInstance();
+        FeatureHotkeyManager.linkConfig("一键取物", new FeatureHotkeyManager.LinkedConfig(
+            () -> loot.hotkeyKey, v -> loot.setHotkeyKey(v),
+            () -> loot.hotkeyName, v -> loot.setHotkeyName(v),
+            () -> fku.org.example.fku.features.loot.LootConfig.save()));
+
+        var sd = fku.org.example.fku.features.selfdamage.SelfDamageConfig.getInstance();
+        FeatureHotkeyManager.linkConfig("自伤", new FeatureHotkeyManager.LinkedConfig(
+            () -> sd.hotkeyKey, v -> { sd.hotkeyKey = v; sd.save(); },
+            () -> sd.hotkeyName, v -> { sd.hotkeyName = v; sd.save(); },
+            () -> fku.org.example.fku.features.selfdamage.SelfDamageConfig.save()));
+
+        // ★ 基岩破坏器：桥接 BedrockBreakerConfig.triggerKey(String) ↔ 全局热键系统(int)
+        var bb = fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig.getInstance();
+        FeatureHotkeyManager.linkConfig("基岩破坏器", new FeatureHotkeyManager.LinkedConfig(
+            () -> {
+                String tk = bb.triggerKey;
+                if (tk == null || tk.isEmpty()) return -1;
+                var ik = com.mojang.blaze3d.platform.InputConstants.getKey(tk);
+                return ik.getValue();
+            },
+            key -> {
+                var ik = com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(key);
+                fku.org.example.fku.client.KeyBindings.updateBedrockBreakerKey(ik);
+            },
+            () -> {
+                String tk = bb.triggerKey;
+                if (tk == null || tk.isEmpty()) return "";
+                String[] parts = tk.split("\\.");
+                return parts.length > 0 ? parts[parts.length - 1].toUpperCase() : "";
+            },
+            name -> {
+                var ik = com.mojang.blaze3d.platform.InputConstants.getKey(
+                    "key.keyboard." + name.toLowerCase());
+                if (ik != com.mojang.blaze3d.platform.InputConstants.UNKNOWN)
+                    fku.org.example.fku.client.KeyBindings.updateBedrockBreakerKey(ik);
+            },
+            () -> fku.org.example.fku.features.bedrockbreaker.BedrockBreakerConfig.save()));
     }
 }

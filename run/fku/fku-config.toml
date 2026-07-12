@@ -6,10 +6,10 @@
 ["GUI Settings"]
 	#战斗面板X坐标
 	#Range: > 0
-	combat_panel_x_pos = 235
+	combat_panel_x_pos = 223
 	#视觉面板X坐标
 	#Range: > 0
-	visual_x_pos = 379
+	visual_x_pos = 374
 	#自动丢面板Y坐标
 	#Range: > 0
 	auto_drop_panel_y_pos = 237
@@ -18,13 +18,13 @@
 	gui_x_pos = 83
 	#工具面板Y坐标
 	#Range: > 0
-	tool_y_pos = 104
+	tool_y_pos = 105
 	#娱乐面板X坐标
 	#Range: > 0
 	entertainment_panel_x_pos = 83
 	#视觉面板Y坐标
 	#Range: > 0
-	visual_y_pos = 105
+	visual_y_pos = 99
 	#GUI窗口Y坐标
 	#Range: > 0
 	gui_y_pos = 103
@@ -35,10 +35,10 @@
 	gui_open_key = "key.keyboard.right.shift"
 	#战斗面板Y坐标
 	#Range: > 0
-	combat_panel_y_pos = 208
+	combat_panel_y_pos = 102
 	#工具面板X坐标
 	#Range: > 0
-	tool_x_pos = 520
+	tool_x_pos = 509
 	#娱乐面板Y坐标
 	#Range: > 0
 	entertainment_panel_y_pos = 198

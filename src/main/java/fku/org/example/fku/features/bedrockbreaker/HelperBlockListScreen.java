@@ -4,7 +4,7 @@ import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -15,10 +15,9 @@ public class HelperBlockListScreen extends Screen {
     private static final int HEIGHT = 260;
 
     private static final int INPUT_WIDTH = 280;
-    private static final int INPUT_HEIGHT = 140;
-    private static final int MAX_LENGTH = 2000;
+    private static final int INPUT_HEIGHT = 100;
 
-    private MultiLineEditBox listInput;
+    private EditBox listInput; // 使用 EditBox 代替 MultiLineEditBox（1.20.1 不存在）
     private final Screen parentScreen;
     private String savedMessage = "";
     private int savedMessageTicks = 0;
@@ -37,14 +36,12 @@ public class HelperBlockListScreen extends Screen {
 
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
 
-        listInput = new MultiLineEditBox(font, inputX, inputY, INPUT_WIDTH, INPUT_HEIGHT,
-                Component.literal("在此输入方块ID，逗号分隔..."),
-                Component.literal("辅助方块列表"));
-        listInput.setCharacterLimit(MAX_LENGTH);
+        listInput = new EditBox(font, inputX, inputY, INPUT_WIDTH, 16, Component.literal("辅助方块列表"));
+        listInput.setMaxLength(5000);
         listInput.setValue(cfg.helperBlockList);
         addRenderableWidget(listInput);
 
-        int btnY = inputY + INPUT_HEIGHT + 16;
+        int btnY = inputY + INPUT_HEIGHT + 8;
         int btnWidth = 70;
         int btnHeight = 20;
         int spacing = 15;
@@ -86,62 +83,20 @@ public class HelperBlockListScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (listInput.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
+        if (listInput.keyPressed(keyCode, scanCode, modifiers)) return true;
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (listInput.charTyped(codePoint, modifiers)) {
-            return true;
-        }
+        if (listInput.charTyped(codePoint, modifiers)) return true;
         return super.charTyped(codePoint, modifiers);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // 先让 listInput 处理鼠标点击
         boolean inputClicked = listInput.mouseClicked(mouseX, mouseY, button);
-
-        // ★ 修复：鼠标在输入框区域内时强制设置焦点
-        //   MultiLineEditBox.mouseClicked() 在某些情况下（如 GUI 缩放）
-        //   可能不会正确调用 setFocused(true)，导致需按 Tab 键才能激活输入。
-        //   此处额外检测鼠标位置，确保点击输入框即激活焦点。
-        if (isMouseOverInput(mouseX, mouseY)) {
-            listInput.setFocused(true);
-            return true;
-        }
-
         return inputClicked || super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    /**
-     * 判断鼠标是否在输入框区域内
-     */
-    private boolean isMouseOverInput(double mouseX, double mouseY) {
-        int inputX = listInput.getX();
-        int inputY = listInput.getY();
-        int inputRight = inputX + listInput.getWidth();
-        int inputBottom = inputY + listInput.getHeight();
-        return mouseX >= inputX && mouseX <= inputRight && mouseY >= inputY && mouseY <= inputBottom;
-    }
-
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (listInput.mouseDragged(mouseX, mouseY, button, dragX, dragY)) {
-            return true;
-        }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (listInput.mouseScrolled(mouseX, mouseY, delta)) {
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override

@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "randomDelayMin": 50,
+  "randomDelayMax": 150,
+  "autoThrow": true
+}

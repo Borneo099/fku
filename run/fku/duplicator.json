@@ -1,0 +1,10 @@
+{
+  "dupeDelay": 5,
+  "holdDuration": 10,
+  "enableTrident": false,
+  "dropTridents": true,
+  "durabilityManagement": true,
+  "bypassGrim": false,
+  "autoCloseOnDamage": true,
+  "autoCleanInventory": true
+}

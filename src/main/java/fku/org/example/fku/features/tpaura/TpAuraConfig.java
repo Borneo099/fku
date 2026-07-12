@@ -91,6 +91,10 @@ public class TpAuraConfig {
     public int totemAttacks = 2;
     public int totemHeightIncrease = 9;
 
+    // ════════ 自动飞行 ════════
+    /** 启用时自动开启创造飞行，避免地面瞬移卡顿 */
+    public boolean autoFlight = false;
+
     /** 功能总开关（由 TpAuraComponent 控制） */
     public boolean enabled = false;
 
@@ -193,4 +197,5 @@ public class TpAuraConfig {
     public void setTotemBypass(boolean v) { this.totemBypass = v; save(); }
     public void setTotemAttacks(int v) { this.totemAttacks = Math.max(1, Math.min(3, v)); save(); }
     public void setTotemHeightIncrease(int v) { this.totemHeightIncrease = Math.max(1, Math.min(100, v)); save(); }
+    public void setAutoFlight(boolean v) { this.autoFlight = v; save(); }
 }
