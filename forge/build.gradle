@@ -1,7 +1,18 @@
-plugins {
-    id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
-    id 'org.spongepowered.mixin' version '0.7-SNAPSHOT'
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net/' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        maven { url = 'https://mirrors.huaweicloud.com/repository/maven/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:6.0.16'
+        classpath 'org.spongepowered:mixingradle:0.7.38'
+    }
 }
+
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'org.spongepowered.mixin'
 
 base {
     archivesName = "fku-forge-1.20.1"
@@ -30,6 +41,13 @@ sourceSets {
 
 processResources {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+repositories {
+    maven { url = 'https://maven.minecraftforge.net/' }
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    maven { url = 'https://mirrors.huaweicloud.com/repository/maven/' }
+    mavenCentral()
 }
 
 dependencies {
