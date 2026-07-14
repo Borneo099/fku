@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+[[mods]]
+modId="fku"
+version="1.1"
+displayName="FKU Mod NeoForge"
+logoFile="fku.png"
+credits="FKU Team"
+authors="FKU"
+description="FKU Mod - NeoForge 1.21.8 port"

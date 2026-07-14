@@ -1,41 +1,32 @@
-# gradle
+# Gradle
 .gradle/
 build/
 *.jar
 *.class
+bin/
 
 # IDE
 .idea/
 *.iml
 .vscode/
+*.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
 
-# env
+# Logs
 *.log
+*.gz
+
+# Minecraft run dir
+run/
+
+# Temp
 *.tmp
-gradle.properties.local
+*.cache
 
-# runtime
-run/logs/
-run/saves/
-run/screenshots/
-run/fku/*.json
-run/*.log
-run/*.dat
-run/*.dat_old
-run/usernamecache.json
-run/usercache.json
-run/servers.dat
-run/servers.dat_old
-run/fku-config.toml
-run/debug-quickswitch-no-effect.md
-run/config/
-run/crash-reports/
-run/fku/schematics/
-run/options.txt
-
-# projecte 源文件（参考代码，非项目依赖）
-projecte/
+# Misc
+.gradle/
+build-logic/.gradle/
