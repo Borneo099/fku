@@ -58,7 +58,7 @@ public class NoFallConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         int cx = (width - WIDTH) / 2;
         int cy = (height - HEIGHT) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, WIDTH, HEIGHT, false);

@@ -7,9 +7,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Items;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Baritone 允许任意维度鞘翅
@@ -20,7 +20,7 @@ import net.neoforged.fml.common.Mod;
  * 参考：lexis.Hack.Hacks.Baritone.ElytraAnywhereHack
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class ElytraAnywhereFeature {
 
     private static boolean wasElytraEquipped = false;
@@ -55,8 +55,7 @@ public class ElytraAnywhereFeature {
     }
 
     @SubscribeEvent
-    public static void onTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         BaritoneConfig cfg = BaritoneConfig.getInstance();
 

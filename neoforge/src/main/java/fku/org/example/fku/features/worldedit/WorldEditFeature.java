@@ -9,9 +9,10 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterParticles;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * WorldEdit Lite 主控类
@@ -23,7 +24,7 @@ import net.neoforged.fml.common.Mod;
  * 4. 驱动选区渲染
  * 5. 非创造模式自动禁用
  */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class WorldEditFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -44,8 +45,7 @@ public class WorldEditFeature {
      * Tick 事件 — 驱动任务队列 + 安全检查
      */
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(Post event) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         if (!cfg.enabled) return;
         if (mc.player == null || mc.level == null) return;
@@ -66,13 +66,12 @@ public class WorldEditFeature {
      * 渲染事件 — 选区边框
      */
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+    public static void onRenderLevelStage(AfterParticles event) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         if (!cfg.enabled || !cfg.renderSelection) return;
         if (mc.player == null || mc.level == null) return;
 
-        SelectionManager.getInstance().renderSelection(event.getPoseStack(), event.getPartialTick());
+        SelectionManager.getInstance().renderSelection(event.getPoseStack(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 
     /**

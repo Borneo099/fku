@@ -19,10 +19,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  *   - 每 tick 最多处理 15 个死亡、渲染 5 条闪电
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class KillFXFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -78,7 +78,7 @@ public class KillFXFeature {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
+    public static void onClientTick(ClientTickEvent.Pre event) {
         KillFXConfig cfg = KillFXConfig.getInstance();
         if (!cfg.enabled) {
             processedEntities.clear();
@@ -93,15 +93,7 @@ public class KillFXFeature {
             now - e.getValue() > cfg.targetTimeout * 1000L
         );
 
-        if (event.phase == TickEvent.Phase.START) {
-            // ★ START：只检测死亡，不渲染（避免遍历时修改实体列表）
-            detectDeaths(cfg, now);
-        } else if (event.phase == TickEvent.Phase.END) {
-            // ★ END：渲染队列中的特效（此时遍历已结束，安全）
-            renderQueued(cfg);
-            // ★ 更新着色器特效进度
-            KillFXShaderManager.tick();
-        }
+        detectDeaths(cfg, now);
 
         // 缓存清理
         if (lastHealthMap.size() > 10000) {
@@ -118,9 +110,19 @@ public class KillFXFeature {
      * 渲染着色器特效 — 在世界坐标中绘制死亡位置特效
      */
     @SubscribeEvent
+    public static void onClientTickPost(ClientTickEvent.Post event) {
+        KillFXConfig cfg = KillFXConfig.getInstance();
+        if (!cfg.enabled) {
+            renderQueue.clear();
+            return;
+        }
+        renderQueued(cfg);
+        KillFXShaderManager.tick();
+    }
+
+    @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
-        KillFXShaderManager.renderEffects(event.getPoseStack(), event.getPartialTick());
+        KillFXShaderManager.renderEffects(event.getPoseStack(), event.getPartialTick().getGameTimeDeltaPartialTick(false));
     }
 
     /** 只检测死亡，不渲染——解决遍历实体列表时修改列表导致的卡死 */
@@ -234,7 +236,7 @@ public class KillFXFeature {
             for (int i = 0; i < amount; i++) {
                 LightningBolt bolt;
                 try {
-                    bolt = EntityType.LIGHTNING_BOLT.create(level);
+                    bolt = EntityType.LIGHTNING_BOLT.create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
                 } catch (Exception e) {
                     continue;
                 }
@@ -245,7 +247,7 @@ public class KillFXFeature {
                     safeSetInt(bolt, 6, "life", "field_7185", "f_20860_");
                     safeSetInt(bolt, 6, "flashes", "field_7183", "f_20861_");
                     safeSetBool(bolt, true, "visualOnly", "field_20862_", "f_20862_");
-                    level.putNonPlayerEntity(bolt.getId(), bolt);
+                    level.addEntity(bolt);
                 } catch (Exception ignored) {}
 
                 if (!cfg.useLightningSound) {
@@ -277,9 +279,9 @@ public class KillFXFeature {
                 ItemStack stack = new ItemStack(Items.FIREWORK_ROCKET);
                 CompoundTag tag = new CompoundTag();
                 tag.putInt("Flight", 1);
-                stack.setTag(tag);
+                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
                 var rocket = new net.minecraft.world.entity.projectile.FireworkRocketEntity(level, x, y, z, stack);
-                level.putNonPlayerEntity(rocket.getId(), rocket);
+                level.addEntity(rocket);
             } catch (Exception ignored) {}
         }
 
@@ -379,7 +381,7 @@ public class KillFXFeature {
             default -> se("entity.lightning_bolt.thunder");
         };
     }
-    private static SoundEvent se(String s) { return SoundEvent.createVariableRangeEvent(new ResourceLocation(s)); }
+    private static SoundEvent se(String s) { return SoundEvent.createVariableRangeEvent(ResourceLocation.withDefaultNamespace(s)); }
     private static SoundEvent combatS(String n) { return switch (n) {
         case "THUNDER" -> se("entity.lightning_bolt.thunder"); case "EXPLODE" -> se("entity.generic.explode");
         case "ANVIL" -> se("block.anvil.land"); case "TRIDENT_THUNDER" -> se("item.trident.thunder");

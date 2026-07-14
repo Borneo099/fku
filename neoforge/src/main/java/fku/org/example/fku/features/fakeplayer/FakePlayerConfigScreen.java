@@ -159,7 +159,7 @@ public class FakePlayerConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int cx = (this.width - WIDTH) / 2;
         int cy = (this.height - HEIGHT) / 2;

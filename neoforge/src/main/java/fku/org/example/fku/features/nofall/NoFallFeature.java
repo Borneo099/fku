@@ -6,7 +6,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * NoFallFeature — 防摔功能
@@ -19,7 +19,7 @@ import net.neoforged.fml.common.Mod;
  *   Meteor Client NoFall 模块
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class NoFallFeature {
 
     /** ★ 从配置文件静默恢复开关状态 */

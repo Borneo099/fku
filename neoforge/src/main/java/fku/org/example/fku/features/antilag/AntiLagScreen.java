@@ -170,7 +170,7 @@ public class AntiLagScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         int cx = (width - WIDTH) / 2;
 
         // ── 面板背景（圆角+边框） ──

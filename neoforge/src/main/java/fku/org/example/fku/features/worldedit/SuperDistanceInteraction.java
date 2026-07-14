@@ -11,16 +11,18 @@ import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForgeMod;
-
-import java.util.UUID;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * 超远距离交互管理
@@ -36,8 +38,7 @@ public class SuperDistanceInteraction {
     private static final Minecraft mc = Minecraft.getInstance();
     private static final SuperDistanceInteraction INSTANCE = new SuperDistanceInteraction();
 
-    private static final UUID RANGE_MODIFIER_UUID = UUID.fromString("a0b8e4f2-1c3d-5e6f-7a8b-9c0d1e2f3a4b");
-    private static final String RANGE_MODIFIER_NAME = "WorldEdit super range";
+    private static final ResourceLocation RANGE_MODIFIER_ID = ResourceLocation.fromNamespaceAndPath("fku", "worldedit_super_range");
 
     private ItemStack originalHelmet = ItemStack.EMPTY;
     private boolean helmetEquipped = false;
@@ -62,14 +63,12 @@ public class SuperDistanceInteraction {
         // 创建橡木按钮并添加属性修饰符
         ItemStack button = new ItemStack(Items.OAK_BUTTON, 1);
         AttributeModifier modifier = new AttributeModifier(
-                RANGE_MODIFIER_UUID, RANGE_MODIFIER_NAME,
-                9999.0, AttributeModifier.Operation.ADDITION);
+                RANGE_MODIFIER_ID,
+                9999.0, AttributeModifier.Operation.ADD_VALUE);
 
         // 添加属性到物品
-        button.addAttributeModifier(
-                ForgeMod.BLOCK_REACH.get(),
-                modifier,
-                EquipmentSlot.HEAD);
+        ItemAttributeModifiers attrModifiers = button.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        button.set(DataComponents.ATTRIBUTE_MODIFIERS, attrModifiers.withModifierAdded(Attributes.BLOCK_INTERACTION_RANGE, modifier, EquipmentSlotGroup.HEAD));
 
         // 装备到头盔槽（客户端）
         mc.player.setItemSlot(EquipmentSlot.HEAD, button);
@@ -82,8 +81,8 @@ public class SuperDistanceInteraction {
         }
 
         // 确保属性已应用（客户端）
-        AttributeInstance attr = mc.player.getAttribute(ForgeMod.BLOCK_REACH.get());
-        if (attr != null && !attr.hasModifier(modifier)) {
+        AttributeInstance attr = mc.player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE);
+        if (attr != null && !attr.hasModifier(RANGE_MODIFIER_ID)) {
             attr.addTransientModifier(modifier);
         }
 
@@ -98,9 +97,9 @@ public class SuperDistanceInteraction {
         if (mc.player == null) return;
 
         // 移除属性修饰符
-        AttributeInstance attr = mc.player.getAttribute(ForgeMod.BLOCK_REACH.get());
+        AttributeInstance attr = mc.player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE);
         if (attr != null) {
-            attr.removeModifier(RANGE_MODIFIER_UUID);
+            attr.removeModifier(RANGE_MODIFIER_ID);
         }
 
         // 恢复原头盔（客户端）
@@ -129,7 +128,7 @@ public class SuperDistanceInteraction {
         if (!cfg.enabled) return false;
 
         // 保存当前手持物品槽位
-        originalSelectedSlot = mc.player.getInventory().selected;
+        originalSelectedSlot = mc.player.getInventory().getSelectedSlot();
 
         // 自定义射线追踪
         Vec3 eyePos = mc.player.getEyePosition(1.0f);
@@ -162,7 +161,7 @@ public class SuperDistanceInteraction {
             mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
             Vec3 blockCenter = Vec3.atCenterOf(targetPos);
             Vec3 hitVec = blockCenter.add(
-                    Vec3.atLowerCornerOf(hitResult.getDirection().getNormal()).scale(0.5));
+                    Vec3.atLowerCornerOf(hitResult.getDirection().getUnitVec3i()).scale(0.5));
             BlockHitResult placeHit = new BlockHitResult(
                     hitVec, hitResult.getDirection(), targetPos, false);
             mc.player.connection.send(new ServerboundUseItemOnPacket(

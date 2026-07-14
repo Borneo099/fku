@@ -35,7 +35,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
 
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
@@ -162,8 +162,10 @@ public class BedrockBreakerManager {
         if (range <= 0) return;
 
         BlockPos playerPos = mc.player.blockPosition();
-        int minY = Math.max(mc.level.getMinBuildHeight(), playerPos.getY() - range);
-        int maxY = Math.min(mc.level.getMaxBuildHeight(), playerPos.getY() + range);
+        int buildMinY = mc.level.dimensionType().minY();
+        int buildMaxY = buildMinY + mc.level.dimensionType().height();
+        int minY = Math.max(buildMinY, playerPos.getY() - range);
+        int maxY = Math.min(buildMaxY, playerPos.getY() + range);
 
         // 从最高层向下扫描
         for (int y = maxY; y >= minY; y--) {
@@ -283,7 +285,7 @@ public class BedrockBreakerManager {
             if (adjState.getBlock() == Blocks.LEVER && adjState.getValue(LeverBlock.POWERED)) {
                 // 发送交互包关闭拉杆
                 BlockHitResult leverHit = new BlockHitResult(
-                        Vec3.atCenterOf(adjacentPos).add(Vec3.atLowerCornerOf(face.getOpposite().getNormal()).scale(0.5)),
+                        Vec3.atCenterOf(adjacentPos).add(Vec3.atLowerCornerOf(face.getOpposite().getUnitVec3i()).scale(0.5)),
                         face.getOpposite(),
                         adjacentPos,
                         false);
@@ -357,11 +359,11 @@ public class BedrockBreakerManager {
             BlockPlacingMethod method = BlockPlacingMethod.facing(best.facing);
             calculateFakeRotation(method);
             Vec3 clickLoc = Vec3.atCenterOf(bedrockPos)
-                    .add(Vec3.atLowerCornerOf(best.bodyDir.getNormal()).scale(0.5));
+                    .add(Vec3.atLowerCornerOf(best.bodyDir.getUnitVec3i()).scale(0.5));
             BlockHitResult hit = new BlockHitResult(clickLoc, best.bodyDir, bedrockPos, false);
             mc.player.connection.send(new ServerboundSetCarriedItemPacket(pistonSlot));
             mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                    fakeYaw, fakePitch, mc.player.onGround()));
+                    fakeYaw, fakePitch, mc.player.onGround(), true));
             sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, getSequenceNumber());
             // ★ 此 tick 不链式调用 handlePlaceLever（需确保 SWAP 包跨 tick 同步）
             //   ensureInHotbar 在本 tick 发送 ServerboundContainerClickPacket(SWAP)
@@ -376,7 +378,7 @@ public class BedrockBreakerManager {
             BlockPlacingMethod method = BlockPlacingMethod.facing(best.facing);
             calculateFakeRotation(method);
             mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                    fakeYaw, fakePitch, mc.player.onGround()));
+                    fakeYaw, fakePitch, mc.player.onGround(), true));
             mc.player.connection.send(new ServerboundSetCarriedItemPacket(pistonSlot));
             state = State.WAIT_Y_HEAD_ROT_SYNC;
         }
@@ -420,10 +422,10 @@ public class BedrockBreakerManager {
         BlockPlacingMethod method = BlockPlacingMethod.facing(pistonFacing);
         calculateFakeRotation(method);
         Vec3 clickLoc = Vec3.atCenterOf(bedrockPos)
-                .add(Vec3.atLowerCornerOf(pistonDirection.getNormal()).scale(0.5));
+                .add(Vec3.atLowerCornerOf(pistonDirection.getUnitVec3i()).scale(0.5));
         BlockHitResult hit = new BlockHitResult(clickLoc, pistonDirection, bedrockPos, false);
         mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                fakeYaw, fakePitch, mc.player.onGround()));
+                fakeYaw, fakePitch, mc.player.onGround(), true));
         sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, getSequenceNumber());
 
         // ★ 不在此tick链式调用 handlePlaceLever（v2.9 stateId 冲突修复）
@@ -456,17 +458,17 @@ public class BedrockBreakerManager {
                 float revYaw = Float.isNaN(revRot.yRot()) ? mc.player.getYRot() : revRot.yRot();
                 float revPitch = Float.isNaN(revRot.xRot()) ? mc.player.getXRot() : revRot.xRot();
                 mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                        revYaw, revPitch, mc.player.onGround()));
+                        revYaw, revPitch, mc.player.onGround(), true));
             }
         }
 
         // 切换镐子（严格参考 CheatUtils：使用 setSelectedSlot）
         int pickaxeSlot = findPickaxe();
         if (pickaxeSlot >= 0) {
-            mc.player.getInventory().selected = pickaxeSlot;
+            mc.player.getInventory().setSelectedSlot(pickaxeSlot);
         }
         mc.player.connection.send(new ServerboundSetCarriedItemPacket(
-                mc.player.getInventory().selected));
+                mc.player.getInventory().getSelectedSlot()));
 
         blockDestroyProgress = getPistonDestroyProgress();
         blockDestroySeqNumber = getSequenceNumber();
@@ -571,7 +573,7 @@ public class BedrockBreakerManager {
                     float revYaw = Float.isNaN(revRot.yRot()) ? mc.player.getYRot() : revRot.yRot();
                     float revPitch = Float.isNaN(revRot.xRot()) ? mc.player.getXRot() : revRot.xRot();
                     mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                            revYaw, revPitch, mc.player.onGround()));
+                            revYaw, revPitch, mc.player.onGround(), true));
                 }
                 reverseRotSent = true;
                 return; // 等待下一 tick 让 yHeadRot 同步
@@ -653,7 +655,7 @@ public class BedrockBreakerManager {
         BlockPos clickPos = bedrockPos;
         Direction clickFace = pistonDirection; // 点击基岩的 pistonDirection 面（活塞位置方向）
         Vec3 clickLoc = Vec3.atCenterOf(clickPos)
-                .add(Vec3.atLowerCornerOf(clickFace.getNormal()).scale(0.5));
+                .add(Vec3.atLowerCornerOf(clickFace.getUnitVec3i()).scale(0.5));
         BlockHitResult hit = new BlockHitResult(clickLoc, clickFace, clickPos, false);
 
         // 旋转：使用假旋转包，客户端视角不受影响
@@ -661,7 +663,7 @@ public class BedrockBreakerManager {
         BlockPlacingMethod method = BlockPlacingMethod.facing(reverseFacing);
         calculateFakeRotation(method);
         mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                fakeYaw, fakePitch, mc.player.onGround()));
+                fakeYaw, fakePitch, mc.player.onGround(), true));
 
         // 下蹲+右键放置反向活塞，避免打开容器 GUI
         mc.player.connection.send(new ServerboundSetCarriedItemPacket(pistonSlot));
@@ -687,8 +689,8 @@ public class BedrockBreakerManager {
 
             // 替换方块（如配置）- 使用 plan.apply() 模式
             if (cfg.replaceBlockId != null && !cfg.replaceBlockId.isEmpty()) {
-                Block replaceBlock = ForgeRegistries.BLOCKS.getValue(
-                        new net.minecraft.resources.ResourceLocation(cfg.replaceBlockId));
+                Block replaceBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(
+                        net.minecraft.resources.ResourceLocation.withDefaultNamespace(cfg.replaceBlockId));
                 if (replaceBlock != null && replaceBlock != Blocks.AIR) {
                     int repSlot = findItem(replaceBlock.asItem());
                     if (repSlot >= 0) {
@@ -781,11 +783,11 @@ public class BedrockBreakerManager {
 
         int pickaxeSlot = findPickaxe();
         if (pickaxeSlot >= 0) {
-            mc.player.getInventory().selected = pickaxeSlot;
+            mc.player.getInventory().setSelectedSlot(pickaxeSlot);
         }
 
         mc.player.connection.send(new ServerboundSetCarriedItemPacket(
-                mc.player.getInventory().selected));
+                mc.player.getInventory().getSelectedSlot()));
 
         blockDestroyProgress = getPistonDestroyProgress();
         blockDestroySeqNumber = getSequenceNumber();
@@ -868,7 +870,7 @@ public class BedrockBreakerManager {
             if (isInvalidLeverSupport(bedrockPos)) continue;
 
             BlockHitResult hit = new BlockHitResult(
-                    Vec3.atCenterOf(bedrockPos).add(Vec3.atLowerCornerOf(direction.getNormal()).scale(0.5)),
+                    Vec3.atCenterOf(bedrockPos).add(Vec3.atLowerCornerOf(direction.getUnitVec3i()).scale(0.5)),
                     direction,
                     bedrockPos,
                     false);
@@ -904,7 +906,7 @@ public class BedrockBreakerManager {
 
                 BlockHitResult hit = new BlockHitResult(
                         Vec3.atCenterOf(possibleSupportPos)
-                                .add(Vec3.atLowerCornerOf(dir.getOpposite().getNormal()).scale(0.5)),
+                                .add(Vec3.atLowerCornerOf(dir.getOpposite().getUnitVec3i()).scale(0.5)),
                         dir.getOpposite(),
                         possibleSupportPos,
                         false);
@@ -959,7 +961,7 @@ public class BedrockBreakerManager {
             Direction clickFace = pistonFacing;
             BlockHitResult hit = new BlockHitResult(
                     Vec3.atCenterOf(supportPos)
-                            .add(Vec3.atLowerCornerOf(clickFace.getNormal()).scale(0.5)),
+                            .add(Vec3.atLowerCornerOf(clickFace.getUnitVec3i()).scale(0.5)),
                     clickFace,
                     supportPos,
                     false);
@@ -1058,8 +1060,8 @@ public class BedrockBreakerManager {
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
         if (mc.level == null) return false;
         if (cfg.allBlocks) return true;  // allBlocks 模式：对所有硬方块生效
-        Block target = ForgeRegistries.BLOCKS.getValue(
-                new net.minecraft.resources.ResourceLocation(cfg.targetBlockId));
+        Block target = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(
+                net.minecraft.resources.ResourceLocation.withDefaultNamespace(cfg.targetBlockId));
         return target != null && mc.level.getBlockState(pos).is(target);
     }
 
@@ -1146,7 +1148,7 @@ public class BedrockBreakerManager {
                 blockId = blockId.trim();
                 if (blockId.isEmpty()) continue;
 
-                Block helperBlock = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId));
+                Block helperBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(blockId));
                 if (helperBlock == null || helperBlock == Blocks.AIR) continue;
                 // 必须是固体方块才能提供拉杆附着面
                 if (!helperBlock.defaultBlockState().isSolid()) continue;
@@ -1159,7 +1161,7 @@ public class BedrockBreakerManager {
                 //   新方块位置 = bedrockPos.relative(dir) = helperPos ✓
                 //   基岩一定是固体方块，点击面可靠（不依赖上方方块）
                 Vec3 clickLoc = Vec3.atCenterOf(bedrockPos)
-                        .add(Vec3.atLowerCornerOf(dir.getNormal()).scale(0.5));
+                        .add(Vec3.atLowerCornerOf(dir.getUnitVec3i()).scale(0.5));
                 BlockHitResult hit = new BlockHitResult(clickLoc, dir, bedrockPos, false);
 
                 mc.player.connection.send(new ServerboundSetCarriedItemPacket(hotbarSlot));
@@ -1203,11 +1205,8 @@ public class BedrockBreakerManager {
      *   发包顺序：PRESS_SHIFT → UseItemOn → RELEASE_SHIFT，在同 tick 完成。
      */
     private void sendUseItemOnSneak(InteractionHand hand, BlockHitResult hitResult, int sequence) {
-        mc.player.connection.send(new ServerboundPlayerCommandPacket(
-                mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+        // In 1.21.8, sneaking is no longer sent via player command packets
         mc.player.connection.send(new ServerboundUseItemOnPacket(hand, hitResult, sequence));
-        mc.player.connection.send(new ServerboundPlayerCommandPacket(
-                mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
     }
 
     /**
@@ -1237,7 +1236,7 @@ public class BedrockBreakerManager {
                     }
                 }
                 if (targetSlot < 0) {
-                    targetSlot = inventory.selected; // 无空位则用当前槽
+                    targetSlot = inventory.getSelectedSlot(); // 无空位则用当前槽
                 }
 
                 // 2b. 发送 SWAP 包，将背包物品与快捷栏交换
@@ -1249,31 +1248,22 @@ public class BedrockBreakerManager {
                 mc.player.connection.send(new ServerboundContainerClickPacket(
                         0, // 玩家背包容器
                         stateId,
-                        containerSlot,
-                        targetSlot, // button = 目标快捷栏编号
+                        (short) containerSlot,
+                        (byte) targetSlot, // button = 目标快捷栏编号
                         ClickType.SWAP,
-                        ItemStack.EMPTY,
-                        new Int2ObjectOpenHashMap<>(Map.of(
-                                containerSlot, inventory.getItem(targetSlot).copy(),
-                                hotbarContainerSlot, inventory.getItem(i).copy()
-                        ))
+                        new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(Map.of(
+                                containerSlot, net.minecraft.network.HashedStack.create(inventory.getItem(targetSlot).copy(), mc.getConnection().decoratedHashOpsGenenerator()),
+                                hotbarContainerSlot, net.minecraft.network.HashedStack.create(inventory.getItem(i).copy(), mc.getConnection().decoratedHashOpsGenenerator())
+                        )),
+                        net.minecraft.network.HashedStack.EMPTY
                 ));
-                // ★ v2.10 本地预测 stateId 递增（核心修复：解决跨 tick 第二个 SWAP 被拒）
-                //   矛盾定性：服务端处理 SWAP 后 stateId 自增 1，但客户端 stateId
-                //   需等服务端回复（ClientboundContainerSetSlot）才更新。
-                //   若下一 tick 再次调用 ensureInHotbar（如 handlePlaceLever 中放拉杆），
-                //   此时客户端 stateId 可能仍是旧值（服务端回复尚未到达），
-                //   导致第二个 SWAP 被服务端拒绝，快捷栏实际仍为活塞，
-                //   后续放置操作误放第二个活塞。
-                //   实践路线：本地预测 stateId 增量，无需等待服务端回复。
-                //   predictedContainerStateId 取 max 可同时覆盖服务端已回复的增量。
                 predictedContainerStateId = stateId + 1;
 
                 // 2c. 客户端同步
                 ItemStack temp = inventory.getItem(targetSlot).copy();
-                inventory.items.set(targetSlot, inventory.getItem(i).copy());
-                inventory.items.set(i, temp);
-                inventory.selected = targetSlot;
+                inventory.setItem(targetSlot, inventory.getItem(i).copy());
+                inventory.setItem(i, temp);
+                inventory.setSelectedSlot(targetSlot);
 
                 return targetSlot;
             }
@@ -1359,7 +1349,7 @@ public class BedrockBreakerManager {
                 for (int j = 0; j < 9; j++) {
                     if (inventory.getItem(j).isEmpty()) { targetSlot = j; break; }
                 }
-                if (targetSlot < 0) targetSlot = inventory.selected;
+                if (targetSlot < 0) targetSlot = inventory.getSelectedSlot();
 
                 int containerSlot = i;
                 int hotbarContainerSlot = 36 + targetSlot;
@@ -1368,19 +1358,18 @@ public class BedrockBreakerManager {
                 int stateId = Math.max(serverStateId, predictedContainerStateId);
                 mc.player.connection.send(new ServerboundContainerClickPacket(
                         0, stateId,
-                        containerSlot, targetSlot, ClickType.SWAP,
-                        ItemStack.EMPTY,
-                        new Int2ObjectOpenHashMap<>(Map.of(
-                                containerSlot, inventory.getItem(targetSlot).copy(),
-                                hotbarContainerSlot, inventory.getItem(i).copy()
-                        ))
+                        (short) containerSlot, (byte) targetSlot, ClickType.SWAP,
+                        new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(Map.of(
+                                containerSlot, net.minecraft.network.HashedStack.create(inventory.getItem(targetSlot).copy(), mc.getConnection().decoratedHashOpsGenenerator()),
+                                hotbarContainerSlot, net.minecraft.network.HashedStack.create(inventory.getItem(i).copy(), mc.getConnection().decoratedHashOpsGenenerator())
+                        )),
+                        net.minecraft.network.HashedStack.EMPTY
                 ));
-                // ★ v2.10 本地预测 stateId 递增（同 ensureInHotbar 修复）
                 predictedContainerStateId = stateId + 1;
                 ItemStack temp = inventory.getItem(targetSlot).copy();
-                inventory.items.set(targetSlot, inventory.getItem(i).copy());
-                inventory.items.set(i, temp);
-                inventory.selected = targetSlot;
+                inventory.setItem(targetSlot, inventory.getItem(i).copy());
+                inventory.setItem(i, temp);
+                inventory.setSelectedSlot(targetSlot);
                 return targetSlot;
             }
         }
@@ -1487,7 +1476,7 @@ public class BedrockBreakerManager {
     @SuppressWarnings("unused")
     private void selectSlot(int slot) {
         if (mc.player == null) return;
-        mc.player.getInventory().selected = slot;
+        mc.player.getInventory().setSelectedSlot(slot);
         mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
     }
 
@@ -1730,7 +1719,7 @@ public class BedrockBreakerManager {
         // 恢复快捷栏
         if (mc.player != null) {
             mc.player.connection.send(new ServerboundSetCarriedItemPacket(
-                    mc.player.getInventory().selected));
+                    mc.player.getInventory().getSelectedSlot()));
         }
 
         if (message != null && mc.player != null) {

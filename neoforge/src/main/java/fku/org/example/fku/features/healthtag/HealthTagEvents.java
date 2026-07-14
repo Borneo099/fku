@@ -4,19 +4,17 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "fku", value = Dist.CLIENT)
 public class HealthTagEvents {
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            HealthTagManager.tick();
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
+        HealthTagManager.tick();
     }
 
     @SubscribeEvent
@@ -34,7 +32,7 @@ public class HealthTagEvents {
         double mouseX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getWidth();
         double mouseY = mc.mouseHandler.ypos() * (double) mc.getWindow().getGuiScaledHeight() / (double) mc.getWindow().getHeight();
         
-        HealthTagRenderer.render(event.getGuiGraphics(), (int) mouseX, (int) mouseY, event.getPartialTick());
+        HealthTagRenderer.render(event.getGuiGraphics(), (int) mouseX, (int) mouseY, event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 
     @SubscribeEvent

@@ -2,14 +2,15 @@ package fku.org.example.fku.features.sprint; /* water */
 
 import fku.org.example.fku.Fku;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.Input;
+import net.minecraft.client.player.ClientInput;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.effect.MobEffects;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * SprintHandler — 强制疾跑（BMWSprint）核心逻辑
@@ -35,7 +36,7 @@ import net.neoforged.fml.common.Mod;
  *   5. END 阶段恢复真实视角
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class SprintHandler {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -103,32 +104,35 @@ public class SprintHandler {
     // ════════════════════════════════════════════════════════
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
+    public static void onClientTickPre(ClientTickEvent.Pre event) {
         if (mc.player == null || mc.level == null) return;
 
         SprintConfig cfg = SprintConfig.getInstance();
 
-        if (event.phase == TickEvent.Phase.START) {
+        yawModified = false;
+        overrideInputThisTick = false;
+
+        if (!isEnabled()) return;
+
+        switch (cfg.getMode()) {
+            case LEGIT -> handleLegit(cfg);
+            case OMNIDIRECTIONAL -> handleOmnidirectional(cfg);
+            case OMNIROTATIONAL -> handleOmnirotational(cfg);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onClientTickPost(ClientTickEvent.Post event) {
+        if (mc.player == null || mc.level == null) return;
+
+        // ★ END：恢复真实视角（yaw 在 aiStep 发包后不再需要）
+        if (yawModified) {
+            mc.player.setYRot(realYaw);
+            mc.player.setXRot(realPitch);
             yawModified = false;
             overrideInputThisTick = false;
 
-            if (!isEnabled()) return;
-
-            switch (cfg.getMode()) {
-                case LEGIT -> handleLegit(cfg);
-                case OMNIDIRECTIONAL -> handleOmnidirectional(cfg);
-                case OMNIROTATIONAL -> handleOmnirotational(cfg);
-            }
-        } else if (event.phase == TickEvent.Phase.END) {
-            // ★ END：恢复真实视角（yaw 在 aiStep 发包后不再需要）
-            if (yawModified) {
-                mc.player.setYRot(realYaw);
-                mc.player.setXRot(realPitch);
-                yawModified = false;
-                overrideInputThisTick = false;
-
-                if (DEBUG) System.out.println("[Sprint] END: 恢复 yaw=" + realYaw);
-            }
+            if (DEBUG) System.out.println("[Sprint] END: 恢复 yaw=" + realYaw);
         }
     }
 
@@ -143,12 +147,10 @@ public class SprintHandler {
     public static void onMovementInput(MovementInputUpdateEvent event) {
         if (!overrideInputThisTick) return;
 
-        Input input = event.getInput();
+        ClientInput input = event.getInput();
         // ★ 强制纯向前 + 无侧移
-        //    forwardImpulse = zza（前1 后-1 不按0）
-        //    leftImpulse    = xxa（左1 右-1 不按0）
-        input.forwardImpulse = 1.0F;
-        input.leftImpulse = 0.0F;
+        //    在 1.21.8 中，Input 是 record，通过 keyPresses 字段设置按键状态
+        input.keyPresses = new Input(true, false, false, false, false, false, false);
     }
 
     // ════════════════════════════════════════════════════════

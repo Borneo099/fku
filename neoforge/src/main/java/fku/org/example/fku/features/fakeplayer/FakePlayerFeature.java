@@ -19,10 +19,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.UUID;
 
@@ -44,7 +44,7 @@ import java.util.UUID;
  *   AdvancedFakePlayer.java / IMGFakePlayer.java (InvincibleMachineGun)
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class FakePlayerFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -75,7 +75,7 @@ public class FakePlayerFeature {
 
         // ★ 使用 ClientLevel.addPlayer() 正确注册假人到世界（addFreshEntity 在 ClientLevel 上无效）
         if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel) {
-            ((net.minecraft.client.multiplayer.ClientLevel) mc.level).addPlayer(fakePlayer.getId(), fakePlayer);
+            ((net.minecraft.client.multiplayer.ClientLevel) mc.level).addEntity(fakePlayer);
         }
 
         Fku.LOGGER.info("[FakePlayer] 已生成: {}", cfg.name);
@@ -205,8 +205,7 @@ public class FakePlayerFeature {
      * ★ Tick 事件：假人定时更新 + 自动图腾
      */
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
         if (!cfg.enabled || fakePlayer == null || !fakePlayer.isAlive()) return;
 
@@ -244,19 +243,22 @@ public class FakePlayerFeature {
         if (weapon.isEmpty()) return 1.0F;
 
         // ★ 获取武器基础伤害属性
-        double baseDamage = weapon.getAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
-            .get(Attributes.ATTACK_DAMAGE).stream()
-            .mapToDouble(m -> m.getAmount())
-            .sum();
+        double[] baseDamageArr = {0.0};
+        weapon.forEachModifier(net.minecraft.world.entity.EquipmentSlot.MAINHAND, (holder, modifier) -> {
+            if (holder.is(Attributes.ATTACK_DAMAGE)) {
+                baseDamageArr[0] += modifier.amount();
+            }
+        });
+        double baseDamage = baseDamageArr[0];
         if (baseDamage == 0) baseDamage = 1.0;
 
         // ★ 计算附魔加成（锋利、亡灵杀手、节肢杀手）
         int sharpness = 0, smite = 0, bane = 0;
-        var enchantments = net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantments(weapon);
+        var enchantments = net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantmentsForCrafting(weapon);
         for (var entry : enchantments.entrySet()) {
             var ench = entry.getKey();
-            int level = entry.getValue();
-            var id = net.neoforged.neoforge.registries.NeoForgeRegistries.ENCHANTMENTS.getKey(ench);
+            int level = entry.getIntValue();
+            var id = ench.unwrapKey().map(key -> key.location()).orElse(null);
             if (id == null) continue;
             String path = id.getPath();
             if ("sharpness".equals(path)) sharpness += level;
@@ -268,8 +270,8 @@ public class FakePlayerFeature {
 
         // ★ 力量效果加成
         float strengthBonus = 0;
-        if (player.hasEffect(MobEffects.DAMAGE_BOOST)) {
-            MobEffectInstance effect = player.getEffect(MobEffects.DAMAGE_BOOST);
+        if (player.hasEffect(MobEffects.STRENGTH)) {
+            MobEffectInstance effect = player.getEffect(MobEffects.STRENGTH);
             if (effect != null) strengthBonus = 3.0F * (effect.getAmplifier() + 1);
         }
         // 虚弱效果减益

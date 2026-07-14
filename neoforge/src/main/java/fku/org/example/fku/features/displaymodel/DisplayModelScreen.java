@@ -172,7 +172,7 @@ public class DisplayModelScreen extends Screen {
                 } else {
                     commandRows.remove(rowIndex);
                 }
-                Minecraft.getInstance().tell(this::rebuildLayout);
+                Minecraft.getInstance().submit(this::rebuildLayout);
             }).bounds(x + 10, currentY, 18, 18).build();
             myAddRenderableWidget(row.toggleBtn);
 
@@ -294,17 +294,6 @@ public class DisplayModelScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        for (CommandRow row : commandRows) {
-            if (row.input != null) row.input.tick();
-        }
-        if (placeDelayInput != null) placeDelayInput.tick();
-        if (generationDelayInput != null) generationDelayInput.tick();
-        if (entitySpacingInput != null) entitySpacingInput.tick();
-        if (placeXInput != null) placeXInput.tick();
-        if (placeYInput != null) placeYInput.tick();
-        if (placeZInput != null) placeZInput.tick();
-        if (viewRangeInput != null) viewRangeInput.tick();
-
         updateFromManager();
     }
 
@@ -460,7 +449,7 @@ public class DisplayModelScreen extends Screen {
     // ====================================================================
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
+        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
         int x = (width - WIDTH) / 2;

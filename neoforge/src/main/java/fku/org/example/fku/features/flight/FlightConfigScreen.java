@@ -65,7 +65,7 @@ public class FlightConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         int cx = (width - W) / 2, cy = (height - H) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         super.render(g, mx, my, pt);

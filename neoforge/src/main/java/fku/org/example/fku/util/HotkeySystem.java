@@ -5,9 +5,9 @@ import fku.org.example.fku.util.FeatureHotkeyManager.IHotkeyInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
@@ -18,7 +18,7 @@ import java.util.Map;
  * <p>
  * 每个 hack 的按键状态持久跟踪，按下瞬间触发一次，释放不触发。
  */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class HotkeySystem {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -67,8 +67,7 @@ public class HotkeySystem {
     // ═══════ GLFW 轮询（参考 lexis: 持续跟踪 pressedKeys） ═══════
 
     @SubscribeEvent
-    public static void onTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onTick(ClientTickEvent.Post event) {
         if (mc.getWindow() == null) return;
         long window = mc.getWindow().getWindow();
 

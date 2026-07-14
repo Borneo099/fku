@@ -98,7 +98,7 @@ public class FakeRotationManager {
      */
     public static ServerboundMovePlayerPacket.PosRot createPendingPacket() {
         return new ServerboundMovePlayerPacket.PosRot(
-                pendingX, pendingY, pendingZ, pendingYaw, pendingPitch, pendingOnGround);
+                pendingX, pendingY, pendingZ, pendingYaw, pendingPitch, true, pendingOnGround);
     }
 
     /**
@@ -137,7 +137,7 @@ public class FakeRotationManager {
 
         // ★ 发送组合 PosRot 包：同时改变服务端位置 + 旋转
         player.connection.send(new ServerboundMovePlayerPacket.PosRot(
-                fakedX, fakedY, fakedZ, targetYaw, player.getXRot(), player.onGround()));
+                fakedX, fakedY, fakedZ, targetYaw, player.getXRot(), true, player.onGround()));
 
         // ★ 设置恢复计时器
         restoreTimer = RESTORE_DELAY_TICKS;
@@ -156,7 +156,7 @@ public class FakeRotationManager {
 
         // ★ 发送恢复包（原始位置 + 原始旋转）
         player.connection.send(new ServerboundMovePlayerPacket.PosRot(
-                origX, origY, origZ, origYaw, origPitch, player.onGround()));
+                origX, origY, origZ, origYaw, origPitch, true, player.onGround()));
     }
 
     /**

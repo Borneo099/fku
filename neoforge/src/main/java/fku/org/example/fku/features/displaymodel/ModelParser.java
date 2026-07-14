@@ -56,14 +56,14 @@ public class ModelParser {
         nbtString = cleanNbtString(nbtString);
         
         // 解析为CompoundTag
-        CompoundTag rootTag = TagParser.parseTag(nbtString);
+        CompoundTag rootTag = TagParser.parseCompoundFully(nbtString);
         
         // 仅提取Passengers列表中的内容，不包含主实体
         List<CompoundTag> passengers = new ArrayList<>();
-        if (rootTag.contains("Passengers", Tag.TAG_LIST)) {
-            ListTag passengerList = rootTag.getList("Passengers", Tag.TAG_COMPOUND);
+        if (rootTag.contains("Passengers")) {
+            ListTag passengerList = rootTag.getListOrEmpty("Passengers");
             for (int i = 0; i < passengerList.size(); i++) {
-                CompoundTag passenger = passengerList.getCompound(i);
+                CompoundTag passenger = passengerList.getCompoundOrEmpty(i);
                 // 递归提取嵌套Passengers（避免遗漏多级嵌套）
                 extractPassengerRecursive(passenger, passengers, 0);
             }
@@ -88,10 +88,10 @@ public class ModelParser {
         result.add(tag.copy());
         
         // 递归处理该乘客的嵌套Passengers
-        if (tag.contains("Passengers", Tag.TAG_LIST)) {
-            ListTag passengers = tag.getList("Passengers", Tag.TAG_COMPOUND);
+        if (tag.contains("Passengers")) {
+            ListTag passengers = tag.getListOrEmpty("Passengers");
             for (int i = 0; i < passengers.size(); i++) {
-                extractPassengerRecursive(passengers.getCompound(i), result, depth + 1);
+                extractPassengerRecursive(passengers.getCompoundOrEmpty(i), result, depth + 1);
             }
         }
     }

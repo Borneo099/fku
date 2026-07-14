@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -85,7 +86,7 @@ public class ClipboardManager {
 
                     BlockEntity be = mc.level.getBlockEntity(pos);
                     if (be != null) {
-                        copiedBlockEntityData.add(be.saveWithFullMetadata());
+                        copiedBlockEntityData.add(be.saveWithFullMetadata(mc.level.registryAccess()));
                     } else {
                         copiedBlockEntityData.add(new CompoundTag());
                     }
@@ -199,7 +200,7 @@ public class ClipboardManager {
                     // 保存 BlockEntity
                     BlockEntity be = mc.level.getBlockEntity(pos);
                     if (be != null) {
-                        CompoundTag te = be.saveWithFullMetadata();
+                        CompoundTag te = be.saveWithFullMetadata(mc.level.registryAccess());
                         te.putInt("x", x);
                         te.putInt("y", y);
                         te.putInt("z", z);
@@ -212,7 +213,7 @@ public class ClipboardManager {
         // 构建 NBT
         CompoundTag root = new CompoundTag();
         root.putInt("Version", 2);
-        root.putInt("DataVersion", net.minecraft.SharedConstants.getCurrentVersion().getDataVersion().getVersion());
+        root.putInt("DataVersion", net.minecraft.SharedConstants.getCurrentVersion().dataVersion().version());
         root.putShort("Width", w);
         root.putShort("Height", h);
         root.putShort("Length", l);
@@ -264,26 +265,26 @@ public class ClipboardManager {
         }
 
         try (FileInputStream fis = new FileInputStream(file)) {
-            CompoundTag root = NbtIo.readCompressed(fis);
-            short w = root.getShort("Width");
-            short h = root.getShort("Height");
-            short l = root.getShort("Length");
-            int[] blockData = root.getIntArray("BlockData");
+            CompoundTag root = NbtIo.readCompressed(fis, NbtAccounter.unlimitedHeap());
+            short w = root.getShortOr("Width", (short)0);
+            short h = root.getShortOr("Height", (short)0);
+            short l = root.getShortOr("Length", (short)0);
+            int[] blockData = root.getIntArray("BlockData").orElse(new int[0]);
 
             // 读取调色板
-            CompoundTag paletteTag = root.getCompound("Palette");
+            CompoundTag paletteTag = root.getCompoundOrEmpty("Palette");
             Map<Integer, String> reversePalette = new HashMap<>();
-            for (String key : paletteTag.getAllKeys()) {
-                reversePalette.put(paletteTag.getInt(key), key);
+            for (String key : paletteTag.keySet()) {
+                reversePalette.put(paletteTag.getIntOr(key, 0), key);
             }
 
             // 解析 BlockEntities
             Map<BlockPos, CompoundTag> teMap = new HashMap<>();
-            if (root.contains("BlockEntities", 9)) {
-                ListTag teList = root.getList("BlockEntities", 10);
+            if (root.contains("BlockEntities")) {
+                ListTag teList = root.getListOrEmpty("BlockEntities");
                 for (int i = 0; i < teList.size(); i++) {
-                    CompoundTag te = teList.getCompound(i);
-                    BlockPos tePos = new BlockPos(te.getInt("x"), te.getInt("y"), te.getInt("z"));
+                    CompoundTag te = teList.getCompoundOrEmpty(i);
+                    BlockPos tePos = new BlockPos(te.getIntOr("x", 0), te.getIntOr("y", 0), te.getIntOr("z", 0));
                     te.remove("x"); te.remove("y"); te.remove("z");
                     teMap.put(tePos, te);
                 }
@@ -338,7 +339,7 @@ public class ClipboardManager {
      */
     private String stateToString(BlockState state) {
         StringBuilder sb = new StringBuilder();
-        sb.append(net.neoforged.neoforge.registries.NeoForgeRegistries.BLOCKS.getKey(state.getBlock()));
+        sb.append(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()));
         var values = state.getValues();
         if (!values.isEmpty()) {
             sb.append("[");
@@ -365,7 +366,7 @@ public class ClipboardManager {
             if (bracket >= 0) {
                 blockId = str.substring(0, bracket);
             }
-            Block block = net.neoforged.neoforge.registries.NeoForgeRegistries.BLOCKS.getValue(
+            Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(
                     net.minecraft.resources.ResourceLocation.tryParse(blockId));
             if (block == null) return null;
             

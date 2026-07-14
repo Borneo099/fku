@@ -6,15 +6,15 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.List;
 import java.util.Optional;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "fku", value = Dist.CLIENT)
 public class YPosOverlay {
 
     private static Entity cachedTarget = null;
@@ -23,7 +23,7 @@ public class YPosOverlay {
     public static void toggle() {
         MovementConfig config = MovementConfig.getInstance();
         config.setYPosOverlayEnabled(!config.yPosOverlayEnabled);
-        
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             mc.player.displayClientMessage(
@@ -34,8 +34,8 @@ public class YPosOverlay {
     }
 
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CROSSHAIR.type()) return;
+    public static void onRenderOverlay(RenderGuiLayerEvent.Pre event) {
+        if (!event.getName().equals(VanillaGuiLayers.CROSSHAIR)) return;
         if (!MovementConfig.getInstance().yPosOverlayEnabled) return;
 
         Minecraft mc = Minecraft.getInstance();

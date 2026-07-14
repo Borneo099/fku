@@ -5,9 +5,9 @@ import fku.org.example.fku.util.BaritoneBridge;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Baritone 跑酷模式
@@ -18,7 +18,7 @@ import net.neoforged.fml.common.Mod;
  * 参考：lexis.Hack.Hacks.Baritone.BaritoneParkourHack
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class BaritoneParkourFeature {
 
     private static boolean hackActive = false;
@@ -80,8 +80,7 @@ public class BaritoneParkourFeature {
     }
 
     @SubscribeEvent
-    public static void onTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (!hackActive || mc.player == null) return;
 

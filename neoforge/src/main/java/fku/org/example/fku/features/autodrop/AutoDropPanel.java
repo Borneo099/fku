@@ -11,15 +11,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.awt.*;
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "fku")
 public class AutoDropPanel {
     private static final int PANEL_WIDTH = 112;  // 增加宽度以容纳6个物品
     private static final int PANEL_HEIGHT = 188;
@@ -141,7 +141,7 @@ public class AutoDropPanel {
             int itemX = startX + col * (ICON_SIZE + ICON_SPACING);
             int itemY = y + row * (ICON_SIZE + ICON_SPACING);
 
-            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(ResourceLocation.withDefaultNamespace(itemId));
             ItemStack stack = new ItemStack(item != null ? item : Items.PAPER);
 
             guiGraphics.fill(itemX, itemY, itemX + ICON_SIZE, itemY + ICON_SIZE, 0x44444444);
@@ -168,7 +168,7 @@ public class AutoDropPanel {
         if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH &&
             mouseY >= panelY && mouseY <= panelY + PANEL_HEIGHT) {
             
-            scrollOffset -= (int) (event.getScrollDelta() * SCROLL_SPEED);
+            scrollOffset -= (int) (event.getScrollDeltaY() * SCROLL_SPEED);
             event.setCanceled(true);
         }
     }

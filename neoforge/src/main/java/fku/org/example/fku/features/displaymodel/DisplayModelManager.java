@@ -15,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Pre;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -165,7 +165,7 @@ public class DisplayModelManager {
         this.syncWaitTicks = Math.max(0, placeDelayMs / 50);
         this.interDelayTicks = Math.max(0, generationDelayMs / 50);
         this.originalItem = player.getItemInHand(InteractionHand.MAIN_HAND).copy();
-        this.selectedSlot = player.getInventory().selected;
+        this.selectedSlot = player.getInventory().getSelectedSlot();
         this.tickCounter = 0;
 
         // 加载第一行
@@ -213,8 +213,7 @@ public class DisplayModelManager {
     //  onClientTick — 事件入口
     // ====================================================================
     @SubscribeEvent
-    public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+    public void onClientTick(Pre event) {
         if (this.running) {
             this.tick();
         }
@@ -351,7 +350,7 @@ public class DisplayModelManager {
         ItemStack spawnEgg = createSpawnEgg(passengerTag);
 
         // 替换客户端热栏槽位
-        player.getInventory().items.set(selectedSlot, spawnEgg.copy());
+        player.getInventory().setItem(selectedSlot, spawnEgg.copy());
         player.getInventory().setChanged();
 
         // 同步到服务端
@@ -391,7 +390,7 @@ public class DisplayModelManager {
         ItemStack egg = createSpawnEgg(passengerTag);
 
         // ★ 必须在 useItemOn 之前将物品同步到服务端，否则多人模式下服务端认不出这个蛋
-        player.getInventory().items.set(selectedSlot, egg.copy());
+        player.getInventory().setItem(selectedSlot, egg.copy());
         syncItemToServer(selectedSlot, egg.copy());
 
         // 使用玩家脚下方块作为交互目标
@@ -443,7 +442,7 @@ public class DisplayModelManager {
         LocalPlayer player = mc.player;
         if (player == null || originalItem == null) return;
 
-        player.getInventory().items.set(selectedSlot, originalItem.copy());
+        player.getInventory().setItem(selectedSlot, originalItem.copy());
         player.setItemInHand(InteractionHand.MAIN_HAND, originalItem.copy());
         syncItemToServer(selectedSlot, originalItem.copy());
     }
@@ -497,7 +496,7 @@ public class DisplayModelManager {
         display.putString("Name", "{\"translate\":\"entity.minecraft.block_display\"}");
         tag.put("display", display);
 
-        egg.setTag(tag);
+        egg.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
         return egg;
     }
 

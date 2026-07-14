@@ -23,11 +23,13 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterEntities;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.joml.Matrix4f;
 
 import fku.org.example.fku.features.healthtag.HealthTagManager;
@@ -59,6 +61,7 @@ import java.util.stream.Collectors;
  *   (https://github.com/MeteorDevelopment/meteor-client)
  */
 @OnlyIn(Dist.CLIENT)
+@EventBusSubscriber(modid = "fku", value = Dist.CLIENT)
 public class TpAuraFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -251,8 +254,7 @@ public class TpAuraFeature {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (mc.player == null || mc.level == null) return;
 
         TpAuraConfig cfg = TpAuraConfig.getInstance();
@@ -305,8 +307,7 @@ public class TpAuraFeature {
     // ══════════════════════════════════════════════
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
+    public static void onRenderLevelStage(AfterEntities event) {
         if (!isEnabled()) return;
         if (mc.player == null || mc.level == null) return;
 
@@ -345,8 +346,8 @@ public class TpAuraFeature {
                 if (i < self.renderPathNodes.size() - 1) {
                     Vec3 next = self.renderPathNodes.get(i + 1);
                     Matrix4f mat = poseStack.last().pose();
-                    consumer.vertex(mat, (float) n.x, (float) (n.y + 1), (float) n.z).color(pr, pg, pb, pa).normal(0f, 1f, 0f).endVertex();
-                    consumer.vertex(mat, (float) next.x, (float) (next.y + 1), (float) next.z).color(pr, pg, pb, pa).normal(0f, 1f, 0f).endVertex();
+                    consumer.addVertex(mat, (float) n.x, (float) (n.y + 1), (float) n.z).setColor(pr, pg, pb, pa).setNormal(0f, 1f, 0f);
+                    consumer.addVertex(mat, (float) next.x, (float) (next.y + 1), (float) next.z).setColor(pr, pg, pb, pa).setNormal(0f, 1f, 0f);
                 }
             }
         }
@@ -359,8 +360,8 @@ public class TpAuraFeature {
      * 使用 HOTBAR 渲染后的时机，使文字叠加在物品栏上方居中位置
      */
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.HOTBAR.type()) return;
+    public static void onRenderOverlay(RenderGuiLayerEvent.Post event) {
+        if (!event.getName().equals(VanillaGuiLayers.HOTBAR)) return;
 
         // 只在切换后短时间内显示，超时自动隐藏，避免常驻干扰
         if (System.currentTimeMillis() > overlayShowUntil) return;
@@ -391,34 +392,34 @@ public class TpAuraFeature {
         double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
 
         // 底部矩形（4条边线）
-        consumer.vertex(mat, (float) minX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
+        consumer.addVertex(mat, (float) minX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(0f, -1f, 0f);
 
         // 顶部矩形（4条边线）
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
+        consumer.addVertex(mat, (float) minX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
 
         // 竖线（4条垂直边）
-        consumer.vertex(mat, (float) minX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
+        consumer.addVertex(mat, (float) minX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) minY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) maxY, (float) minZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) maxX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) minY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
+        consumer.addVertex(mat, (float) minX, (float) maxY, (float) maxZ).setColor(r, g, b, a).setNormal(0f, 1f, 0f);
     }
 
     // ══════════════════════════════════════════════
@@ -462,8 +463,8 @@ public class TpAuraFeature {
         double reach = cfg.maxRange;
 
         // ★ 世界边界检查：防止虚空/Y轴越界导致卡死
-        int worldMinY = mc.level.getMinBuildHeight();
-        int worldMaxY = mc.level.getMaxBuildHeight() - 1;
+        int worldMinY = mc.level.dimensionType().minY();
+        int worldMaxY = mc.level.dimensionType().minY() + mc.level.dimensionType().height() - 1;
         if (basePos.y < worldMinY || basePos.y > worldMaxY) return;
 
         // ★ 天花板检测：V-Clip高度不超天花板下方2格（防穿墙拉回）
@@ -511,7 +512,7 @@ public class TpAuraFeature {
         for (int i = 0; i < spam; i++) {
             if (mc.player == null || mc.player.connection == null) break;
             mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                mc.player.getX(), mc.player.getY(), mc.player.getZ(), false
+                mc.player.getX(), mc.player.getY(), mc.player.getZ(), false, true
             ));
         }
 
@@ -537,7 +538,7 @@ public class TpAuraFeature {
                 }
 
                 if (mc.level != null) {
-                    int worldTop = mc.level.getMaxBuildHeight() - 1;
+                    int worldTop = mc.level.dimensionType().minY() + mc.level.dimensionType().height() - 1;
                     if (basePos.y + blocks > worldTop) {
                         blocks = (int) (worldTop - basePos.y);
                         if (blocks < 1) break;
@@ -572,9 +573,9 @@ public class TpAuraFeature {
             mc.player.setPos(basePos.x, basePos.y, basePos.z);
             if (mc.player.connection != null) {
                 mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                    basePos.x, basePos.y, basePos.z, false));
+                    basePos.x, basePos.y, basePos.z, false, true));
                 mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                    basePos.x, basePos.y, basePos.z, false));
+                    basePos.x, basePos.y, basePos.z, false, true));
             }
         }
     }
@@ -624,7 +625,7 @@ public class TpAuraFeature {
     /** 发送位置包（模拟 PositionAndOnGround） */
     private void sendMove(Vec3 pos) {
         if (mc.player == null || mc.player.connection == null) return;
-        mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
+        mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false, true));
     }
 
     /** 计算回传位置并设置玩家位置 */
@@ -687,7 +688,7 @@ public class TpAuraFeature {
         if (mc.level == null || mc.player == null) return true;
         BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
         // ★ 世界边界检查：防止虚空/Y轴越界导致异常
-        if (bp.getY() < mc.level.getMinBuildHeight() || bp.getY() >= mc.level.getMaxBuildHeight()) return true;
+        if (bp.getY() < mc.level.dimensionType().minY() || bp.getY() >= mc.level.dimensionType().minY() + mc.level.dimensionType().height()) return true;
         if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return true;
         AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
         for (BlockPos bPos : BlockPos.betweenClosed(
@@ -790,7 +791,7 @@ public class TpAuraFeature {
 
         // 基础检查：世界边界 + 区块加载
         BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
-        if (bp.getY() < mc.level.getMinBuildHeight() || bp.getY() >= mc.level.getMaxBuildHeight()) return null;
+        if (bp.getY() < mc.level.dimensionType().minY() || bp.getY() >= mc.level.dimensionType().minY() + mc.level.dimensionType().height()) return null;
         if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return null;
 
         // ★ 检查方块碰撞
@@ -907,7 +908,7 @@ public class TpAuraFeature {
 
         // ★ 全生物攻击模式：不按类型过滤
         if (!cfg.attackAllEntities) {
-            String entityTypeKey = net.neoforged.neoforge.registries.NeoForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).getPath().toLowerCase();
+            String entityTypeKey = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath().toLowerCase();
             if (!allowedTypes.contains(entityTypeKey)) return false;
         }
 
@@ -923,7 +924,7 @@ public class TpAuraFeature {
         // ★ 白名单检查（所有实体均有效，不限于玩家）
         //   之前版本将白名单检查放在 Player 分支内，导致全生物模式下非玩家实体绕过白名单。
         if (cfg.whitelistEnabled) {
-            String entityType = net.neoforged.neoforge.registries.NeoForgeRegistries.ENTITY_TYPES
+            String entityType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
                     .getKey(entity.getType()).getPath().toLowerCase();
             List<String> wl = Arrays.stream(cfg.whitelist.split(","))
                     .map(String::trim)
@@ -969,22 +970,22 @@ public class TpAuraFeature {
             int slot = findWeaponInventorySlot();
             if (slot != -1) {
                 silentSwapSlot = slot;
-                silentSwapPrevSlot = mc.player.getInventory().selected;
+                silentSwapPrevSlot = mc.player.getInventory().getSelectedSlot();
                 if (slot >= 36) {
                     // 热栏槽位，直接切换
-                    mc.player.getInventory().selected = slot - 36;
+                    mc.player.getInventory().setSelectedSlot(slot - 36);
                 } else {
                     // 背包槽位，使用 SWAP 操作
                     mc.player.connection.send(new ServerboundContainerClickPacket(
                             0, // 玩家背包容器ID
                             mc.player.containerMenu.getStateId(),
-                            slot, // 背包中武器槽位
-                            0, // 热栏槽位 0
+                            (short) slot, // 背包中武器槽位
+                            (byte) 0, // 热栏槽位 0
                             ClickType.SWAP,
-                            mc.player.containerMenu.getCarried(),
-                            new Int2ObjectOpenHashMap<>()
+                            new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(),
+                            net.minecraft.network.HashedStack.create(mc.player.containerMenu.getCarried(), mc.getConnection().decoratedHashOpsGenenerator())
                     ));
-                    mc.player.getInventory().selected = 0;
+                    mc.player.getInventory().setSelectedSlot(0);
                 }
                 return true;
             }
@@ -993,8 +994,8 @@ public class TpAuraFeature {
             for (int i = 0; i < 9; i++) {
                 String name = mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
                 if (name.contains("sword") || name.contains("mace") || name.contains("axe")) {
-                    if (originalSlot == -1) originalSlot = mc.player.getInventory().selected;
-                    mc.player.getInventory().selected = i;
+                    if (originalSlot == -1) originalSlot = mc.player.getInventory().getSelectedSlot();
+                    mc.player.getInventory().setSelectedSlot(i);
                     return true;
                 }
             }
@@ -1008,18 +1009,18 @@ public class TpAuraFeature {
 
         if (silentSwapSlot != -1 && mc.player != null && mc.player.connection != null) {
             if (silentSwapSlot >= 36) {
-                mc.player.getInventory().selected = silentSwapPrevSlot;
+                mc.player.getInventory().setSelectedSlot(silentSwapPrevSlot);
             } else {
                 mc.player.connection.send(new ServerboundContainerClickPacket(
                         0,
                         mc.player.containerMenu.getStateId(),
-                        silentSwapSlot,
-                        0,
+                        (short) silentSwapSlot,
+                        (byte) 0,
                         ClickType.SWAP,
-                        mc.player.containerMenu.getCarried(),
-                        new Int2ObjectOpenHashMap<>()
+                        new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(),
+                        net.minecraft.network.HashedStack.create(mc.player.containerMenu.getCarried(), mc.getConnection().decoratedHashOpsGenenerator())
                 ));
-                mc.player.getInventory().selected = silentSwapPrevSlot;
+                mc.player.getInventory().setSelectedSlot(silentSwapPrevSlot);
                 mc.player.connection.send(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
             }
             silentSwapSlot = -1;
@@ -1027,7 +1028,7 @@ public class TpAuraFeature {
         }
 
         if (originalSlot != -1 && mc.player != null) {
-            mc.player.getInventory().selected = originalSlot;
+            mc.player.getInventory().setSelectedSlot(originalSlot);
             originalSlot = -1;
         }
     }

@@ -241,7 +241,7 @@ public class BedrockBreakerScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
+        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
 
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy(0), WIDTH, HEIGHT, false);

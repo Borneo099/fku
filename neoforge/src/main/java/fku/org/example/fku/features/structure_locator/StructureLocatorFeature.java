@@ -17,7 +17,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
  *       lexis.Hack.Hacks.Baritone.StructureLocatorHack
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class StructureLocatorFeature {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("StructureLocator");
@@ -243,8 +243,7 @@ public class StructureLocatorFeature {
 
     /** 自动清除 + 粒子光柱（150 格内渲染 END_ROD 光柱） */
     @SubscribeEvent
-    public static void onClientTick(net.neoforged.neoforge.event.tick.TickEvent.ClientTickEvent event) {
-        if (event.phase != net.neoforged.neoforge.event.tick.TickEvent.Phase.END) return;
+    public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
         if (markedX < 0 || mc.player == null || mc.level == null) return;
 
         // ── 到达检测 ──
@@ -331,7 +330,7 @@ public class StructureLocatorFeature {
 
     /** 渲染 HUD：方向指示 + 距离 + 近距离大箭头 */
     @SubscribeEvent
-    public static void onRenderHUD(net.neoforged.neoforge.client.event.RenderGuiOverlayEvent.Post event) {
+    public static void onRenderHUD(net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Post event) {
         if (markedX < 0 || mc.player == null || mc.level == null) return;
 
         var g = event.getGuiGraphics();

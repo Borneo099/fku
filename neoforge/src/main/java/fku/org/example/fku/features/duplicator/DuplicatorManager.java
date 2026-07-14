@@ -17,9 +17,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.core.registries.Registries;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Pre;
 import net.neoforged.bus.api.SubscribeEvent;
 
 /**
@@ -72,8 +73,7 @@ public class DuplicatorManager {
     public boolean isRunning() { return phase != Phase.IDLE; }
 
     @SubscribeEvent
-    public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+    public void onClientTick(Pre event) {
         Minecraft mc = Minecraft.getInstance();
         if (!(mc.screen instanceof DupeScreen)) return;
         tick(mc);
@@ -117,13 +117,13 @@ public class DuplicatorManager {
                 }
                 // 按下使用键并发送包
                 mc.options.keyUse.setDown(true);
-                mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
+                mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0, player.getYRot(), player.getXRot()));
 
                 if (cfg.bypassGrim) {
                     mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(
-                            player.getX(), player.getY(), player.getZ(), player.onGround()));
+                            player.getX(), player.getY(), player.getZ(), true, player.onGround()));
                     mc.getConnection().send(new ServerboundMovePlayerPacket.Rot(
-                            player.getYRot() + 0.1f, player.getXRot(), player.onGround()));
+                            player.getYRot() + 0.1f, player.getXRot(), true, player.onGround()));
                 }
                 phase = Phase.HOLDING;
                 tickCounter = 0;
@@ -142,7 +142,7 @@ public class DuplicatorManager {
                 try {
                     if (cfg.bypassGrim) {
                         mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(
-                                player.getX(), player.getY(), player.getZ(), player.onGround()));
+                                player.getX(), player.getY(), player.getZ(), true, player.onGround()));
                     }
                     // SWAP 合成格 slot 3 ↔ 热栏[0]
                     mc.gameMode.handleInventoryMouseClick(
@@ -221,7 +221,8 @@ public class DuplicatorManager {
         for (int i = 0; i < 9; i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty() || !(stack.getItem() instanceof TridentItem)) continue;
-            int riptide = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.RIPTIDE, stack);
+            int riptide = EnchantmentHelper.getTagEnchantmentLevel(
+                player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.RIPTIDE), stack);
             if (riptide > 0) continue;
             int dur = stack.getMaxDamage() - stack.getDamageValue();
             if (dur < bestDurability) { bestDurability = dur; bestSlot = i; }
@@ -265,7 +266,7 @@ public class DuplicatorManager {
         @Override
         public void render(GuiGraphics g, int mx, int my, float pt) {
             if (minecraft != null && font != null) {
-                renderBackground(g);
+                renderBackground(g, mx, my, pt);
                 g.drawString(font, "§6正在自动快速复制三叉戟中...", width / 2, height / 2 - 20, 0xFFFFFF);
                 g.drawString(font, "§7按 Esc 关闭功能并退出", width / 2, height / 2 + 5, 0xAAAAAA);
                 super.render(g, mx, my, pt);

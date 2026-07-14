@@ -84,7 +84,7 @@ public class QuickSwitchConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         var cfg = QuickSwitchConfig.getInstance();
 
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);

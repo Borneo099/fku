@@ -861,23 +861,23 @@ public class KillFXConfigScreen extends Screen {
     // ════════════════════════════════════════════════════════════
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         int cx = (width - WIDTH) / 2, cy = (height - VISIBLE_HEIGHT) / 2;
         // 只在面板区域内响应滚轮
         if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy && mouseY <= cy + VISIBLE_HEIGHT) {
-            int newScroll = scrollOffset - (int)(delta * 16);
+            int newScroll = scrollOffset - (int)(deltaY * 16);
             // 限制滚动范围：最多滚动到内容底部
             int maxScroll = Math.max(0, contentMaxRow - (cy + VISIBLE_HEIGHT - 60));
             scrollOffset = Math.max(0, Math.min(newScroll, maxScroll));
             rebuildWidgets();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
+        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int cx = (width - WIDTH) / 2;
         int cy = (height - VISIBLE_HEIGHT) / 2;

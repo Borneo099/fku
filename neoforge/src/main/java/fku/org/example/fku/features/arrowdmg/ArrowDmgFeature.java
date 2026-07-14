@@ -22,13 +22,13 @@ import net.minecraft.world.level.ClipContext;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.joml.Matrix4f;
 
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class ArrowDmgFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -77,8 +77,7 @@ public class ArrowDmgFeature {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (mc.player == null || mc.level == null) return;
         LocalPlayer p = mc.player;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
@@ -112,7 +111,7 @@ public class ArrowDmgFeature {
                 if (safeY != targetY) {
                     // 调整视角俯仰角以适应新的Y高度
                 }
-                p.connection.send(new ServerboundMovePlayerPacket.Pos(p.getX(), safeY, p.getZ(), p.onGround()));
+                p.connection.send(new ServerboundMovePlayerPacket.Pos(p.getX(), safeY, p.getZ(), true, p.onGround()));
                 p.setPos(p.getX(), safeY, p.getZ());
             }
             // 校准视角：计算目标方向并发送 Rot 包（防止下传后枪口指向地面）
@@ -121,10 +120,8 @@ public class ArrowDmgFeature {
             double hd = Math.sqrt(dx*dx + dz*dz);
             float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, hd));
-            p.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, p.onGround()));
+            p.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, p.onGround()));
         }
-
-        // ★ 自动下蹲：选中目标且蓄力时下蹲，释放后2-3Tick自动起身
         boolean wantCrouch = cfg.autoCrouch && target != null && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW;
         if (wantCrouch) {
             double targetH = targetOriginalBox != null ? targetOriginalBox.getYsize() : target.getBoundingBox().getYsize();
@@ -132,7 +129,7 @@ public class ArrowDmgFeature {
                 mc.options.keyShift.setDown(true);
                 crouchReleaseTimer = 3; // 设释放计时器
                 if (p.getAbilities().flying) {
-                    p.connection.send(new ServerboundMovePlayerPacket.Pos(p.getX(), p.getY(), p.getZ(), p.onGround()));
+                    p.connection.send(new ServerboundMovePlayerPacket.Pos(p.getX(), p.getY(), p.getZ(), true, p.onGround()));
                 }
             }
         } else if (crouchReleaseTimer > 0) {
@@ -206,7 +203,7 @@ public class ArrowDmgFeature {
 
         // ★ 1) PosRot 原子包：位置+角度一次性发（服务端同时更新位置和朝向）
         p.connection.send(new ServerboundMovePlayerPacket.PosRot(
-            shootPos.x, shootPos.y, shootPos.z, yaw, pitch, false));
+            shootPos.x, shootPos.y, shootPos.z, yaw, pitch, true, false));
 
         // ★ 2) 客户端临时旋转（让本 Tick 的后续包也用此角度）
         p.setYRot(yaw);
@@ -220,8 +217,8 @@ public class ArrowDmgFeature {
         p.setYRot(origYaw);
         p.setXRot(origPitch);
         p.connection.send(new ServerboundMovePlayerPacket.PosRot(
-            orig.x, orig.y + 0.01, orig.z, origYaw, origPitch, false));
-        p.connection.send(new ServerboundMovePlayerPacket.Pos(orig.x, orig.y, orig.z, true));
+            orig.x, orig.y + 0.01, orig.z, origYaw, origPitch, true, false));
+        p.connection.send(new ServerboundMovePlayerPacket.Pos(orig.x, orig.y, orig.z, true, true));
 
         p.fallDistance = 0;
     }
@@ -233,13 +230,13 @@ public class ArrowDmgFeature {
         if (n > 10000) n = 10000;
         double x=mc.player.getX(), y=mc.player.getY(), z=mc.player.getZ();
         mc.player.connection.send(new ServerboundPlayerCommandPacket(mc.player, ServerboundPlayerCommandPacket.Action.START_SPRINTING));
-        for(int i=0;i<n/2;i++) { mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-1.0E-10,z,true)); mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y+1.0E-10,z,false)); }
-        if(cfg.useOffset) mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-0.01,z,true));
+        for(int i=0;i<n/2;i++) { mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-1.0E-10,z,true,true)); mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y+1.0E-10,z,true,false)); }
+        if(cfg.useOffset) mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-0.01,z,true,true));
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
         if (mc.player != null && mc.player.connection != null)
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
+            mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x, y, z, true, onGround));
     }
 
     /** ★ Y校准：找安全的Y坐标，防止卡入方块 */
@@ -309,7 +306,6 @@ public class ArrowDmgFeature {
     // ════════ ESP 渲染（仅方框） ════════
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         if (!isEnabled() || target == null || !target.isAlive() || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
@@ -332,24 +328,24 @@ public class ArrowDmgFeature {
         float r=((color>>16)&0xFF)/255f,g=((color>>8)&0xFF)/255f,b=(color&0xFF)/255f,a=(((color>>24)&0xFF))/255f;
         if(a==0)a=1f;
         float mx=(float)box.minX,my=(float)box.minY,mz=(float)box.minZ,Mx=(float)box.maxX,My=(float)box.maxY,Mz=(float)box.maxZ;
-        buf.vertex(mat,mx,my,mz).color(r,g,b,a).normal(0,-1,0).endVertex(); buf.vertex(mat,Mx,my,mz).color(r,g,b,a).normal(0,-1,0).endVertex();
-        buf.vertex(mat,Mx,my,mz).color(r,g,b,a).normal(0,-1,0).endVertex(); buf.vertex(mat,Mx,my,Mz).color(r,g,b,a).normal(0,-1,0).endVertex();
-        buf.vertex(mat,Mx,my,Mz).color(r,g,b,a).normal(0,-1,0).endVertex(); buf.vertex(mat,mx,my,Mz).color(r,g,b,a).normal(0,-1,0).endVertex();
-        buf.vertex(mat,mx,my,Mz).color(r,g,b,a).normal(0,-1,0).endVertex(); buf.vertex(mat,mx,my,mz).color(r,g,b,a).normal(0,-1,0).endVertex();
-        buf.vertex(mat,mx,My,mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,Mx,My,mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,Mx,My,mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,Mx,My,Mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,Mx,My,Mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,mx,My,Mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,mx,My,Mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,mx,My,mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,mx,my,mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,mx,My,mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,Mx,my,mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,Mx,My,mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,Mx,my,Mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,Mx,My,Mz).color(r,g,b,a).normal(0,1,0).endVertex();
-        buf.vertex(mat,mx,my,Mz).color(r,g,b,a).normal(0,1,0).endVertex(); buf.vertex(mat,mx,My,Mz).color(r,g,b,a).normal(0,1,0).endVertex();
+        buf.addVertex(mat,mx,my,mz).setColor(r,g,b,a).setNormal(0,-1,0); buf.addVertex(mat,Mx,my,mz).setColor(r,g,b,a).setNormal(0,-1,0);
+        buf.addVertex(mat,Mx,my,mz).setColor(r,g,b,a).setNormal(0,-1,0); buf.addVertex(mat,Mx,my,Mz).setColor(r,g,b,a).setNormal(0,-1,0);
+        buf.addVertex(mat,Mx,my,Mz).setColor(r,g,b,a).setNormal(0,-1,0); buf.addVertex(mat,mx,my,Mz).setColor(r,g,b,a).setNormal(0,-1,0);
+        buf.addVertex(mat,mx,my,Mz).setColor(r,g,b,a).setNormal(0,-1,0); buf.addVertex(mat,mx,my,mz).setColor(r,g,b,a).setNormal(0,-1,0);
+        buf.addVertex(mat,mx,My,mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,Mx,My,mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,Mx,My,mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,Mx,My,Mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,Mx,My,Mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,mx,My,Mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,mx,My,Mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,mx,My,mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,mx,my,mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,mx,My,mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,Mx,my,mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,Mx,My,mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,Mx,my,Mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,Mx,My,Mz).setColor(r,g,b,a).setNormal(0,1,0);
+        buf.addVertex(mat,mx,my,Mz).setColor(r,g,b,a).setNormal(0,1,0); buf.addVertex(mat,mx,My,Mz).setColor(r,g,b,a).setNormal(0,1,0);
     }
 
     // ════════ Y坐标显示（移植自YPosOverlay，整合到渲染） ════════
     @SubscribeEvent
-    public static void onRenderOverlay(net.neoforged.neoforge.client.event.RenderGuiOverlayEvent.Pre event) {
-        if (event.getOverlay() != net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.type()) return;
+    public static void onRenderOverlay(net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Pre event) {
+        if (event.getName() != net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR) return;
         if (!isEnabled() || target == null || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;

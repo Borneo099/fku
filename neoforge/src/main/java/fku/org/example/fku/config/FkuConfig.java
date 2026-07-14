@@ -16,24 +16,24 @@ public class FkuConfig {
     }
     private static final String FILE_NAME = "fku-config.toml";
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static ModConfigSpec SPEC;
 
     // 只保留 GUI 相关配置
-    public static ForgeConfigSpec.ConfigValue<String> guiKey;
-    public static ForgeConfigSpec.IntValue guiXPos;
-    public static ForgeConfigSpec.IntValue guiYPos;
-    public static ForgeConfigSpec.IntValue visualXPos;
-    public static ForgeConfigSpec.IntValue visualYPos;
-    public static ForgeConfigSpec.IntValue toolXPos;
-    public static ForgeConfigSpec.IntValue toolYPos;
-    public static ForgeConfigSpec.IntValue autoDropPanelXPos;
-    public static ForgeConfigSpec.IntValue autoDropPanelYPos;
-    public static ForgeConfigSpec.IntValue entertainmentPanelX;
-    public static ForgeConfigSpec.IntValue entertainmentPanelY;
-    public static ForgeConfigSpec.IntValue combatPanelX;
-    public static ForgeConfigSpec.IntValue combatPanelY;
-    public static ForgeConfigSpec.BooleanValue disableConnectionTimeout;
+    public static ModConfigSpec.ConfigValue<String> guiKey;
+    public static ModConfigSpec.IntValue guiXPos;
+    public static ModConfigSpec.IntValue guiYPos;
+    public static ModConfigSpec.IntValue visualXPos;
+    public static ModConfigSpec.IntValue visualYPos;
+    public static ModConfigSpec.IntValue toolXPos;
+    public static ModConfigSpec.IntValue toolYPos;
+    public static ModConfigSpec.IntValue autoDropPanelXPos;
+    public static ModConfigSpec.IntValue autoDropPanelYPos;
+    public static ModConfigSpec.IntValue entertainmentPanelX;
+    public static ModConfigSpec.IntValue entertainmentPanelY;
+    public static ModConfigSpec.IntValue combatPanelX;
+    public static ModConfigSpec.IntValue combatPanelY;
+    public static ModConfigSpec.BooleanValue disableConnectionTimeout;
 
     static {
         BUILDER.push("GUI Settings");
@@ -88,6 +88,8 @@ public class FkuConfig {
     }
 
     public static void init() {
+        // TODO: NeoForge 1.21.8 uses a different config loading mechanism
+        // SPEC.setConfig() was removed, use NeoForge event system instead
         File configDir = getConfigDir();
         File configFile = new File(configDir, FILE_NAME);
         final CommentedFileConfig configData = CommentedFileConfig.builder(configFile)
@@ -96,6 +98,7 @@ public class FkuConfig {
                 .writingMode(WritingMode.REPLACE)
                 .build();
         configData.load();
-        SPEC.setConfig(configData);
+        // In NeoForge 1.21.8, config is loaded via the ModConfigEvent.Loading event
+        // SPEC.acceptConfig(new IConfigSpec.ILoadedConfig() { ... });
     }
 }

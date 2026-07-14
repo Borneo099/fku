@@ -75,7 +75,7 @@ public class TaskQueue {
             if (!item.isEmpty()) {
                 int slot = ensureInHotbarSlot(item.getItem());
                 if (slot >= 0 && originalSlot < 0) {
-                    originalSlot = mc.player != null ? mc.player.getInventory().selected : -1;
+                    originalSlot = mc.player != null ? mc.player.getInventory().getSelectedSlot() : -1;
                 }
             }
         }
@@ -217,7 +217,7 @@ public class TaskQueue {
         if (targetSlot < 0) return;
 
         if (originalSlot < 0) {
-            originalSlot = mc.player.getInventory().selected;
+            originalSlot = mc.player.getInventory().getSelectedSlot();
         }
 
         int seq = getSequence();
@@ -245,12 +245,12 @@ public class TaskQueue {
         } else {
             yaw = (float) (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
             pitch = (float) (-Math.asin(dir.y) * 180.0 / Math.PI);
-            placeFace = Direction.getNearest(dir.x, dir.y, dir.z).getOpposite();
+            placeFace = Direction.getApproximateNearest(dir.x, dir.y, dir.z).getOpposite();
         }
 
         // 发送假旋转包
         if (!Float.isNaN(yaw) && !Float.isNaN(pitch)) {
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, mc.player.onGround()));
+            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, mc.player.onGround()));
         }
 
         // ③ 切物品
@@ -258,16 +258,13 @@ public class TaskQueue {
 
         // ④ 放置
         if (!orient || placeFace == null) {
-            placeFace = Direction.getNearest(dir.x, dir.y, dir.z).getOpposite();
+            placeFace = Direction.getApproximateNearest(dir.x, dir.y, dir.z).getOpposite();
         }
-        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(placeFace.getNormal()).scale(-0.5));
+        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(placeFace.getUnitVec3i()).scale(-0.5));
         BlockHitResult hitResult = new BlockHitResult(clickPos, placeFace, pos, false);
 
-        mc.player.connection.send(new ServerboundPlayerCommandPacket(
-                mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+        // In 1.21.8, sneaking is no longer sent via player command packets
         mc.player.connection.send(new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, seq));
-        mc.player.connection.send(new ServerboundPlayerCommandPacket(
-                mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
     }
 
     /**
@@ -278,7 +275,8 @@ public class TaskQueue {
         // 客户端预测：直接设置 BlockEntity 数据
         if (mc.level.getBlockEntity(pos) != null) {
             try {
-                mc.level.getBlockEntity(pos).load(tag);
+                // In 1.21.8, BlockEntity.load(CompoundTag) was removed; client-side prediction skipped
+            // mc.level.getBlockEntity(pos).loadWithComponents(...);
             } catch (Exception e) {
                 // ignore
             }
@@ -305,7 +303,7 @@ public class TaskQueue {
         Vec3 dir = blockCenter.subtract(eyePos).normalize();
         float yaw = (float) (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
         float pitch = (float) (-Math.asin(dir.y) * 180.0 / Math.PI);
-        mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, mc.player.onGround()));
+        mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, mc.player.onGround()));
 
         // ③ 破坏包
         mc.player.connection.send(new ServerboundPlayerActionPacket(
@@ -338,7 +336,7 @@ public class TaskQueue {
     private int ensureInHotbarSlot(net.minecraft.world.item.Item item) {
         if (mc.player == null) return -1;
         var inv = mc.player.getInventory();
-        int curr = inv.selected;
+        int curr = inv.getSelectedSlot();
 
         // 主手已是目标物品
         if (inv.getItem(curr).is(item)) return curr;
@@ -346,7 +344,7 @@ public class TaskQueue {
         // 快捷栏搜索
         for (int i = 0; i < 9; i++) {
             if (inv.getItem(i).is(item)) {
-                inv.selected = i;
+                inv.setSelectedSlot(i);
                 mc.player.connection.send(new ServerboundSetCarriedItemPacket(i));
                 return i;
             }

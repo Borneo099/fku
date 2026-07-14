@@ -113,7 +113,7 @@ public class StructureLocatorScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         var cfg = StructureLocatorConfig.getInstance();
 
         // ── 主面板 ──
@@ -174,14 +174,14 @@ public class StructureLocatorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
+    public boolean mouseScrolled(double mx, double my, double deltaX, double deltaY) {
         if (showList && mx >= cx + W + 4 && mx <= cx + W + 4 + LIST_W && my >= cy + 20 && my <= cy + H) {
             int maxVis = Math.min(StructureLocatorFeature.TARGETS.size(), Math.max(1, (H - 50) / 13));
-            listScroll = (int) Math.max(0, Math.min(StructureLocatorFeature.TARGETS.size() - maxVis, listScroll - delta));
+            listScroll = (int) Math.max(0, Math.min(StructureLocatorFeature.TARGETS.size() - maxVis, listScroll - deltaY));
             rebuildStructList();
             return true;
         }
-        return super.mouseScrolled(mx, my, delta);
+        return super.mouseScrolled(mx, my, deltaX, deltaY);
     }
 
     @Override

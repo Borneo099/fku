@@ -16,7 +16,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.bus.api.SubscribeEvent;
 
 /**
@@ -97,8 +97,7 @@ public class PearlPhaseFeature {
     // ══════════════════════════════════════════════
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(Post event) {
         if (mc.player == null || mc.level == null) return;
 
         PearlPhaseConfig cfg = PearlPhaseConfig.getInstance();
@@ -449,7 +448,7 @@ public class PearlPhaseFeature {
         for (int i = 0; i < 9; i++) {
             var stack = mc.player.getInventory().getItem(i);
             if (!stack.isEmpty() && stack.getItem() == Items.ENDER_PEARL) {
-                mc.player.getInventory().selected = i;
+                mc.player.getInventory().setSelectedSlot(i);
                 return true;
             }
         }
@@ -459,9 +458,9 @@ public class PearlPhaseFeature {
             var stack = mc.player.getInventory().getItem(i);
             if (!stack.isEmpty() && stack.getItem() == Items.ENDER_PEARL) {
                 // 快捷交换到热栏
-                mc.player.getInventory().selected = 0;
+                mc.player.getInventory().setSelectedSlot(0);
                 mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                        mc.player.getYRot(), mc.player.getXRot(), mc.player.onGround()
+                        mc.player.getYRot(), mc.player.getXRot(), true, mc.player.onGround()
                 ));
                 return false;  // 背包交换太复杂，暂不支持
             }

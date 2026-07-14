@@ -84,7 +84,7 @@ public class AutoDropScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
 
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;

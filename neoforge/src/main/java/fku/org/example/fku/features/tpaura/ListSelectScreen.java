@@ -165,7 +165,7 @@ public class ListSelectScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         int cx = (width - PANEL_W) / 2;
         int cy = (height - PANEL_H) / 2;
 
@@ -194,7 +194,7 @@ public class ListSelectScreen extends Screen {
         if (scrollOffset < 0) scrollOffset = 0;
 
         // 裁剪区域
-        enableScissor(cx + LIST_X, listY, cx + LIST_X + LIST_W, listEndY);
+        enableScissor(g, cx + LIST_X, listY, cx + LIST_X + LIST_W, listEndY);
 
         for (int i = scrollOffset; i < filteredItems.size(); i++) {
             int y = listY + (i - scrollOffset) * ITEM_HEIGHT;
@@ -215,7 +215,7 @@ public class ListSelectScreen extends Screen {
             g.drawString(font, marker + " " + item, cx + LIST_X + 4, y + 2, isSelected ? 0x55FF55 : 0xCCCCCC);
         }
 
-        disableScissor();
+        g.disableScissor();
 
         // ── 滚动条 ──
         if (filteredItems.size() > maxVisibleItems) {
@@ -255,10 +255,10 @@ public class ListSelectScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
-        if (delta < 0) {
+    public boolean mouseScrolled(double mx, double my, double deltaX, double deltaY) {
+        if (deltaY < 0) {
             scrollOffset = Math.min(scrollOffset + 3, Math.max(0, filteredItems.size() - maxVisibleItems));
-        } else if (delta > 0) {
+        } else if (deltaY > 0) {
             scrollOffset = Math.max(scrollOffset - 3, 0);
         }
         return true;
@@ -291,16 +291,11 @@ public class ListSelectScreen extends Screen {
     //  裁剪辅助
     // ══════════════════════════════════════════════
 
-    private void enableScissor(int x1, int y1, int x2, int y2) {
-        int scale = (int) Minecraft.getInstance().getWindow().getGuiScale();
-        int sx1 = x1 * scale;
-        int sy1 = (int) (Minecraft.getInstance().getWindow().getScreenHeight() - y2 * scale);
-        int sx2 = x2 * scale;
-        int sy2 = (int) (Minecraft.getInstance().getWindow().getScreenHeight() - y1 * scale);
-        RenderSystem.enableScissor(sx1, sy1, sx2 - sx1, sy2 - sy1);
+    private void enableScissor(GuiGraphics g, int x1, int y1, int x2, int y2) {
+        g.enableScissor(x1, y1, x2 - x1, y2 - y1);
     }
 
-    private void disableScissor() {
-        RenderSystem.disableScissor();
+    private void disableScissor(GuiGraphics g) {
+        g.disableScissor();
     }
 }

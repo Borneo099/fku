@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -50,7 +50,7 @@ public class ToolManager {
 
         // 检查手持物品
         var heldItem = mc.player.getItemInHand(hand != null ? hand : InteractionHand.MAIN_HAND);
-        String itemId = ForgeRegistries.ITEMS.getKey(heldItem.getItem()).toString();
+        String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(heldItem.getItem()).toString();
 
         if (itemId.equals(WorldEditConfig.getInstance().toolItem) && currentTool.equals("wand")) {
             // ★ 使用自定义射线追踪（超远距离）
@@ -194,7 +194,7 @@ public class ToolManager {
     private void showBlockInfo(BlockPos pos, BlockState state) {
         if (mc.player == null) return;
         Block block = state.getBlock();
-        String blockId = ForgeRegistries.BLOCKS.getKey(block).toString();
+        String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).toString();
         String hardness = String.format("%.2f", state.getDestroySpeed(mc.level, pos));
 
         mc.player.displayClientMessage(
@@ -234,8 +234,8 @@ public class ToolManager {
 
         Vec3 blockCenter = Vec3.atCenterOf(pos);
         Vec3 lookVec = mc.player.getLookAngle();
-        net.minecraft.core.Direction face = net.minecraft.core.Direction.getNearest(lookVec.x, lookVec.y, lookVec.z).getOpposite();
-        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(face.getNormal()).scale(-0.5));
+        net.minecraft.core.Direction face = net.minecraft.core.Direction.getApproximateNearest(lookVec.x, lookVec.y, lookVec.z).getOpposite();
+        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(face.getUnitVec3i()).scale(-0.5));
 
         mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundUseItemOnPacket(
                 net.minecraft.world.InteractionHand.MAIN_HAND,

@@ -9,7 +9,7 @@ import net.minecraft.commands.Commands;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * WorldEdit 命令注册 — 严格遵循创世神（WorldEdit）的指令格式
@@ -18,7 +18,7 @@ import net.neoforged.fml.common.Mod;
  *   1. //<子命令>  — 直接输入 //wand, //set stone 等（完全符合创世神习惯）
  *   2. /fku we <子命令>  — 备用入口
  */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class WorldEditCommands {
 
     @SubscribeEvent

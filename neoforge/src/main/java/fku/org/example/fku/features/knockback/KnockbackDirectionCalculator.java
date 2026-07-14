@@ -116,7 +116,7 @@ public class KnockbackDirectionCalculator {
         int tx = (int) Math.floor(target.getX());
         int tz = (int) Math.floor(target.getZ());
         int ty = (int) Math.floor(target.getY());
-        int minY = level.getMinBuildHeight();
+        int minY = level.getMinY();
 
         double bestDist = Double.MAX_VALUE;
         float bestAngle = player.getYRot();

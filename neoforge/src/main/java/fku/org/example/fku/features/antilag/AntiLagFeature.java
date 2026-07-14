@@ -9,9 +9,9 @@ import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   AntiLag.java (Meteor Client) 的完整包拦截 + 假包发送逻辑移植
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class AntiLagFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -71,7 +71,7 @@ public class AntiLagFeature {
         if (player == null || player.connection == null) return;
 
         // ★ 服务端目标位置 vs 玩家当前位置
-        Vec3 serverPos = new Vec3(packet.getX(), packet.getY(), packet.getZ());
+        Vec3 serverPos = packet.change().position();
         Vec3 playerPos = player.position();
         double dist = playerPos.distanceTo(serverPos);
 
@@ -82,12 +82,12 @@ public class AntiLagFeature {
         ci.cancel();
 
         // ★ 发送确认包（告知服务端"我已收到同步"）
-        player.connection.send(new ServerboundAcceptTeleportationPacket(packet.getId()));
+        player.connection.send(new ServerboundAcceptTeleportationPacket(packet.id()));
 
         // ★ 非反拉回模式：发送假位置包欺骗服务端
         if (!cfg.back) {
             // 虚空保护
-            if (!cfg.allowIntoVoid && serverPos.y < player.level().getMinBuildHeight()) return;
+            if (!cfg.allowIntoVoid && serverPos.y < player.level().dimensionType().minY()) return;
 
             // 检查速率限制
             if (movePacketCounter.get() > cfg.limitPerSecond) {
@@ -124,8 +124,8 @@ public class AntiLagFeature {
     // ════════════════════════════════════════════════════════
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+    public static void onClientTick(ClientTickEvent.Pre event) {
+        // event is Pre, no phase check needed
         AntiLagConfig cfg = AntiLagConfig.getInstance();
         if (!cfg.enabled) return;
         if (mc.player == null || mc.level == null) return;
@@ -179,7 +179,7 @@ public class AntiLagFeature {
                 x, y, z,
                 player.getYRot(),
                 player.getXRot(),
-                onGround));
+                onGround, true));
     }
 
     /** 获取当前秒发包数（用于GUI显示） */

@@ -92,14 +92,14 @@ public class SprintConfigScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         int cx = cx(), cyb = (height - HEIGHT) / 2;
         if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cyb && mouseY <= cyb + HEIGHT) {
-            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
+            scrollOffset = Math.max(0, scrollOffset - (int)(deltaY * 20));
             rebuildWidgets();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
 
     protected void rebuildWidgets() {
@@ -258,7 +258,7 @@ public class SprintConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
 
         int cx = cx();
         int cy = cy(0);

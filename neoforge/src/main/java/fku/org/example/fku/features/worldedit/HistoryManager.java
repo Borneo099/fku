@@ -7,6 +7,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.level.storage.TagValueInput;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -71,7 +73,7 @@ public class HistoryManager {
             if (snapshot.blockEntityData instanceof CompoundTag tag && !tag.isEmpty()) {
                 BlockEntity be = mc().level.getBlockEntity(pos);
                 if (be != null) {
-                    be.load(tag);
+                    be.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, mc().level.registryAccess(), tag));
                 }
             }
             // 发包同步

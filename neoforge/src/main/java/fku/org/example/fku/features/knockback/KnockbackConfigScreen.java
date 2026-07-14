@@ -209,19 +209,19 @@ public class KnockbackConfigScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         int cx = (width - WIDTH) / 2, cy2 = (height - HEIGHT) / 2;
         if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy2 && mouseY <= cy2 + HEIGHT) {
-            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
+            scrollOffset = Math.max(0, scrollOffset - (int)(deltaY * 20));
             init();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
     }
 
     @Override
     public void render(@NotNull GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+        renderBackground(g, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
         int cy = cy(0);
 

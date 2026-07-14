@@ -122,7 +122,7 @@ public class BaritoneScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         g.drawString(font, "§l§dBaritone 设置", cx + 10, cy + 8, 0xFFFFFF);
 

@@ -191,7 +191,7 @@ public class TpAuraScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         int cx = (width - W) / 2, cy = (height - H) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         g.drawString(font, "§l§6TpAura 配置", cx + 8, cy + 20, 0xFFFFFF);

@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -141,12 +141,12 @@ public class CommandRegistry {
     private void giveToolItem() {
         if (mc.player == null) return;
         String toolId = WorldEditConfig.getInstance().toolItem;
-        Block toolBlock = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(toolId));
+        Block toolBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(toolId));
         if (toolBlock == null) {
             // fallback to wooden axe
             toolId = "minecraft:wooden_axe";
         }
-        var item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(toolId));
+        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(ResourceLocation.withDefaultNamespace(toolId));
         if (item == null) return;
 
         // 检查快捷栏是否有
@@ -158,8 +158,8 @@ public class CommandRegistry {
             if (mc.player.getInventory().getItem(i).getItem() == item) {
                 // 移到快捷栏
                 var targetStack = mc.player.getInventory().getItem(i).copy();
-                mc.player.getInventory().items.set(mc.player.getInventory().selected, targetStack);
-                mc.player.getInventory().items.set(i, net.minecraft.world.item.ItemStack.EMPTY);
+                mc.player.getInventory().setItem(mc.player.getInventory().getSelectedSlot(), targetStack);
+                mc.player.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
                 return;
             }
         }
@@ -491,11 +491,11 @@ public class CommandRegistry {
     private BlockState parseBlockState(String input) {
         // 支持格式: minecraft:stone, stone, dirt
         String blockId = input.contains(":") ? input : "minecraft:" + input;
-        Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId));
+        Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(blockId));
         if (block == null) {
             // 尝试不同格式
             blockId = "minecraft:" + input;
-            block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId));
+            block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(blockId));
         }
         if (block == null) {
             sendMsg("§c未知方块: " + input);

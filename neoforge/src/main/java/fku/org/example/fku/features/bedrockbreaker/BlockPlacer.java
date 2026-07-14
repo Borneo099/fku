@@ -44,7 +44,7 @@ public class BlockPlacer {
             // 从上方放置：点击目标位置上方方块的下表面
             BlockPos clickPos = pos.relative(Direction.UP);
             Vec3 clickLoc = Vec3.atCenterOf(clickPos)
-                    .add(Vec3.atLowerCornerOf(Direction.DOWN.getNormal()).scale(0.5));
+                    .add(Vec3.atLowerCornerOf(Direction.DOWN.getUnitVec3i()).scale(0.5));
             hit = new BlockHitResult(clickLoc, Direction.DOWN, clickPos, false);
         } else {
             // 朝向放置：点击目标位置反方向方块的目标面
@@ -64,7 +64,7 @@ public class BlockPlacer {
             }
 
             Vec3 clickLoc = Vec3.atCenterOf(clickPos)
-                    .add(Vec3.atLowerCornerOf(clickFace.getNormal()).scale(0.5));
+                    .add(Vec3.atLowerCornerOf(clickFace.getUnitVec3i()).scale(0.5));
             hit = new BlockHitResult(clickLoc, clickFace, clickPos, false);
         }
 
@@ -119,17 +119,13 @@ public class BlockPlacer {
 
             // ★ 发送假旋转包：客户端视角不受影响，仅服务端朝向改变
             mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                    fakeYaw, fakePitch, mc.player.onGround()));
+                    fakeYaw, fakePitch, mc.player.onGround(), true));
 
-            // ★ 下蹲+右键放置方块，避免打开容器 GUI
-            mc.player.connection.send(new ServerboundPlayerCommandPacket(
-                    mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+            // ★ 右键放置方块
             mc.player.connection.send(new ServerboundUseItemOnPacket(
                     InteractionHand.MAIN_HAND,
                     hitResult,
                     getSequenceNumber()));
-            mc.player.connection.send(new ServerboundPlayerCommandPacket(
-                    mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
             return CompletableFuture.completedFuture(null);
         }
 

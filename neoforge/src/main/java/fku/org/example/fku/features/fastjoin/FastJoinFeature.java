@@ -8,9 +8,9 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * FastJoinFeature — 快速加载 (修复版)
@@ -18,7 +18,7 @@ import net.neoforged.fml.common.Mod;
  * ★ 修复：视距恢复后持续锁定目标值，防止游戏自动拉回
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class FastJoinFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -67,8 +67,7 @@ public class FastJoinFeature {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(Post event) {
         if (!isEnabled() || mc.player == null) return;
 
         FastJoinConfig cfg = FastJoinConfig.getInstance();

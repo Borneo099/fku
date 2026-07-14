@@ -6,18 +6,16 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "fku")
 public class AutoDropHandler {
     private static int tickCounter = 0;
 
     @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
         AutoDropConfig config = AutoDropConfig.getInstance();
         if (!config.enabled) return;
 
@@ -25,7 +23,7 @@ public class AutoDropHandler {
         int interval = Math.max(1, Math.min(20, config.scanInterval));
         if (tickCounter % interval != 0) return;
 
-        Player player = event.player;
+        Player player = event.getEntity();
         if (!(player instanceof LocalPlayer)) return;
 
         LocalPlayer localPlayer = (LocalPlayer) player;
@@ -75,6 +73,6 @@ public class AutoDropHandler {
     }
 
     public static String getItemId(ItemStack stack) {
-        return net.neoforged.neoforge.registries.NeoForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
     }
 }

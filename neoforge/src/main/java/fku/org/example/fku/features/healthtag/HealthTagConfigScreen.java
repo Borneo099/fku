@@ -64,7 +64,7 @@ public class HealthTagConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
+        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, WIDTH, HEIGHT, false);

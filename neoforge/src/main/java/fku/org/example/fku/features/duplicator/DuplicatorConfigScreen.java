@@ -76,7 +76,7 @@ public class DuplicatorConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
+        renderBackground(g, mx, my, pt);
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         g.drawString(font, "§l§b三叉戟复制配置", cx + 10, cy + 8, 0xFFFFFF);
         g.drawString(font, "§7冷却延迟(tick):", cx + 12, cy + 33, 0xAAAAAA);

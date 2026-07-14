@@ -5,9 +5,9 @@ import fku.org.example.fku.util.BaritoneBridge;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Baritone 加速
@@ -17,7 +17,7 @@ import net.neoforged.fml.common.Mod;
  * 参考：lexis.Hack.Hacks.Baritone.BaritoneSpeedHack
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class BaritoneSpeedFeature {
 
     private static final double VANILLA_SPEED = 0.1;
@@ -43,8 +43,7 @@ public class BaritoneSpeedFeature {
     }
 
     @SubscribeEvent
-    public static void onTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onTick(ClientTickEvent.Post event) {
         var mc = net.minecraft.client.Minecraft.getInstance();
         BaritoneConfig cfg = BaritoneConfig.getInstance();
 

@@ -6,15 +6,15 @@ import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * 自伤功能 — 移植 lexis DamageHack，支持热键绑定
  */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class SelfDamageFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -74,8 +74,7 @@ public class SelfDamageFeature {
 
     /** 延迟恢复防摔/32k弓 */
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (restoreDelayTicks > 0) {
             restoreDelayTicks--;
             if (restoreDelayTicks == 0) {
@@ -119,6 +118,6 @@ public class SelfDamageFeature {
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
-        mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
+        mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(x, y, z, true, onGround));
     }
 }

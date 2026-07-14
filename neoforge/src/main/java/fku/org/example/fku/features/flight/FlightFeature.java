@@ -11,9 +11,9 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * FlightFeature — 飞行功能（Wurst 模式）
@@ -22,7 +22,7 @@ import net.neoforged.fml.common.Mod;
  * 自动切换 Sprint 全向旋转 → 全向疾跑，关闭时恢复。
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class FlightFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -64,8 +64,7 @@ public class FlightFeature {
     public static boolean isFlightActive() { return active; }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(Post event) {
         if (mc.player == null || mc.level == null) return;
         LocalPlayer player = mc.player;
         FlightConfig cfg = FlightConfig.getInstance();
@@ -79,7 +78,7 @@ public class FlightFeature {
         }
 
         // ── 双击检测 ──
-        boolean jumping = player.input.jumping;
+        boolean jumping = player.input.keyPresses.jump();
         if (!active) {
             // ★ 创造模式冲突：玩家已经拥有原版飞行能力时，不激活 Wurst 飞行
             boolean hasCreativeFlight = player.getAbilities().mayfly && player.getAbilities().flying;
@@ -97,14 +96,14 @@ public class FlightFeature {
 
         // ── 飞行控制 ──
         float camYaw = mc.gameRenderer.getMainCamera().getYRot();
-        float fwd = player.input.forwardImpulse;
-        float str = -player.input.leftImpulse;
+        float fwd = player.input.getMoveVector().y;
+        float str = -player.input.getMoveVector().x;
         Vec3 h = Vec3.directionFromRotation(0, camYaw).multiply(fwd, 0, fwd)
                 .add(Vec3.directionFromRotation(0, camYaw + 90).multiply(str, 0, str));
         if (h.lengthSqr() > 1e-4) h = h.normalize().scale(cfg.flySpeed);
         else h = Vec3.ZERO;
 
-        double vy = jumping ? cfg.verticalSpeed : player.input.shiftKeyDown ? -cfg.verticalSpeed : 0;
+        double vy = jumping ? cfg.verticalSpeed : player.input.keyPresses.shift() ? -cfg.verticalSpeed : 0;
         player.setDeltaMovement(h.x, vy, h.z);
 
         // 防踢
@@ -119,8 +118,8 @@ public class FlightFeature {
         }
 
         player.noPhysics = cfg.disableCollision;
-        if (cfg.disableCollision && player.getY() < mc.level.getMinBuildHeight())
-            player.setPos(player.getX(), mc.level.getMinBuildHeight() + 1, player.getZ());
+        if (cfg.disableCollision && player.getY() < mc.level.dimensionType().minY())
+            player.setPos(player.getX(), mc.level.dimensionType().minY() + 1, player.getZ());
 
         // 双击降落
         if (jumping && !prevJumping) {

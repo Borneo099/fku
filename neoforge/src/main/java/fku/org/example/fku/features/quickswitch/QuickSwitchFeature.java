@@ -9,9 +9,11 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.*;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -148,7 +150,7 @@ public class QuickSwitchFeature {
         if (channel == null || !channel.isOpen()) return;
 
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
-        int curSlot = mc.player.getInventory().selected;
+        int curSlot = mc.player.getInventory().getSelectedSlot();
 
         switch (cfg.mode) {
             case "SMART" -> {
@@ -169,7 +171,7 @@ public class QuickSwitchFeature {
 
                 // 发送序列中第一个切换包
                 int firstSlot = switchQueue.get(0);
-                mc.player.getInventory().selected = firstSlot;
+                mc.player.getInventory().setSelectedSlot(firstSlot);
                 channel.writeAndFlush(new ServerboundSetCarriedItemPacket(firstSlot));
                 switchStepIndex = 1;
 
@@ -201,7 +203,7 @@ public class QuickSwitchFeature {
 
                 // 发送序列中第一个切换包
                 int firstSlot = switchQueue.get(0);
-                mc.player.getInventory().selected = firstSlot;
+                mc.player.getInventory().setSelectedSlot(firstSlot);
                 channel.writeAndFlush(new ServerboundSetCarriedItemPacket(firstSlot));
                 switchStepIndex = 1;
 
@@ -249,7 +251,7 @@ public class QuickSwitchFeature {
                     if (switchStepIndex < switchQueue.size()) {
                         // 还有未发的切换包 → 发下一个
                         int nextSlot = switchQueue.get(switchStepIndex);
-                        mc.player.getInventory().selected = nextSlot;
+                        mc.player.getInventory().setSelectedSlot(nextSlot);
                         // MULTI_SWITCH 阶段的后续切换包用 connection.send()
                         if (mc.player.connection != null) {
                             mc.player.connection.send(new ServerboundSetCarriedItemPacket(nextSlot));
@@ -305,7 +307,7 @@ public class QuickSwitchFeature {
         int enchSlot = findBestEnchantedWeaponSlot();
         if (enchSlot < 0) return result; // 无附魔武器，不触发秒切
 
-        int curSlot = mc.player.getInventory().selected;
+        int curSlot = mc.player.getInventory().getSelectedSlot();
 
         // 2. 如果附魔武器就是当前手持的，无需切换
         if (enchSlot == curSlot) return result;
@@ -345,7 +347,7 @@ public class QuickSwitchFeature {
                 ItemStack stack = inv.getItem(slot);
                 if (stack.isEmpty()) continue;
 
-                String regName = ForgeRegistries.ITEMS.getKey(stack.getItem()).toString().toLowerCase();
+                String regName = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase();
                 if (regName.equals(targetId) || regName.endsWith(":" + targetId)) {
                     // 避免重复添加同一槽位
                     if (result.isEmpty() || result.get(result.size() - 1) != slot) {
@@ -379,7 +381,7 @@ public class QuickSwitchFeature {
         switchStepIndex = 0;
         originalSlot = -1;
 
-        mc.player.getInventory().selected = slot;
+        mc.player.getInventory().setSelectedSlot(slot);
         mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
 
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
@@ -398,7 +400,7 @@ public class QuickSwitchFeature {
         if (state != SwitchState.IDLE) {
             // 如果有待恢复的槽位，立即切回
             if (originalSlot >= 0 && mc.player != null && mc.player.connection != null) {
-                mc.player.getInventory().selected = originalSlot;
+                mc.player.getInventory().setSelectedSlot(originalSlot);
                 mc.player.connection.send(new ServerboundSetCarriedItemPacket(originalSlot));
             }
             switchQueue.clear();
@@ -497,7 +499,7 @@ public class QuickSwitchFeature {
     private static int getNoDurabilityScore(Item item) {
         // ★ 高分：完全不消耗耐久的物品
         if (item instanceof BlockItem) return 100;           // 方块
-        if (item.isEdible()) return 90;                       // 食物（1.20.1 用 isEdible()）
+        if (item.components().has(DataComponents.FOOD)) return 90;                       // 食物（1.20.1 用 isEdible()）
         if (item instanceof ArrowItem) return 85;            // 箭矢
         if (item instanceof PotionItem) return 80;           // 药水
         if (item instanceof SnowballItem) return 80;         // 雪球/蛋等投掷物
@@ -510,20 +512,14 @@ public class QuickSwitchFeature {
         if (item instanceof ShearsItem) return 60;           // 剪刀
         if (item instanceof LeadItem) return 60;             // 拴绳
         if (item instanceof BrushItem) return 60;            // 刷子
-        if (item instanceof HorseArmorItem) return 50;       // 马铠
 
         // ★ 低分：会消耗耐久的工具和武器
-        if (item instanceof SwordItem) return 10;
         if (item instanceof AxeItem) return 10;
-        if (item instanceof PickaxeItem) return 10;
         if (item instanceof ShovelItem) return 10;
         if (item instanceof HoeItem) return 10;
         if (item instanceof TridentItem) return 10;
-        // MaceItem 在 1.20.1 不存在（1.21+ 才有），用 DiggerItem 作为兜底
-        if (item instanceof DiggerItem) return 10;           // 镐/铲/锄的基类
         if (item instanceof BowItem) return 15;
         if (item instanceof CrossbowItem) return 15;
-        if (item instanceof ArmorItem) return 20;
 
         // ★ 默认中等分数（未知物品类型，保守估计）
         return 30;
@@ -558,24 +554,19 @@ public class QuickSwitchFeature {
      */
     private static double getBaseAttackDamage(ItemStack stack) {
         if (stack.isEmpty()) return 0;
-        var modifiers = stack.getAttributeModifiers(EquipmentSlot.MAINHAND);
-        if (modifiers == null || modifiers.isEmpty()) {
-            Item item = stack.getItem();
-            if (item instanceof SwordItem s) return s.getDamage();
-            if (item instanceof AxeItem) return 7.0;
-            if (item instanceof TridentItem) return 7.0;
-            if (item instanceof PickaxeItem) return 3.0;
-            if (item instanceof ShovelItem) return 2.5;
-            if (item instanceof HoeItem) return 1.0;
-            return 1.0;
-        }
-        double total = 0;
-        for (var entry : modifiers.entries()) {
-            if (entry.getKey() != null && entry.getKey().equals(Attributes.ATTACK_DAMAGE)) {
-                total += entry.getValue().getAmount();
+        final double[] total = {0};
+        stack.forEachModifier(EquipmentSlot.MAINHAND, (attr, modifier) -> {
+            if (attr != null && attr.is(Attributes.ATTACK_DAMAGE)) {
+                total[0] += modifier.amount();
             }
-        }
-        return total > 0 ? total : 1.0;
+        });
+        if (total[0] > 0) return total[0];
+        Item item = stack.getItem();
+        if (item instanceof AxeItem) return 7.0;
+        if (item instanceof TridentItem) return 7.0;
+        if (item instanceof ShovelItem) return 2.5;
+        if (item instanceof HoeItem) return 1.0;
+        return 1.0;
     }
 
     /**
@@ -584,17 +575,16 @@ public class QuickSwitchFeature {
     private static double calculateEnchantmentDamageScore(ItemStack stack) {
         if (stack.isEmpty()) return 0;
 
-        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(stack);
+        ItemEnchantments enchantments = EnchantmentHelper.getEnchantmentsForCrafting(stack);
         if (enchantments == null || enchantments.isEmpty()) return 0;
 
         double totalScore = 0;
 
-        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
-            Enchantment ench = entry.getKey();
-            int level = entry.getValue();
-            if (ench == null || level <= 0) continue;
+        for (var entry : enchantments.entrySet()) {
+            int level = entry.getIntValue();
+            if (level <= 0) continue;
 
-            double factor = getEnchantmentDamageFactor(ench, stack);
+            double factor = getEnchantmentDamageFactor(entry.getKey(), stack);
             totalScore += level * factor;
         }
 
@@ -604,8 +594,8 @@ public class QuickSwitchFeature {
     /**
      * 获取单个附魔的伤害增强因子
      */
-    private static double getEnchantmentDamageFactor(Enchantment ench, ItemStack stack) {
-        ResourceLocation regName = ForgeRegistries.ENCHANTMENTS.getKey(ench);
+    private static double getEnchantmentDamageFactor(net.minecraft.core.Holder<Enchantment> enchHolder, ItemStack stack) {
+        ResourceLocation regName = enchHolder.unwrapKey().map(key -> key.location()).orElse(null);
         if (regName != null) {
             String path = regName.getPath().toLowerCase();
 
@@ -621,8 +611,7 @@ public class QuickSwitchFeature {
         }
 
         Item item = stack.getItem();
-        if (item instanceof SwordItem || item instanceof AxeItem ||
-            item instanceof TridentItem || item instanceof PickaxeItem ||
+        if (item instanceof AxeItem || item instanceof TridentItem ||
             item instanceof ShovelItem) {
             return 0.3;
         }

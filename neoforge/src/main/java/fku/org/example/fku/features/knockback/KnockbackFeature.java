@@ -3,7 +3,7 @@ package fku.org.example.fku.features.knockback; /* water */
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 
 /**
@@ -41,8 +41,7 @@ public class KnockbackFeature {
      * 确保服务端已处理攻击包后再恢复原始旋转
      */
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
 
         FakeRotationManager.tick();
         // ★ 状态机秒切：tick 驱动状态机（切换到切回的延迟等待）

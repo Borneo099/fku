@@ -3,7 +3,7 @@ package fku.org.example.fku.features.antipush; /* water */
 import fku.org.example.fku.Fku;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * AntiPushFeature — 防推功能
@@ -11,7 +11,7 @@ import net.neoforged.fml.common.Mod;
  * 开关状态始终从 Config 读取/保存（静默持久化）
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class AntiPushFeature {
 
     public static void init() {

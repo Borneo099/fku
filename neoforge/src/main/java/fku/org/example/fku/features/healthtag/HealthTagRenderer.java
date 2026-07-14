@@ -78,7 +78,7 @@ public class HealthTagRenderer {
             entity.setYHeadRot(180.0f + xMouse * 0.2f);
             entity.yHeadRotO = 180.0f + xMouse * 0.2f;
 
-            try { InventoryScreen.renderEntityInInventory(guiGraphics, modelX, modelY, (int)size, pose, null, entity); } catch (Exception e) {}
+            try { InventoryScreen.renderEntityInInventory(guiGraphics, modelX, modelY, 30, 45, size, new org.joml.Vector3f(0, 0, 0), pose, new org.joml.Quaternionf(), entity); } catch (Exception e) {}
 
             entity.setYRot(oldYRot);
             entity.yRotO = oldYRotO;
@@ -122,12 +122,12 @@ public class HealthTagRenderer {
         String healthText = String.format("%.1f / %.1f", health, maxHealth);
         float textScale = 0.85f;
         float textWidth = Minecraft.getInstance().font.width(healthText) * textScale;
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(barX + (barWidth - textWidth) / 2, barY - 2, 0);
-        guiGraphics.pose().scale(textScale, textScale, textScale);
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(barX + (barWidth - textWidth) / 2, barY - 2);
+        guiGraphics.pose().scale(textScale, textScale);
         guiGraphics.drawString(Minecraft.getInstance().font, healthText, 1, 1, (alphaInt / 2 << 24), false);
         guiGraphics.drawString(Minecraft.getInstance().font, healthText, 0, 0, 0xFFFFFF | (alphaInt << 24), false);
-        guiGraphics.pose().popPose();
+        guiGraphics.pose().popMatrix();
 
         if (editing && entity == null) {
             guiGraphics.drawCenteredString(Minecraft.getInstance().font, "拖动我 (3D 模型区域)", config.x + WIDTH / 2, config.y + HEIGHT / 2 - 4, 0x55FFFFFF);

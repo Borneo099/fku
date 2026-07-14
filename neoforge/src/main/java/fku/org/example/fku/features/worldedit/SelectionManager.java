@@ -9,12 +9,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.renderer.GameRenderer;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 
 /**
  * 选区管理器 — 管理Pos1/Pos2坐标与渲染
@@ -154,49 +151,37 @@ public class SelectionManager {
         // 获取 PoseStack 的矩阵
         Matrix4f matrix = poseStack.last().pose();
 
-        RenderSystem.disableDepthTest();
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        RenderSystem.disableCull();
-
-        Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder buffer = tesselator.getBuilder();
-        buffer.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
-
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
         float a = 0.8f;
 
+        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        VertexConsumer consumer = bufferSource.getBuffer(RenderType.LINES);
+
         // 底部矩形
-        addLine(matrix, buffer, x1, y1, z1, x2, y1, z1, r, g, b, a);
-        addLine(matrix, buffer, x2, y1, z1, x2, y1, z2, r, g, b, a);
-        addLine(matrix, buffer, x2, y1, z2, x1, y1, z2, r, g, b, a);
-        addLine(matrix, buffer, x1, y1, z2, x1, y1, z1, r, g, b, a);
+        addLine(consumer, matrix, x1, y1, z1, x2, y1, z1, r, g, b, a);
+        addLine(consumer, matrix, x2, y1, z1, x2, y1, z2, r, g, b, a);
+        addLine(consumer, matrix, x2, y1, z2, x1, y1, z2, r, g, b, a);
+        addLine(consumer, matrix, x1, y1, z2, x1, y1, z1, r, g, b, a);
         // 顶部矩形
-        addLine(matrix, buffer, x1, y2, z1, x2, y2, z1, r, g, b, a);
-        addLine(matrix, buffer, x2, y2, z1, x2, y2, z2, r, g, b, a);
-        addLine(matrix, buffer, x2, y2, z2, x1, y2, z2, r, g, b, a);
-        addLine(matrix, buffer, x1, y2, z2, x1, y2, z1, r, g, b, a);
+        addLine(consumer, matrix, x1, y2, z1, x2, y2, z1, r, g, b, a);
+        addLine(consumer, matrix, x2, y2, z1, x2, y2, z2, r, g, b, a);
+        addLine(consumer, matrix, x2, y2, z2, x1, y2, z2, r, g, b, a);
+        addLine(consumer, matrix, x1, y2, z2, x1, y2, z1, r, g, b, a);
         // 垂直线
-        addLine(matrix, buffer, x1, y1, z1, x1, y2, z1, r, g, b, a);
-        addLine(matrix, buffer, x2, y1, z1, x2, y2, z1, r, g, b, a);
-        addLine(matrix, buffer, x2, y1, z2, x2, y2, z2, r, g, b, a);
-        addLine(matrix, buffer, x1, y1, z2, x1, y2, z2, r, g, b, a);
+        addLine(consumer, matrix, x1, y1, z1, x1, y2, z1, r, g, b, a);
+        addLine(consumer, matrix, x2, y1, z1, x2, y2, z1, r, g, b, a);
+        addLine(consumer, matrix, x2, y1, z2, x2, y2, z2, r, g, b, a);
+        addLine(consumer, matrix, x1, y1, z2, x1, y2, z2, r, g, b, a);
 
-        tesselator.end();
-
-        // 恢复渲染状态
-        RenderSystem.enableCull();
-        RenderSystem.enableDepthTest();
-        RenderSystem.disableBlend();
+        bufferSource.endBatch();
     }
 
-    private void addLine(Matrix4f matrix, BufferBuilder buffer, float x1, float y1, float z1,
+    private void addLine(VertexConsumer consumer, Matrix4f matrix, float x1, float y1, float z1,
                          float x2, float y2, float z2, float r, float g, float b, float a) {
-        buffer.vertex(matrix, x1, y1, z1).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x2, y2, z2).color(r, g, b, a).endVertex();
+        consumer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, a);
+        consumer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, a);
     }
 
     /**

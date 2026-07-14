@@ -23,9 +23,9 @@ import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.event.tick.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +58,7 @@ import java.util.Set;
  *   [热键] 开启→start()，关闭→stop() 清空标记
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(value = Dist.CLIENT)
+@EventBusSubscriber(value = Dist.CLIENT)
 public class LootFeature {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("FKU-Loot");
@@ -164,7 +164,7 @@ public class LootFeature {
     // ════════ 事件处理器 ════════
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
+    public static void onClientTick(ClientTickEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         LootConfig cfg = LootConfig.getInstance();
@@ -357,8 +357,8 @@ public class LootFeature {
         // ── 阶段1：THROW ──
         if (overflowSlot == OVERFLOW_PICKUP_DONE) {
             mc.player.connection.send(new ServerboundContainerClickPacket(
-                    menu.containerId, menu.getStateId(), -999, 0,
-                    ClickType.PICKUP, menu.getCarried(), new Int2ObjectOpenHashMap<>()));
+                    menu.containerId, menu.getStateId(), (short) -999, (byte) 0,
+                    ClickType.PICKUP, new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(), net.minecraft.network.HashedStack.create(menu.getCarried(), mc.getConnection().decoratedHashOpsGenenerator())));
             overflowSlot = -1;
             currentSlotIndex++;
             lastClickTime = System.currentTimeMillis();
@@ -377,8 +377,8 @@ public class LootFeature {
             if (slot != null && slot.hasItem()) {
                 if (config.dropOverflow) {
                     mc.player.connection.send(new ServerboundContainerClickPacket(
-                            menu.containerId, menu.getStateId(), overflowSlot, 0,
-                            ClickType.PICKUP, ItemStack.EMPTY, new Int2ObjectOpenHashMap<>()));
+                            menu.containerId, menu.getStateId(), (short) overflowSlot, (byte) 0,
+                            ClickType.PICKUP, new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(), net.minecraft.network.HashedStack.EMPTY));
                     overflowSlot = OVERFLOW_PICKUP_DONE;
                     lastClickTime = System.currentTimeMillis();
                     if (!overflowNotified) {
@@ -420,8 +420,8 @@ public class LootFeature {
 
         // ── 阶段4：QUICK_MOVE ──
         mc.player.connection.send(new ServerboundContainerClickPacket(
-                menu.containerId, menu.getStateId(), currentSlotIndex, 0,
-                ClickType.QUICK_MOVE, menu.getCarried(), new Int2ObjectOpenHashMap<>()));
+                menu.containerId, menu.getStateId(), (short) currentSlotIndex, (byte) 0,
+                ClickType.QUICK_MOVE, new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(), net.minecraft.network.HashedStack.create(menu.getCarried(), mc.getConnection().decoratedHashOpsGenenerator())));
         lastClickTime = System.currentTimeMillis();
         statusMessage = "一键取物：处理第 " + (currentSlotIndex + 1) + "/" + containerSlotCount + " 格";
 
