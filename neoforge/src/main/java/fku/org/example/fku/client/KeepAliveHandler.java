@@ -2,8 +2,8 @@ package fku.org.example.fku.client;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 /**
  * KeepAliveHandler — 连接保持预留

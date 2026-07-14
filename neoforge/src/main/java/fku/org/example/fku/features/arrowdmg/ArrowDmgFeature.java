@@ -23,12 +23,12 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 import org.joml.Matrix4f;
 
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ArrowDmgFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -348,8 +348,8 @@ public class ArrowDmgFeature {
 
     // ════════ Y坐标显示（移植自YPosOverlay，整合到渲染） ════════
     @SubscribeEvent
-    public static void onRenderOverlay(net.minecraftforge.client.event.RenderGuiOverlayEvent.Pre event) {
-        if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.type()) return;
+    public static void onRenderOverlay(net.neoforged.neoforge.client.event.RenderGuiOverlayEvent.Pre event) {
+        if (event.getOverlay() != net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.type()) return;
         if (!isEnabled() || target == null || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;

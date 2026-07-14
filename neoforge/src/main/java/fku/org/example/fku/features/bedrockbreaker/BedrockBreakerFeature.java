@@ -3,8 +3,8 @@ package fku.org.example.fku.features.bedrockbreaker; /* water */
 import fku.org.example.fku.Fku;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 /**
  * 基岩破坏器功能注册
@@ -17,7 +17,7 @@ import net.minecraftforge.fml.common.Mod;
  * - 纯客户端，无服务端逻辑
  * - 仅注册事件，不耦合 GUI
  */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class BedrockBreakerFeature {
 
     private static boolean initialized = false;

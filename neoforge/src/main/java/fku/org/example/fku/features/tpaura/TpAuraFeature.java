@@ -25,9 +25,9 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 
 import fku.org.example.fku.features.healthtag.HealthTagManager;
@@ -907,7 +907,7 @@ public class TpAuraFeature {
 
         // ★ 全生物攻击模式：不按类型过滤
         if (!cfg.attackAllEntities) {
-            String entityTypeKey = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).getPath().toLowerCase();
+            String entityTypeKey = net.neoforged.neoforge.registries.NeoForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).getPath().toLowerCase();
             if (!allowedTypes.contains(entityTypeKey)) return false;
         }
 
@@ -923,7 +923,7 @@ public class TpAuraFeature {
         // ★ 白名单检查（所有实体均有效，不限于玩家）
         //   之前版本将白名单检查放在 Player 分支内，导致全生物模式下非玩家实体绕过白名单。
         if (cfg.whitelistEnabled) {
-            String entityType = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES
+            String entityType = net.neoforged.neoforge.registries.NeoForgeRegistries.ENTITY_TYPES
                     .getKey(entity.getType()).getPath().toLowerCase();
             List<String> wl = Arrays.stream(cfg.whitelist.split(","))
                     .map(String::trim)

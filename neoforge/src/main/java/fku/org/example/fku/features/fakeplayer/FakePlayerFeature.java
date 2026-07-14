@@ -21,8 +21,8 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.event.tick.TickEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 import java.util.UUID;
 
@@ -44,7 +44,7 @@ import java.util.UUID;
  *   AdvancedFakePlayer.java / IMGFakePlayer.java (InvincibleMachineGun)
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class FakePlayerFeature {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -256,7 +256,7 @@ public class FakePlayerFeature {
         for (var entry : enchantments.entrySet()) {
             var ench = entry.getKey();
             int level = entry.getValue();
-            var id = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(ench);
+            var id = net.neoforged.neoforge.registries.NeoForgeRegistries.ENCHANTMENTS.getKey(ench);
             if (id == null) continue;
             String path = id.getPath();
             if ("sharpness".equals(path)) sharpness += level;

@@ -338,7 +338,7 @@ public class ClipboardManager {
      */
     private String stateToString(BlockState state) {
         StringBuilder sb = new StringBuilder();
-        sb.append(net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(state.getBlock()));
+        sb.append(net.neoforged.neoforge.registries.NeoForgeRegistries.BLOCKS.getKey(state.getBlock()));
         var values = state.getValues();
         if (!values.isEmpty()) {
             sb.append("[");
@@ -365,7 +365,7 @@ public class ClipboardManager {
             if (bracket >= 0) {
                 blockId = str.substring(0, bracket);
             }
-            Block block = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getValue(
+            Block block = net.neoforged.neoforge.registries.NeoForgeRegistries.BLOCKS.getValue(
                     net.minecraft.resources.ResourceLocation.tryParse(blockId));
             if (block == null) return null;
             

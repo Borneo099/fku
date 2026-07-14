@@ -1,6 +1,6 @@
 package fku.org.example.fku.util;
 
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

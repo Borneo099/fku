@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
-        maven { url = 'https://mirrors.huaweicloud.com/repository/maven/' }
         maven { url = 'https://maven.neoforged.net/releases/' }
+        maven { url = 'https://mirrors.huaweicloud.com/repository/maven/' }
         gradlePluginPortal()
     }
 }

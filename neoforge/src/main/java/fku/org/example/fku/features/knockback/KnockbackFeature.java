@@ -4,7 +4,7 @@ import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /**
  * KnockbackFeature — 自由击退方向主功能类

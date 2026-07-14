@@ -20,7 +20,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 /**
  * 三叉戟复制管理器 — 移植自 lexis TridentDupeHack

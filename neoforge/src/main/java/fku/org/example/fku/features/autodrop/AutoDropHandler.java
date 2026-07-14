@@ -7,10 +7,10 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.event.tick.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.MOD)
 public class AutoDropHandler {
     private static int tickCounter = 0;
 
@@ -75,6 +75,6 @@ public class AutoDropHandler {
     }
 
     public static String getItemId(ItemStack stack) {
-        return net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
+        return net.neoforged.neoforge.registries.NeoForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
     }
 }

@@ -47,20 +47,44 @@ apply 's/import net\.minecraftforge\.client\.event\.ClientPlayerNetworkEvent;/im
 apply 's/import net\.minecraftforge\.client\.event\.RegisterClientCommandsEvent;/import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;/g'
 apply 's/import net\.minecraftforge\.client\.settings\.KeyConflictContext;/import net.neoforged.neoforge.client.settings.KeyConflictContext;/g'
 apply 's/import net\.minecraftforge\.client\.renderer\.Shaders;/import net.neoforged.neoforge.client.renderer.Shaders;/g' 2>/dev/null || true
+apply 's/import net\.minecraftforge\.client\.event\.ClientChatReceivedEvent;/import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;/g'
+apply 's/import net\.minecraftforge\.client\.event\.MovementInputUpdateEvent;/import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;/g'
+apply 's/import net\.minecraftforge\.client\.event\.RegisterShadersEvent;/import net.neoforged.neoforge.client.event.RegisterShadersEvent;/g'
+apply 's/import net\.minecraftforge\.client\.event\.RenderGuiEvent;/import net.neoforged.neoforge.client.event.RenderGuiEvent;/g'
+apply 's/import net\.minecraftforge\.client\.event\.ScreenEvent;/import net.neoforged.neoforge.client.event.ScreenEvent;/g'
+apply 's/import net\.minecraftforge\.client\.gui\.overlay\.VanillaGuiOverlay;/import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;/g'
 
 # 通用事件
 apply 's/import net\.minecraftforge\.event\.TickEvent;/import net.neoforged.neoforge.event.tick.TickEvent;/g'
 apply 's/import net\.minecraftforge\.event\.entity\.player\.AttackEntityEvent;/import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;/g'
+apply 's/import net\.minecraftforge\.event\.entity\.living\.LivingFallEvent;/import net.neoforged.neoforge.event.entity.living.LivingFallEvent;/g'
+
+# eventbus
+apply 's/import net\.minecraftforge\.eventbus\.api\.SubscribeEvent;/import net.neoforged.bus.api.SubscribeEvent;/g'
+apply 's/import net\.minecraftforge\.eventbus\.api\.Event;/import net.neoforged.bus.api.Event;/g'
 
 # fml
 apply 's/import net\.minecraftforge\.fml\.event\.lifecycle\.FMLClientSetupEvent;/import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;/g'
 apply 's/import net\.minecraftforge\.fml\.config\.ModConfig;/import net.neoforged.fml.config.ModConfig;/g'
+apply 's/import net\.minecraftforge\.fml\.ModList;/import net.neoforged.fml.ModList;/g'
+apply 's/import net\.minecraftforge\.fml\.common\.Mod;/import net.neoforged.fml.common.Mod;/g'
 
-# @Mod.EventBusSubscriber 属性 (FORGE→MOD)
-apply 's/@Mod\.EventBusSubscriber(modid = "fku", bus = Mod\.EventBusSubscriber\.Bus\.FORGE, value = Dist\.CLIENT)/@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)/g'
+# common
+apply 's/import net\.minecraftforge\.common\.ForgeConfigSpec;/import net.neoforged.neoforge.common.ModConfigSpec;/g'
+apply 's/import net\.minecraftforge\.common\.ForgeMod;/import net.neoforged.neoforge.common.NeoForgeMod;/g'
+apply 's/import net\.minecraftforge\.entity\.PartEntity;/import net.neoforged.neoforge.entity.PartEntity;/g'
 
-# Registries
-apply 's/import net\.minecraftforge\.registries\.\(ForgeRegistries\|IForgeRegistry\|RegisterEvent\);/import net.neoforged.neoforge.registries.\1;/g' 2>/dev/null || true
+# registries
+apply 's/import net\.minecraftforge\.registries\.ForgeRegistries;/import net.neoforged.neoforge.registries.NeoForgeRegistries;/g'
+
+# 行内引用（非 import 语句中的完整限定名）
+apply 's/net\.minecraftforge\.client\.event\.RenderGuiOverlayEvent\./net.neoforged.neoforge.client.event.RenderGuiOverlayEvent./g'
+apply 's/net\.minecraftforge\.client\.gui\.overlay\.VanillaGuiOverlay\./net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay./g'
+apply 's/net\.minecraftforge\.registries\.ForgeRegistries\./net.neoforged.neoforge.registries.NeoForgeRegistries./g'
+apply 's/net\.minecraftforge\.event\.TickEvent\./net.neoforged.neoforge.event.tick.TickEvent./g'
+
+# 将 @Mod.EventBusSubscriber 的 bus=FORGE 改为 bus=MOD
+apply 's/bus = Mod\.EventBusSubscriber\.Bus\.FORGE/bus = Mod.EventBusSubscriber.Bus.MOD/g'
 
 echo "=== 同步完成 ==="
 echo "剩余 Forge 引用检查:"
