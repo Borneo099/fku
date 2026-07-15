@@ -9,3 +9,7 @@ logoFile="fku.png"
 credits="FKU Team"
 authors="FKU"
 description="FKU Mod - NeoForge 1.21.8 port"
+
+# mixin 配置：声明 mixin 配置文件，使 FML 在加载时应用
+[[mixins]]
+config = "fku.mixins.json"

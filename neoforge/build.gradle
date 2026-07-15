@@ -24,12 +24,13 @@ processResources {
 }
 
 dependencies {
-    implementation "net.neoforged:neoforge:${neo_version}"
+    implementation "net.neoforged:neoforge:${neoVersion}"
 }
 
 jar {
     manifest {
         attributes([
+            "MixinConfigs": "fku.mixins.json",
             "Specification-Title": "fku",
             "Specification-Version": "1",
             "Implementation-Title": project.name,

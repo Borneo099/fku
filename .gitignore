@@ -30,3 +30,6 @@ run/
 # Misc
 .gradle/
 build-logic/.gradle/
+
+# Generated gradle run dirs
+neoforge/runs/

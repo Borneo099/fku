@@ -777,12 +777,9 @@ cd neoforge && ./gradlew build       # NeoForge 1.21.8（需 JDK 21）
 在所有子任务完成后，必须执行：
 1. `cd forge && ./gradlew build` — 验证 Forge 1.20.1 编译
 2. `bash scripts/sync-neoforge.sh` — 同步到 NeoForge
-3. 告知用户 NeoForge 构建方式（因沙箱可能无法连接 Maven）
 
 ### 32. 注意事项
 
-- 沙箱环境可能无法连接 NeoForge 的 Maven 仓库（`maven.neoforged.net`），NeoForge 构建需在本地执行
-- Forge 1.20.1 可在沙箱中完整构建
 - 新增平台时，先在映射表中记录 API 差异，再编写同步脚本
 - 后续让你开发新功能时，只需说明需求，我会自动完成：common 编码 → 同步 → 双版本构建的全流程
 
