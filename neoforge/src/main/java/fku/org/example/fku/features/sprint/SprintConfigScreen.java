@@ -258,7 +258,6 @@ public class SprintConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
 
         int cx = cx();
         int cy = cy(0);
@@ -267,31 +266,31 @@ public class SprintConfigScreen extends Screen {
         g.enableScissor(cx + 2, cy + 20, cx + WIDTH - 2, cy + HEIGHT - 32);
 
         // ── 标题 ──
-        g.drawString(font, "强制疾跑配置 - " + TAB_NAMES[activeTab], cx + 10, cy + 2, 0xFFFFFF);
+        g.drawString(font, "强制疾跑配置 - " + TAB_NAMES[activeTab], cx + 10, cy + 2, 0xFFFFFFFF);
 
         if (activeTab == 0) {
             // ── 疾跑模式 ──
-            g.drawString(font, "疾跑模式:", cx + COL_LABEL, cy(ROW_MODE), 0xAAAAAA);
+            g.drawString(font, "疾跑模式:", cx + COL_LABEL, cy(ROW_MODE), 0xFFAAAAAA);
 
             // ── 忽略条件 ──
-            g.drawString(font, "§7- - - 忽略条件 - - -", cx + COL_LABEL, cy(ROW_IGNORE_TITLE), 0x666666);
-            g.drawString(font, "忽略失明:", cx + COL_LABEL, cy(ROW_IGNORE_BLINDNESS), 0xAAAAAA);
-            g.drawString(font, "忽略饥饿:", cx + COL_LABEL, cy(ROW_IGNORE_HUNGER), 0xAAAAAA);
-            g.drawString(font, "忽略撞墙:", cx + COL_LABEL, cy(ROW_IGNORE_COLLISION), 0xAAAAAA);
+            g.drawString(font, "§7- - - 忽略条件 - - -", cx + COL_LABEL, cy(ROW_IGNORE_TITLE), 0xFF666666);
+            g.drawString(font, "忽略失明:", cx + COL_LABEL, cy(ROW_IGNORE_BLINDNESS), 0xFFAAAAAA);
+            g.drawString(font, "忽略饥饿:", cx + COL_LABEL, cy(ROW_IGNORE_HUNGER), 0xFFAAAAAA);
+            g.drawString(font, "忽略撞墙:", cx + COL_LABEL, cy(ROW_IGNORE_COLLISION), 0xFFAAAAAA);
         } else {
             // ── Legit 选项 ──
-            g.drawString(font, "§7- - - Legit 模式 - - -", cx + COL_LABEL, cy(ROW_STOP_GROUND) - 16, 0x666666);
-            g.drawString(font, "地面停止:", cx + COL_LABEL, cy(ROW_STOP_GROUND), 0xAAAAAA);
-            g.drawString(font, "空中停止:", cx + COL_LABEL, cy(ROW_STOP_AIR), 0xAAAAAA);
+            g.drawString(font, "§7- - - Legit 模式 - - -", cx + COL_LABEL, cy(ROW_STOP_GROUND) - 16, 0xFF666666);
+            g.drawString(font, "地面停止:", cx + COL_LABEL, cy(ROW_STOP_GROUND), 0xFFAAAAAA);
+            g.drawString(font, "空中停止:", cx + COL_LABEL, cy(ROW_STOP_AIR), 0xFFAAAAAA);
 
             // ── 鞘翅旋转 ──
-            g.drawString(font, "§7- - - 全向旋转 - - -", cx + COL_LABEL, cy(ROW_ELYTRA) - 16, 0x666666);
-            g.drawString(font, "鞘翅旋转:", cx + COL_LABEL, cy(ROW_ELYTRA), 0xAAAAAA);
+            g.drawString(font, "§7- - - 全向旋转 - - -", cx + COL_LABEL, cy(ROW_ELYTRA) - 16, 0xFF666666);
+            g.drawString(font, "鞘翅旋转:", cx + COL_LABEL, cy(ROW_ELYTRA), 0xFFAAAAAA);
 
             // ── 平滑旋转 ──
-            g.drawString(font, "平滑旋转:", cx + COL_LABEL, cy(ROW_SMOOTH_SWITCH), 0xAAAAAA);
+            g.drawString(font, "平滑旋转:", cx + COL_LABEL, cy(ROW_SMOOTH_SWITCH), 0xFFAAAAAA);
             if (cfg.smoothRotation) {
-                g.drawString(font, "§7°/帧", cx + COL_WIDGET + 137, cy(ROW_SMOOTH_SWITCH), 0x666666);
+                g.drawString(font, "§7°/帧", cx + COL_WIDGET + 137, cy(ROW_SMOOTH_SWITCH), 0xFF666666);
             }
         }
 

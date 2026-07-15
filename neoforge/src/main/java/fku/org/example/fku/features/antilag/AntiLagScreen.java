@@ -170,32 +170,31 @@ public class AntiLagScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width - WIDTH) / 2;
 
         // ── 面板背景（圆角+边框） ──
         GuiRenderHelper.drawPanelBackground(g, cx, cy(0), WIDTH, HEIGHT, false);
-        g.drawString(font, "AntiLag 防拉回配置", cx + 10, cy(ROW_TITLE), 0xFFFFFF);
+        g.drawString(font, "AntiLag 防拉回配置", cx + 10, cy(ROW_TITLE), 0xFFFFFFFF);
 
         // ── 触发距离 ──
-        g.drawString(font, "触发距离:", cx + 10, cy(ROW_RANGE), 0xAAAAAA);
-        g.drawString(font, "§7(0.1~2000)", cx + 142, cy(ROW_RANGE + 14), 0x666666);
+        g.drawString(font, "触发距离:", cx + 10, cy(ROW_RANGE), 0xFFAAAAAA);
+        g.drawString(font, "§7(0.1~2000)", cx + 142, cy(ROW_RANGE + 14), 0xFF666666);
 
         // ── 每秒限包 ──
-        g.drawString(font, "每秒限包:", cx + 10, cy(ROW_LIMIT), 0xAAAAAA);
-        g.drawString(font, "§7(1~10000)", cx + 132, cy(ROW_LIMIT + 14), 0x666666);
+        g.drawString(font, "每秒限包:", cx + 10, cy(ROW_LIMIT), 0xFFAAAAAA);
+        g.drawString(font, "§7(1~10000)", cx + 132, cy(ROW_LIMIT + 14), 0xFF666666);
 
         // ── 路径步长 ──
-        g.drawString(font, "路径步长:", cx + 10, cy(ROW_MOVE_DIST), 0xAAAAAA);
-        g.drawString(font, "§7(0.01~1.0)", cx + 132, cy(ROW_MOVE_DIST + 14), 0x666666);
+        g.drawString(font, "路径步长:", cx + 10, cy(ROW_MOVE_DIST), 0xFFAAAAAA);
+        g.drawString(font, "§7(0.01~1.0)", cx + 132, cy(ROW_MOVE_DIST + 14), 0xFF666666);
 
         // ── 脱困步距 ──
-        g.drawString(font, "脱困步距:", cx + 10, cy(ROW_VCLIP_STEP), 0xAAAAAA);
-        g.drawString(font, "§7(0.1~5.0)", cx + 132, cy(ROW_VCLIP_STEP + 14), 0x666666);
+        g.drawString(font, "脱困步距:", cx + 10, cy(ROW_VCLIP_STEP), 0xFFAAAAAA);
+        g.drawString(font, "§7(0.1~5.0)", cx + 132, cy(ROW_VCLIP_STEP + 14), 0xFF666666);
 
         // ── 模式说明 ──
-        g.drawString(font, "§7| 版本模式：1.16=路径拆分;1.9=直接发送", cx + 175, cy(ROW_SERVER_MODE + 2), 0x666666);
-        g.drawString(font, "§7| 反拉回模式：开启后保留服务端拉回效果", cx + 175, cy(ROW_BACK + 2), 0x666666);
+        g.drawString(font, "§7| 版本模式：1.16=路径拆分;1.9=直接发送", cx + 175, cy(ROW_SERVER_MODE + 2), 0xFF666666);
+        g.drawString(font, "§7| 反拉回模式：开启后保留服务端拉回效果", cx + 175, cy(ROW_BACK + 2), 0xFF666666);
 
         // ── 实时包计数器（每秒刷新） ──
         if (++tickCounter % 20 == 0) {
@@ -203,13 +202,13 @@ public class AntiLagScreen extends Screen {
             String rateState = cfg.rateLimited ? " §c(限速中)" : "";
             g.drawString(font,
                     "本秒发包: " + cnt + "/" + cfg.limitPerSecond + rateState,
-                    cx + 10, cy(ROW_COUNTER), cnt > cfg.limitPerSecond ? 0xFF5555 : 0xAAAAAA);
+                    cx + 10, cy(ROW_COUNTER), cnt > cfg.limitPerSecond ? 0xFFFF5555 : 0xFFAAAAAA);
         } else {
             int cnt = AntiLagFeature.getCurrentPacketCount();
             String rateState = cfg.rateLimited ? " §c(限速中)" : "";
             g.drawString(font,
                     "本秒发包: " + cnt + "/" + cfg.limitPerSecond + rateState,
-                    cx + 10, cy(ROW_COUNTER), cnt > cfg.limitPerSecond ? 0xFF5555 : 0xAAAAAA);
+                    cx + 10, cy(ROW_COUNTER), cnt > cfg.limitPerSecond ? 0xFFFF5555 : 0xFFAAAAAA);
         }
 
         super.render(g, mx, my, pt);

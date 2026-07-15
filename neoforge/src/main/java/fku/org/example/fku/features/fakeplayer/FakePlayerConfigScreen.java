@@ -159,24 +159,23 @@ public class FakePlayerConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int cx = (this.width - WIDTH) / 2;
         int cy = (this.height - HEIGHT) / 2;
 
         // ★ 标题
-        guiGraphics.drawString(Minecraft.getInstance().font, "§l§n假人配置", cx + 10, cy + 5, 0xFFFFFF);
+        guiGraphics.drawString(Minecraft.getInstance().font, "§l§n假人配置", cx + 10, cy + 5, 0xFFFFFFFF);
 
         // ★ 状态提示
         String status = FakePlayerFeature.hasFakePlayer()
             ? "§a● 假人生存中"
             : "§c● 假人未生成";
-        guiGraphics.drawString(Minecraft.getInstance().font, status, cx + 160, cy + 5, 0xFFFFFF);
+        guiGraphics.drawString(Minecraft.getInstance().font, status, cx + 160, cy + 5, 0xFFFFFFFF);
 
         // ★ 标签
-        guiGraphics.drawString(Minecraft.getInstance().font, "假人名称:", cx + 10, cy + ROW_NAME - 40, 0x888888);
-        guiGraphics.drawString(Minecraft.getInstance().font, "初始血量 (2~36):", cx + 160, cy + ROW_NAME - 40, 0x888888);
-        guiGraphics.drawString(Minecraft.getInstance().font, "无敌时间 (0~20 tick):", cx + 10, cy + ROW_TOTEM - 25, 0x888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, "假人名称:", cx + 10, cy + ROW_NAME - 40, 0xFF888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, "初始血量 (2~36):", cx + 160, cy + ROW_NAME - 40, 0xFF888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, "无敌时间 (0~20 tick):", cx + 10, cy + ROW_TOTEM - 25, 0xFF888888);
 
         // ★ 渲染输入框
         this.nameField.render(guiGraphics, mouseX, mouseY, partialTick);

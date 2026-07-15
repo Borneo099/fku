@@ -35,7 +35,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class KnockbackDirectionCalculator {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     /**
      * 计算目标 Yaw（水平旋转角）
@@ -110,7 +109,7 @@ public class KnockbackDirectionCalculator {
      *   - yaw 公式错误 → 方向偏 90°
      */
     private static float calculateCliffYaw(LivingEntity player, LivingEntity target, int radius) {
-        Level level = mc.level;
+        Level level = Minecraft.getInstance().level;
         if (level == null) return player.getYRot();
 
         int tx = (int) Math.floor(target.getX());

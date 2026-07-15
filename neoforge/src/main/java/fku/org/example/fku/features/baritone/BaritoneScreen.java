@@ -122,20 +122,19 @@ public class BaritoneScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
-        g.drawString(font, "§l§dBaritone 设置", cx + 10, cy + 8, 0xFFFFFF);
+        g.drawString(font, "§l§dBaritone 设置", cx + 10, cy + 8, 0xFFFFFFFF);
 
         // 区域标题
-        g.drawString(font, "§b≡ 跑酷模式", cx + 12, yParkourLabelY, 0x55FFFF);
-        g.drawString(font, "§e≡ 加速", cx + 12, ySpeedLabelY, 0xFFFF55);
-        g.drawString(font, "§a≡ 鞘翅任意维度", cx + 12, yElytraLabelY, 0x55FF55);
+        g.drawString(font, "§b≡ 跑酷模式", cx + 12, yParkourLabelY, 0xFF55FFFF);
+        g.drawString(font, "§e≡ 加速", cx + 12, ySpeedLabelY, 0xFFFFFF55);
+        g.drawString(font, "§a≡ 鞘翅任意维度", cx + 12, yElytraLabelY, 0xFF55FF55);
 
         // 实时速度倍率
         double spd = BaritoneConfig.getInstance().speedMultiplier;
-        g.drawString(font, "§7速度: §b" + String.format("%.1f", spd) + "x", cx + 16, ySpeedLabelY + 32, 0xCCCCCC);
+        g.drawString(font, "§7速度: §b" + String.format("%.1f", spd) + "x", cx + 16, ySpeedLabelY + 32, 0xFFCCCCCC);
 
-        g.drawString(font, "§7§o需安装 Baritone", cx + 10, cy + H - 14, 0x666666);
+        g.drawString(font, "§7§o需安装 Baritone", cx + 10, cy + H - 14, 0xFF666666);
         super.render(g, mx, my, pt);
     }
 

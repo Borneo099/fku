@@ -77,7 +77,7 @@ public class ColorWheelPicker {
 
         // 3. 绘制HEX值和当前颜色预览
         String hex = "#" + hexColor.toUpperCase();
-        g.drawString(Minecraft.getInstance().font, hex, px + 5, py + size + 12, 0xFFFFFF);
+        g.drawString(Minecraft.getInstance().font, hex, px + 5, py + size + 12, 0xFFFFFFFF);
         // 当前颜色小方块
         GuiRenderHelper.drawRoundedRect(g, px + size - 30, py + size + 8, 24, 16, hexToInt(hexColor), 3);
     }

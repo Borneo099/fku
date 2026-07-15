@@ -56,15 +56,14 @@ public class DisableTimeoutConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
         int cy = (height - HEIGHT) / 2;
 
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "禁用超时配置", cx + 10, cy + 8, 0xFFFFFF);
+        guiGraphics.drawString(font, "禁用超时配置", cx + 10, cy + 8, 0xFFFFFFFF);
 
-        guiGraphics.drawString(font, "禁用连接超时:", cx + 12, cy + 34, 0xAAAAAA);
-        guiGraphics.drawString(font, "§7屏蔽断线时的超时异常提示", cx + 12, cy + 56, 0x666666);
+        guiGraphics.drawString(font, "禁用连接超时:", cx + 12, cy + 34, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7屏蔽断线时的超时异常提示", cx + 12, cy + 56, 0xFF666666);
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }

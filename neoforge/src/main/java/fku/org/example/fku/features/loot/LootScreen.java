@@ -198,20 +198,19 @@ public class LootScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
         int cy = (height - HEIGHT) / 2;
 
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "一键取物配置", cx + 10, cy + 10, 0xFFFFFF);
+        guiGraphics.drawString(font, "一键取物配置", cx + 10, cy + 10, 0xFFFFFFFF);
 
         // 字段说明
-        guiGraphics.drawString(font, "扫描半径:", cx + 12, cy + ROW_RADIUS + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "物品点击间隔(ms):", cx + 12, cy + ROW_CLICK_DELAY + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "容器间隔(ms):", cx + 12, cy + ROW_CONTAINER_DELAY + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "刷新间隔(tick):", cx + 66, cy + ROW_SCAN_INTERVAL + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "背包满丢弃:", cx + 100, cy + ROW_DROP + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "自动关闭GUI:", cx + 100, cy + ROW_AUTO_CLOSE + 2, 0xAAAAAA);
+        guiGraphics.drawString(font, "扫描半径:", cx + 12, cy + ROW_RADIUS + 2, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "物品点击间隔(ms):", cx + 12, cy + ROW_CLICK_DELAY + 2, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "容器间隔(ms):", cx + 12, cy + ROW_CONTAINER_DELAY + 2, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "刷新间隔(tick):", cx + 66, cy + ROW_SCAN_INTERVAL + 2, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "背包满丢弃:", cx + 100, cy + ROW_DROP + 2, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "自动关闭GUI:", cx + 100, cy + ROW_AUTO_CLOSE + 2, 0xFFAAAAAA);
 
         // 热键提示
         if (waitingHotkey) {

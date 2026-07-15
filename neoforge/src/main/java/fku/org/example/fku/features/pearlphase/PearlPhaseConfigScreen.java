@@ -147,7 +147,6 @@ public class PearlPhaseConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int cx = (this.width - WIDTH) / 2;
@@ -155,7 +154,7 @@ public class PearlPhaseConfigScreen extends Screen {
         guiGraphics.enableScissor(cx + 2, cy + 5, cx + WIDTH - 2, cy + HEIGHT - 5);
 
         // ★ 绘制标题
-        guiGraphics.drawString(font, "§l珍珠卡墙配置", cx, cy + 10, 0xFFFFFF);
+        guiGraphics.drawString(font, "§l珍珠卡墙配置", cx, cy + 10, 0xFFFFFFFF);
 
         // ★ 绘制标签
         drawLabel(guiGraphics, cx, cy + ROW_AUTO_THROW, "自动投掷：看向墙壁时自动投掷珍珠");
@@ -172,7 +171,7 @@ public class PearlPhaseConfigScreen extends Screen {
     }
 
     private void drawLabel(GuiGraphics gui, int cx, int y, String text) {
-        gui.drawString(font, text, cx + 10, y + 2, 0xCCCCCC);
+        gui.drawString(font, text, cx + 10, y + 2, 0xFFCCCCCC);
     }
 
     /**

@@ -471,32 +471,25 @@ public class DisplayModelManager {
      */
     private ItemStack createSpawnEgg(CompoundTag passengerTag) {
         ItemStack egg = new ItemStack(Items.BAT_SPAWN_EGG, 1);
-        CompoundTag tag = new CompoundTag();
-
-        // 添加附魔光效（显示为发光物品）
-        CompoundTag enchantment = new CompoundTag();
-        enchantment.putString("id", "minecraft:sharpness");
-        enchantment.putInt("lvl", 1);
-        ListTag enchantments = new ListTag();
-        enchantments.add(enchantment);
-        tag.put("Enchantments", enchantments);
 
         // ── 可选：可视距离 view_range ──
-        // 若用户配置了 >0 的可视距离，直接写入 EntityTag
-        // 显示实体默认可视距离为 1.0 格
+        // 显示实体默认可视距离为 1.0 格；>0 时直接写入实体存档 NBT
         if (viewRange > 0) {
             passengerTag.putFloat("view_range", (float) viewRange);
         }
 
-        // 设置实体数据（含 Pos + Rotation + Passengers + view_range）
-        tag.put("EntityTag", passengerTag);
+        // ★ 1.21.8 适配：刷怪蛋实体数据组件为 DataComponents.ENTITY_DATA（1.20.1 是 item NBT 的 EntityTag）
+        //   其 CustomData 即实体的【完整存档 NBT】（id + Pos + Rotation + block_state + transformation 等），
+        //   SpawnEggItem 会在生成时通过 CustomData.loadInto 直接 merge 进实体，
+        //   因此绝不能再包一层 "EntityTag"（那是旧版的 NBT 写法，1.21.8 下会被忽略 → 只生成默认蝙蝠）。
+        egg.set(net.minecraft.core.component.DataComponents.ENTITY_DATA,
+                net.minecraft.world.item.component.CustomData.of(passengerTag));
 
-        // 设置物品显示名称
-        CompoundTag display = new CompoundTag();
-        display.putString("Name", "{\"translate\":\"entity.minecraft.block_display\"}");
-        tag.put("display", display);
+        // 显示名称 + 强制附魔光效（仅客户端提示，不影响生成）
+        egg.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.network.chat.Component.translatable("entity.minecraft.block_display"));
+        egg.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 
-        egg.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
         return egg;
     }
 

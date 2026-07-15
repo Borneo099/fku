@@ -21,7 +21,6 @@ import java.util.Map;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class HotkeySystem {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     // ── 绑定模式 ──
     private static String waitingFeature = null;
@@ -45,16 +44,16 @@ public class HotkeySystem {
         if (waitingFeature != null) finishBind();
         waitingFeature = featureName;
         waitingCallback = onComplete;
-        if (mc.player != null)
-            mc.player.displayClientMessage(Component.literal("§e[热键] 按任意键绑定 " + featureName + "，Delete 删除，Esc 取消"), false);
+        if (Minecraft.getInstance().player != null)
+            Minecraft.getInstance().player.displayClientMessage(Component.literal("§e[热键] 按任意键绑定 " + featureName + "，Delete 删除，Esc 取消"), false);
         return true;
     }
 
     /** ClickGuiScreen 调用：ESC 取消绑定 */
     public static void cancelBinding() {
         if (waitingFeature == null) return;
-        if (mc.player != null)
-            mc.player.displayClientMessage(Component.literal("§7[热键] 已取消"), false);
+        if (Minecraft.getInstance().player != null)
+            Minecraft.getInstance().player.displayClientMessage(Component.literal("§7[热键] 已取消"), false);
         finishBind();
     }
 
@@ -68,21 +67,23 @@ public class HotkeySystem {
 
     @SubscribeEvent
     public static void onTick(ClientTickEvent.Post event) {
-        if (mc.getWindow() == null) return;
-        long window = mc.getWindow().getWindow();
+        if (Minecraft.getInstance().getWindow() == null) return;
+        long window = Minecraft.getInstance().getWindow().getWindow();
 
         // ── 绑定模式：捕获下一个有效按键 ──
         if (waitingFeature != null) {
-            for (int key = 32; key < 512; key++) {
-                if (GLFW.glfwGetKey(window, key) != GLFW.GLFW_PRESS) continue;
+            // ★ 绑定循环上限改为 GLFW_KEY_LAST（348）。LWJGL 内部按键缓冲区仅 GLFW_KEY_LAST+1 字节，
+            //   遍历到 349~511 会越界读 DirectByteBuffer 抛 IndexOutOfBoundsException（移动端 1.21.8 崩溃）。
+            for (int key = 32; key <= GLFW.GLFW_KEY_LAST; key++) {
+                if (!isKeyDown(window, key)) continue;
 
                 if (key == GLFW.GLFW_KEY_DELETE || key == GLFW.GLFW_KEY_BACKSPACE) {
                     IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(waitingFeature);
                     hk.setHotkeyKey(-1);
                     hk.setHotkeyName("");
                     hk.saveConfig();
-                    if (mc.player != null)
-                        mc.player.displayClientMessage(Component.literal("§e[热键] " + waitingFeature + " 热键已删除"), false);
+                    if (Minecraft.getInstance().player != null)
+                        Minecraft.getInstance().player.displayClientMessage(Component.literal("§e[热键] " + waitingFeature + " 热键已删除"), false);
                     finishBind();
                     return;
                 }
@@ -96,8 +97,8 @@ public class HotkeySystem {
                 hk.setHotkeyKey(key);
                 hk.setHotkeyName(name);
                 hk.saveConfig();
-                if (mc.player != null)
-                    mc.player.displayClientMessage(Component.literal("§a[热键] " + waitingFeature + " 已绑定: " + name), false);
+                if (Minecraft.getInstance().player != null)
+                    Minecraft.getInstance().player.displayClientMessage(Component.literal("§a[热键] " + waitingFeature + " 已绑定: " + name), false);
                 finishBind();
                 return;
             }
@@ -105,13 +106,13 @@ public class HotkeySystem {
         }
 
         // ── 触发模式：有 GUI 打开时不触发（防误触，如打开箱子按 R 整理） ──
-        if (mc.screen != null) {
+        if (Minecraft.getInstance().screen != null) {
             // 但保留按键状态跟踪，避免恢复后 key 状态错乱
             for (var entry : triggers.entrySet()) {
                 IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(entry.getKey());
                 int keyCode = hk.getHotkeyKey();
-                if (keyCode < 0) continue;
-                boolean isDown = GLFW.glfwGetKey(window, keyCode) == GLFW.GLFW_PRESS;
+                if (keyCode < 0 || keyCode > GLFW.GLFW_KEY_LAST) continue;
+                boolean isDown = isKeyDown(window, keyCode);
                 prevKeyState.put(keyCode, isDown);
             }
             return;
@@ -120,9 +121,9 @@ public class HotkeySystem {
         for (var entry : triggers.entrySet()) {
             IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(entry.getKey());
             int keyCode = hk.getHotkeyKey();
-            if (keyCode < 0) continue;
+            if (keyCode < 0 || keyCode > GLFW.GLFW_KEY_LAST) continue;
 
-            boolean isDown = GLFW.glfwGetKey(window, keyCode) == GLFW.GLFW_PRESS;
+            boolean isDown = isKeyDown(window, keyCode);
             boolean wasDown = prevKeyState.getOrDefault(keyCode, false);
 
             // 按下瞬间触发一次（边缘触发）：当前按下 + 上一 tick 未按下
@@ -133,6 +134,15 @@ public class HotkeySystem {
 
             // 持久跟踪状态
             prevKeyState.put(keyCode, isDown);
+        }
+    }
+
+    /** 安全读取按键状态：GLFW 内部按键缓冲区仅 GLFW_KEY_LAST+1 大小，越界读取会抛 IndexOutOfBoundsException（1.21.8 移动端崩溃） */
+    private static boolean isKeyDown(long window, int key) {
+        try {
+            return GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS;
+        } catch (Exception e) {
+            return false;
         }
     }
 

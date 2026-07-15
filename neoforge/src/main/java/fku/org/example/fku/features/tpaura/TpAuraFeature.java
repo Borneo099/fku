@@ -64,7 +64,6 @@ import java.util.stream.Collectors;
 @EventBusSubscriber(modid = "fku", value = Dist.CLIENT)
 public class TpAuraFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     /** 单例实例（用于渲染等需要访问实例状态的场景） */
     private static TpAuraFeature instance;
@@ -103,8 +102,8 @@ public class TpAuraFeature {
         cfg.save();
         overlayShowUntil = System.currentTimeMillis() + 3000;
         if (v) {
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§6[TpAura] §a已启用 §7(范围=" + cfg.maxRange + ", 模式=" + cfg.mode + ")"),
                     false
                 );
@@ -114,8 +113,8 @@ public class TpAuraFeature {
             if (feature != null) {
                 feature.cleanup();
             }
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§6[TpAura] §c已禁用"),
                     false
                 );
@@ -149,8 +148,8 @@ public class TpAuraFeature {
     public static void startHotkeyBind(Runnable onBound) {
         waitingKeyBind = true;
         onKeyBoundCallback = onBound;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§6[TpAura] §e按下键盘上的按键绑定热键... (Esc取消)"),
                 false
             );
@@ -161,8 +160,8 @@ public class TpAuraFeature {
     public static void cancelHotkeyBind() {
         waitingKeyBind = false;
         onKeyBoundCallback = null;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§6[TpAura] §7热键绑定已取消"),
                 false
             );
@@ -177,7 +176,7 @@ public class TpAuraFeature {
      */
     @SubscribeEvent
     public static void onKeyInput(InputEvent.Key event) {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
 
         // ── 热键绑定模式：捕获按下的键 ──
         if (waitingKeyBind) {
@@ -216,8 +215,8 @@ public class TpAuraFeature {
             cfg.setHotkeyName(keyName);
 
             waitingKeyBind = false;
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§6[TpAura] §a热键已绑定: §e" + keyName),
                     false
                 );
@@ -240,7 +239,7 @@ public class TpAuraFeature {
 
     /** 自动飞行：完全照搬箭伤飞行（无状态，无条件覆盖） */
     private static void autoFlight(boolean hasTarget) {
-        var p = mc.player;
+        var p = Minecraft.getInstance().player;
         if (p == null) return;
         if (hasTarget) {
             p.getAbilities().mayfly = true;
@@ -255,7 +254,7 @@ public class TpAuraFeature {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         TpAuraConfig cfg = TpAuraConfig.getInstance();
 
@@ -271,7 +270,7 @@ public class TpAuraFeature {
 
         // 2. 蓄力检查
         if ("Smart".equals(cfg.attackMode) || "Universal".equals(cfg.attackMode)) {
-            if (mc.player.getAttackStrengthScale(0.5f) < (float) cfg.cooldownThreshold) return;
+            if (Minecraft.getInstance().player.getAttackStrengthScale(0.5f) < (float) cfg.cooldownThreshold) return;
         }
 
         // 3. 延迟
@@ -290,10 +289,10 @@ public class TpAuraFeature {
 
         // ★ 自动飞行：搜到目标后、传送前，无条件开启（照搬箭伤飞行）
         if (cfg.autoFlight) {
-            var a = mc.player.getAbilities();
+            var a = Minecraft.getInstance().player.getAbilities();
             a.mayfly = true;
             a.flying = true;
-            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket(a));
+            Minecraft.getInstance().player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket(a));
         }
 
         // 5. 执行攻击
@@ -309,18 +308,18 @@ public class TpAuraFeature {
     @SubscribeEvent
     public static void onRenderLevelStage(AfterEntities event) {
         if (!isEnabled()) return;
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         TpAuraFeature self = getInstance();
         TpAuraConfig cfg = TpAuraConfig.getInstance();
 
         PoseStack poseStack = event.getPoseStack();
-        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 camPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        VertexConsumer consumer = mc.renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.LINES);
+        VertexConsumer consumer = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.LINES);
 
         // ── 渲染目标边界框 ──
         if (self.currentTarget != null) {
@@ -368,12 +367,12 @@ public class TpAuraFeature {
 
         String text = "§6[TpAura " + (isEnabled() ? "§aON" : "§cOFF") + "§6]";
 
-        int w = mc.getWindow().getGuiScaledWidth();
-        int h = mc.getWindow().getGuiScaledHeight();
-        int textX = w / 2 - mc.font.width(text) / 2;
+        int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        int textX = w / 2 - Minecraft.getInstance().font.width(text) / 2;
         int textY = h - 62; // 物品栏上方约两个槽位的高度
 
-        event.getGuiGraphics().drawString(mc.font, text, textX, textY, 0xFFFFFF);
+        event.getGuiGraphics().drawString(Minecraft.getInstance().font, text, textX, textY, 0xFFFFFFFF);
     }
 
     // ══════════════════════════════════════════════
@@ -434,8 +433,8 @@ public class TpAuraFeature {
      */
     private void executeTrouserAttack(Entity target, TpAuraConfig cfg) {
         // ★ 空指针防护：防止玩家死亡/切换维度时崩溃
-        if (mc.player == null || mc.level == null) return;
-        if (mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
+        if (Minecraft.getInstance().player.connection == null) return;
         if (target == null || !target.isAlive()) return;
 
         try {
@@ -454,7 +453,7 @@ public class TpAuraFeature {
         //   而回传后玩家位置未完全复位，导致下一轮Tick的基准位置逐渐升高。
         //   解决方案：一次性捕获固定基准位置 basePos，整个攻击流程（含所有子攻击）
         //   的所有高度计算均锚定于此，攻击完成后强制复位到此位置。
-        Vec3 basePos = mc.player.position();
+        Vec3 basePos = Minecraft.getInstance().player.position();
         Vec3 targetPos = target.position();
 
         // ★ NaN 防护：防止实体坐标异常导致后续计算卡死
@@ -463,8 +462,8 @@ public class TpAuraFeature {
         double reach = cfg.maxRange;
 
         // ★ 世界边界检查：防止虚空/Y轴越界导致卡死
-        int worldMinY = mc.level.dimensionType().minY();
-        int worldMaxY = mc.level.dimensionType().minY() + mc.level.dimensionType().height() - 1;
+        int worldMinY = Minecraft.getInstance().level.dimensionType().minY();
+        int worldMaxY = Minecraft.getInstance().level.dimensionType().minY() + Minecraft.getInstance().level.dimensionType().height() - 1;
         if (basePos.y < worldMinY || basePos.y > worldMaxY) return;
 
         // ★ 天花板检测：V-Clip高度不超天花板下方2格（防穿墙拉回）
@@ -510,9 +509,9 @@ public class TpAuraFeature {
         // ★ 安全上限：防止配置异常导致过量发包
         if (spam > 100) spam = 100;
         for (int i = 0; i < spam; i++) {
-            if (mc.player == null || mc.player.connection == null) break;
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                mc.player.getX(), mc.player.getY(), mc.player.getZ(), false, true
+            if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) break;
+            Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Pos(
+                Minecraft.getInstance().player.getX(), Minecraft.getInstance().player.getY(), Minecraft.getInstance().player.getZ(), false, true
             ));
         }
 
@@ -529,7 +528,7 @@ public class TpAuraFeature {
                 //   不再使用动态累加的 currentHeight，确保基准始终为 basePos.y
                 int blocks = (int) reach + i * cfg.totemHeightIncrease;
 
-                // ★ 天花板检测：基于 basePos 而非动态的 mc.player.position()
+                // ★ 天花板检测：基于 basePos 而非动态的 Minecraft.getInstance().player.position()
                 //   防止因前一次攻击导致玩家位置变化后检测结果不一致
                 if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling && blocks > 0) {
                     double safeH = getSafeCeilingHeight(basePos, blocks, cfg.ceilingScanStep);
@@ -537,8 +536,8 @@ public class TpAuraFeature {
                     blocks = Math.min(blocks, (int) (safeH - basePos.y));
                 }
 
-                if (mc.level != null) {
-                    int worldTop = mc.level.dimensionType().minY() + mc.level.dimensionType().height() - 1;
+                if (Minecraft.getInstance().level != null) {
+                    int worldTop = Minecraft.getInstance().level.dimensionType().minY() + Minecraft.getInstance().level.dimensionType().height() - 1;
                     if (basePos.y + blocks > worldTop) {
                         blocks = (int) (worldTop - basePos.y);
                         if (blocks < 1) break;
@@ -569,12 +568,12 @@ public class TpAuraFeature {
 
         // ★ 强化复位：在 doReturn 之外额外执行一次强制复位
         //   连续发送2个位置包 + setPosition，增强服务端同步可靠性
-        if (cfg.returnPos && mc.player != null) {
-            mc.player.setPos(basePos.x, basePos.y, basePos.z);
-            if (mc.player.connection != null) {
-                mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
+        if (cfg.returnPos && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.setPos(basePos.x, basePos.y, basePos.z);
+            if (Minecraft.getInstance().player.connection != null) {
+                Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Pos(
                     basePos.x, basePos.y, basePos.z, false, true));
-                mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
+                Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Pos(
                     basePos.x, basePos.y, basePos.z, false, true));
             }
         }
@@ -582,23 +581,23 @@ public class TpAuraFeature {
 
     /** 执行攻击发包 */
     private void performAttack(Entity target, TpAuraConfig cfg) {
-        if (mc.player == null || mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
         if (target == null) return;
 
         // ★ 假人联动：如果目标是本地假人，直接在客户端模拟伤害，不发包
         //   服务端不认识客户端假人实体，发攻击包会被丢弃
         if (FakePlayerFeature.handleTpAuraAttack(target)) {
             if (cfg.swingHand) {
-                mc.player.swing(InteractionHand.MAIN_HAND);
+                Minecraft.getInstance().player.swing(InteractionHand.MAIN_HAND);
             }
-            mc.player.resetAttackStrengthTicker();
+            Minecraft.getInstance().player.resetAttackStrengthTicker();
             return;
         }
 
         // ★ 直接发送标准攻击包（原始发包方式，经测试最可靠）
         // 注意：LocalPlayer#attack() 在 Forge 1.20.1 中有额外客户端检查
         // （如 onClientAttack 事件），可能取消发包，因此直接发原始包。
-        mc.player.connection.send(ServerboundInteractPacket.createAttackPacket(target, mc.player.isShiftKeyDown()));
+        Minecraft.getInstance().player.connection.send(ServerboundInteractPacket.createAttackPacket(target, Minecraft.getInstance().player.isShiftKeyDown()));
 
         // ★ TpAura 联动 KillFX：手动记录攻击记录
         //   TpAura 直接发包攻击，绕过 AttackEntityEvent，
@@ -611,11 +610,11 @@ public class TpAuraFeature {
         HealthTagManager.onAttack(target);
 
         if (cfg.swingHand) {
-            mc.player.swing(InteractionHand.MAIN_HAND);
+            Minecraft.getInstance().player.swing(InteractionHand.MAIN_HAND);
         }
 
         // ★ 强制重置攻击蓄力计时器
-        mc.player.resetAttackStrengthTicker();
+        Minecraft.getInstance().player.resetAttackStrengthTicker();
     }
 
     // ══════════════════════════════════════════════
@@ -624,13 +623,13 @@ public class TpAuraFeature {
 
     /** 发送位置包（模拟 PositionAndOnGround） */
     private void sendMove(Vec3 pos) {
-        if (mc.player == null || mc.player.connection == null) return;
-        mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false, true));
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
+        Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false, true));
     }
 
     /** 计算回传位置并设置玩家位置 */
     private void doReturn(Vec3 startPos, Vec3 finalPos, TpAuraConfig cfg) {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
         if (cfg.returnPos) {
             if ("Paper".equals(cfg.mode) && cfg.goUp) {
                 double returnReach = cfg.maxRange;
@@ -648,17 +647,17 @@ public class TpAuraFeature {
             if (cfg.offsetFix) {
                 Vec3 offset = getOffset(startPos);
                 sendMove(offset);
-                mc.player.setPos(offset.x, offset.y, offset.z);
+                Minecraft.getInstance().player.setPos(offset.x, offset.y, offset.z);
             } else {
-                mc.player.setPos(startPos.x, startPos.y, startPos.z);
+                Minecraft.getInstance().player.setPos(startPos.x, startPos.y, startPos.z);
             }
         } else {
             if (cfg.offsetFix) {
                 Vec3 offset = getOffset(finalPos);
                 sendMove(offset);
-                mc.player.setPos(offset.x, offset.y, offset.z);
+                Minecraft.getInstance().player.setPos(offset.x, offset.y, offset.z);
             } else {
-                mc.player.setPos(finalPos.x, finalPos.y, finalPos.z);
+                Minecraft.getInstance().player.setPos(finalPos.x, finalPos.y, finalPos.z);
             }
         }
     }
@@ -685,17 +684,17 @@ public class TpAuraFeature {
 
     /** 检查位置是否无效（碰撞箱重叠或岩浆） */
     private boolean invalid(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return true;
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return true;
         BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
         // ★ 世界边界检查：防止虚空/Y轴越界导致异常
-        if (bp.getY() < mc.level.dimensionType().minY() || bp.getY() >= mc.level.dimensionType().minY() + mc.level.dimensionType().height()) return true;
-        if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return true;
-        AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
+        if (bp.getY() < Minecraft.getInstance().level.dimensionType().minY() || bp.getY() >= Minecraft.getInstance().level.dimensionType().minY() + Minecraft.getInstance().level.dimensionType().height()) return true;
+        if (Minecraft.getInstance().level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return true;
+        AABB box = Minecraft.getInstance().player.getBoundingBox().move(pos.subtract(Minecraft.getInstance().player.position()));
         for (BlockPos bPos : BlockPos.betweenClosed(
                 BlockPos.containing(box.minX, box.minY, box.minZ),
                 BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
-            var state = mc.level.getBlockState(bPos);
-            if (!state.getCollisionShape(mc.level, bPos).isEmpty()
+            var state = Minecraft.getInstance().level.getBlockState(bPos);
+            if (!state.getCollisionShape(Minecraft.getInstance().level, bPos).isEmpty()
                     || state.getBlock() == net.minecraft.world.level.block.Blocks.LAVA) {
                 return true;
             }
@@ -728,12 +727,12 @@ public class TpAuraFeature {
      * @return 安全传送高度（Y坐标），最低不小于 startPos.y
      */
     private double getSafeCeilingHeight(Vec3 startPos, double maxHeight, int step) {
-        if (mc.level == null) return startPos.y + maxHeight;
+        if (Minecraft.getInstance().level == null) return startPos.y + maxHeight;
 
         for (int y = step; y <= (int) maxHeight; y += step) {
             BlockPos checkPos = BlockPos.containing(startPos.x, startPos.y + y, startPos.z);
-            BlockState state = mc.level.getBlockState(checkPos);
-            if (!state.isAir() && !state.getCollisionShape(mc.level, checkPos).isEmpty()) {
+            BlockState state = Minecraft.getInstance().level.getBlockState(checkPos);
+            if (!state.isAir() && !state.getCollisionShape(Minecraft.getInstance().level, checkPos).isEmpty()) {
                 // 天花板下方至少留2格给玩家高度（1.8格≈判定2格）
                 return Math.max(startPos.y, startPos.y + y - 2.0);
             }
@@ -755,7 +754,7 @@ public class TpAuraFeature {
      * @return 选中的落点位置，null 表示没有可用点
      */
     private Vec3 findRandomLandingPoint(Vec3 center, int offset, double maxRange) {
-        if (mc.level == null || mc.player == null) return null;
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return null;
 
         // 收集所有候选点及其权重
         List<LandingCandidate> candidates = new ArrayList<>();
@@ -767,7 +766,7 @@ public class TpAuraFeature {
                 for (int dy = -1; dy <= 1; dy++) {
                     Vec3 testPos = center.add(dx, dy, 0);
                     // ★ 约束：候选落点不能超出最大TP范围（防瞬移过远）
-                    if (mc.player.distanceToSqr(testPos) > maxRange * maxRange) continue;
+                    if (Minecraft.getInstance().player.distanceToSqr(testPos) > maxRange * maxRange) continue;
                     LandingCandidate candidate = evaluateLandingPoint(testPos);
                     if (candidate != null) {
                         candidates.add(candidate);
@@ -787,12 +786,12 @@ public class TpAuraFeature {
      * null 表示该点不可用
      */
     private LandingCandidate evaluateLandingPoint(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return null;
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return null;
 
         // 基础检查：世界边界 + 区块加载
         BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
-        if (bp.getY() < mc.level.dimensionType().minY() || bp.getY() >= mc.level.dimensionType().minY() + mc.level.dimensionType().height()) return null;
-        if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return null;
+        if (bp.getY() < Minecraft.getInstance().level.dimensionType().minY() || bp.getY() >= Minecraft.getInstance().level.dimensionType().minY() + Minecraft.getInstance().level.dimensionType().height()) return null;
+        if (Minecraft.getInstance().level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return null;
 
         // ★ 检查方块碰撞
         boolean hasBlockCollision = checkBlockCollision(pos);
@@ -817,13 +816,13 @@ public class TpAuraFeature {
 
     /** 检查位置是否有方块碰撞（与 invalid() 同逻辑但不检查岩浆） */
     private boolean checkBlockCollision(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return true;
-        AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return true;
+        AABB box = Minecraft.getInstance().player.getBoundingBox().move(pos.subtract(Minecraft.getInstance().player.position()));
         for (BlockPos bPos : BlockPos.betweenClosed(
                 BlockPos.containing(box.minX, box.minY, box.minZ),
                 BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
-            var state = mc.level.getBlockState(bPos);
-            if (!state.getCollisionShape(mc.level, bPos).isEmpty()
+            var state = Minecraft.getInstance().level.getBlockState(bPos);
+            if (!state.getCollisionShape(Minecraft.getInstance().level, bPos).isEmpty()
                     || state.getBlock() == net.minecraft.world.level.block.Blocks.LAVA) {
                 return true;
             }
@@ -833,11 +832,11 @@ public class TpAuraFeature {
 
     /** 检查位置是否有其他实体存在 */
     private boolean checkEntityAtPosition(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return false;
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return false;
         AABB checkArea = new AABB(pos.x - 0.5, pos.y, pos.z - 0.5,
                                    pos.x + 0.5, pos.y + 2, pos.z + 0.5);
-        for (Entity e : mc.level.getEntities(null, checkArea)) {
-            if (e != mc.player && e.isAlive()) {
+        for (Entity e : Minecraft.getInstance().level.getEntities(null, checkArea)) {
+            if (e != Minecraft.getInstance().player && e.isAlive()) {
                 return true;
             }
         }
@@ -882,16 +881,16 @@ public class TpAuraFeature {
 
     /** 查找最近的有效目标 */
     private Entity findTarget(TpAuraConfig cfg) {
-        if (mc.level == null || mc.player == null) return null;
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return null;
 
         Set<String> allowedTypes = cfg.getEntityTypeSet();
 
         Entity best = null;
         double bestDist = Double.MAX_VALUE;
 
-        for (Entity entity : mc.level.entitiesForRendering()) {
+        for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
             if (!entityFilter(entity, cfg, allowedTypes)) continue;
-            double dist = mc.player.distanceTo(entity);
+            double dist = Minecraft.getInstance().player.distanceTo(entity);
             // ★ 玩家目标使用 attackDistance（攻击距离），其他实体使用 maxRange
             double effectiveRange = (entity instanceof Player) ? cfg.attackDistance : cfg.maxRange;
             if (dist < bestDist && dist <= effectiveRange) {
@@ -904,7 +903,7 @@ public class TpAuraFeature {
 
     /** 实体过滤器 */
     private boolean entityFilter(Entity entity, TpAuraConfig cfg, Set<String> allowedTypes) {
-        if (!(entity instanceof LivingEntity) || !entity.isAlive() || entity == mc.player) return false;
+        if (!(entity instanceof LivingEntity) || !entity.isAlive() || entity == Minecraft.getInstance().player) return false;
 
         // ★ 全生物攻击模式：不按类型过滤
         if (!cfg.attackAllEntities) {
@@ -912,10 +911,10 @@ public class TpAuraFeature {
             if (!allowedTypes.contains(entityTypeKey)) return false;
         }
 
-        if (mc.player.distanceTo(entity) > cfg.maxRange) return false;
+        if (Minecraft.getInstance().player.distanceTo(entity) > cfg.maxRange) return false;
 
         // ★ 玩家额外使用 attackDistance 限制
-        if (entity instanceof Player && mc.player.distanceTo(entity) > cfg.attackDistance) return false;
+        if (entity instanceof Player && Minecraft.getInstance().player.distanceTo(entity) > cfg.attackDistance) return false;
 
         // 忽略条件
         if (cfg.ignoreNamed && entity.hasCustomName()) return false;
@@ -947,9 +946,9 @@ public class TpAuraFeature {
 
     /** 查找武器在背包中的槽位 */
     private int findWeaponInventorySlot() {
-        if (mc.player == null) return -1;
+        if (Minecraft.getInstance().player == null) return -1;
         for (int i = 0; i < 45; i++) {
-            String name = mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
+            String name = Minecraft.getInstance().player.getInventory().getItem(i).getItem().toString().toLowerCase();
             if (name.contains("sword") || name.contains("mace") || name.contains("axe")) {
                 return i;
             }
@@ -959,9 +958,9 @@ public class TpAuraFeature {
 
     /** 检查并切换到武器 */
     private boolean checkAndSwapWeapon(TpAuraConfig cfg) {
-        if (mc.player == null || mc.player.connection == null) return false;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return false;
 
-        ItemStack mainHand = mc.player.getMainHandItem();
+        ItemStack mainHand = Minecraft.getInstance().player.getMainHandItem();
         String itemName = mainHand.getItem().toString().toLowerCase();
         boolean isWeapon = itemName.contains("sword") || itemName.contains("mace") || itemName.contains("axe");
         if (isWeapon && !(cfg.requireMace && !itemName.contains("mace"))) return true;
@@ -970,32 +969,32 @@ public class TpAuraFeature {
             int slot = findWeaponInventorySlot();
             if (slot != -1) {
                 silentSwapSlot = slot;
-                silentSwapPrevSlot = mc.player.getInventory().getSelectedSlot();
+                silentSwapPrevSlot = Minecraft.getInstance().player.getInventory().getSelectedSlot();
                 if (slot >= 36) {
                     // 热栏槽位，直接切换
-                    mc.player.getInventory().setSelectedSlot(slot - 36);
+                    Minecraft.getInstance().player.getInventory().setSelectedSlot(slot - 36);
                 } else {
                     // 背包槽位，使用 SWAP 操作
-                    mc.player.connection.send(new ServerboundContainerClickPacket(
+                    Minecraft.getInstance().player.connection.send(new ServerboundContainerClickPacket(
                             0, // 玩家背包容器ID
-                            mc.player.containerMenu.getStateId(),
+                            Minecraft.getInstance().player.containerMenu.getStateId(),
                             (short) slot, // 背包中武器槽位
                             (byte) 0, // 热栏槽位 0
                             ClickType.SWAP,
                             new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(),
-                            net.minecraft.network.HashedStack.create(mc.player.containerMenu.getCarried(), mc.getConnection().decoratedHashOpsGenenerator())
+                            net.minecraft.network.HashedStack.create(Minecraft.getInstance().player.containerMenu.getCarried(), Minecraft.getInstance().getConnection().decoratedHashOpsGenenerator())
                     ));
-                    mc.player.getInventory().setSelectedSlot(0);
+                    Minecraft.getInstance().player.getInventory().setSelectedSlot(0);
                 }
                 return true;
             }
         } else {
             // 非静默切换：直接搜索热栏
             for (int i = 0; i < 9; i++) {
-                String name = mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
+                String name = Minecraft.getInstance().player.getInventory().getItem(i).getItem().toString().toLowerCase();
                 if (name.contains("sword") || name.contains("mace") || name.contains("axe")) {
-                    if (originalSlot == -1) originalSlot = mc.player.getInventory().getSelectedSlot();
-                    mc.player.getInventory().setSelectedSlot(i);
+                    if (originalSlot == -1) originalSlot = Minecraft.getInstance().player.getInventory().getSelectedSlot();
+                    Minecraft.getInstance().player.getInventory().setSelectedSlot(i);
                     return true;
                 }
             }
@@ -1007,28 +1006,28 @@ public class TpAuraFeature {
     private void swapBackWeapon() {
         if (silentSwapSlot == -1 && originalSlot == -1) return;
 
-        if (silentSwapSlot != -1 && mc.player != null && mc.player.connection != null) {
+        if (silentSwapSlot != -1 && Minecraft.getInstance().player != null && Minecraft.getInstance().player.connection != null) {
             if (silentSwapSlot >= 36) {
-                mc.player.getInventory().setSelectedSlot(silentSwapPrevSlot);
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(silentSwapPrevSlot);
             } else {
-                mc.player.connection.send(new ServerboundContainerClickPacket(
+                Minecraft.getInstance().player.connection.send(new ServerboundContainerClickPacket(
                         0,
-                        mc.player.containerMenu.getStateId(),
+                        Minecraft.getInstance().player.containerMenu.getStateId(),
                         (short) silentSwapSlot,
                         (byte) 0,
                         ClickType.SWAP,
                         new Int2ObjectOpenHashMap<net.minecraft.network.HashedStack>(),
-                        net.minecraft.network.HashedStack.create(mc.player.containerMenu.getCarried(), mc.getConnection().decoratedHashOpsGenenerator())
+                        net.minecraft.network.HashedStack.create(Minecraft.getInstance().player.containerMenu.getCarried(), Minecraft.getInstance().getConnection().decoratedHashOpsGenenerator())
                 ));
-                mc.player.getInventory().setSelectedSlot(silentSwapPrevSlot);
-                mc.player.connection.send(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(silentSwapPrevSlot);
+                Minecraft.getInstance().player.connection.send(new ServerboundContainerClosePacket(Minecraft.getInstance().player.containerMenu.containerId));
             }
             silentSwapSlot = -1;
             silentSwapPrevSlot = -1;
         }
 
-        if (originalSlot != -1 && mc.player != null) {
-            mc.player.getInventory().setSelectedSlot(originalSlot);
+        if (originalSlot != -1 && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.getInventory().setSelectedSlot(originalSlot);
             originalSlot = -1;
         }
     }

@@ -47,7 +47,6 @@ import java.util.UUID;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class FakePlayerFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static boolean initialized = false;
 
     /** 当前生成的假人实例 */
@@ -69,13 +68,13 @@ public class FakePlayerFeature {
     public static void spawn() {
         remove();
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
-        fakePlayer = new FakePlayerEntity(mc.player, cfg.name, cfg.health, cfg.copyInv);
+        fakePlayer = new FakePlayerEntity(Minecraft.getInstance().player, cfg.name, cfg.health, cfg.copyInv);
 
         // ★ 使用 ClientLevel.addPlayer() 正确注册假人到世界（addFreshEntity 在 ClientLevel 上无效）
-        if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel) {
-            ((net.minecraft.client.multiplayer.ClientLevel) mc.level).addEntity(fakePlayer);
+        if (Minecraft.getInstance().level instanceof net.minecraft.client.multiplayer.ClientLevel) {
+            ((net.minecraft.client.multiplayer.ClientLevel) Minecraft.getInstance().level).addEntity(fakePlayer);
         }
 
         Fku.LOGGER.info("[FakePlayer] 已生成: {}", cfg.name);
@@ -133,12 +132,12 @@ public class FakePlayerFeature {
         float damage = calculateAttackDamage(event.getEntity());
 
         // ★ 检查暴击
-        boolean isCrit = mc.player != null
-            && mc.player.fallDistance > 0.0F
-            && !mc.player.onGround()
-            && !mc.player.isInWater()
-            && !mc.player.hasEffect(MobEffects.BLINDNESS)
-            && !mc.player.isPassenger();
+        boolean isCrit = Minecraft.getInstance().player != null
+            && Minecraft.getInstance().player.fallDistance > 0.0F
+            && !Minecraft.getInstance().player.onGround()
+            && !Minecraft.getInstance().player.isInWater()
+            && !Minecraft.getInstance().player.hasEffect(MobEffects.BLINDNESS)
+            && !Minecraft.getInstance().player.isPassenger();
 
         if (isCrit) damage *= 1.5F;
 
@@ -146,9 +145,9 @@ public class FakePlayerFeature {
         fakePlayer.applyDamage(damage);
 
         // ★ 视觉反馈
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player != null) {
-            mc.level.playSound(player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
+            Minecraft.getInstance().level.playSound(player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
                 SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
         }
 
@@ -173,23 +172,23 @@ public class FakePlayerFeature {
         if (target != fakePlayer) return false;
 
         // ★ 计算伤害（基于玩家的装备）
-        float damage = calculateAttackDamage(mc.player);
+        float damage = calculateAttackDamage(Minecraft.getInstance().player);
 
         // ★ 检查暴击
-        boolean isCrit = mc.player != null
-            && mc.player.fallDistance > 0.0F
-            && !mc.player.onGround()
-            && !mc.player.isInWater()
-            && !mc.player.hasEffect(MobEffects.BLINDNESS)
-            && !mc.player.isPassenger();
+        boolean isCrit = Minecraft.getInstance().player != null
+            && Minecraft.getInstance().player.fallDistance > 0.0F
+            && !Minecraft.getInstance().player.onGround()
+            && !Minecraft.getInstance().player.isInWater()
+            && !Minecraft.getInstance().player.hasEffect(MobEffects.BLINDNESS)
+            && !Minecraft.getInstance().player.isPassenger();
         if (isCrit) damage *= 1.5F;
 
         // ★ 应用伤害
         fakePlayer.applyDamage(damage);
 
         // ★ 音效反馈（该方法由赛博教员实现）
-        if (mc.level != null) {
-            mc.level.playSound(mc.player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
+        if (Minecraft.getInstance().level != null) {
+            Minecraft.getInstance().level.playSound(Minecraft.getInstance().player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
                 SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
         }
 
@@ -302,8 +301,8 @@ public class FakePlayerFeature {
     }
 
     private static void displayClientMessage(String msg) {
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(msg), false);
         }
     }
@@ -327,7 +326,7 @@ public class FakePlayerFeature {
         private final boolean ground;
 
         public FakePlayerEntity(net.minecraft.world.entity.player.Player player, String name, float health, boolean copyInv) {
-            super(mc.level, new GameProfile(UUID.randomUUID(), name));
+            super(Minecraft.getInstance().level, new GameProfile(UUID.randomUUID(), name));
             // ★ 复制玩家状态（参考 IMGFakePlayer 原始实现）
             this.copyPosition(player);
             this.setYRot(player.getYRot());
@@ -450,16 +449,16 @@ public class FakePlayerFeature {
             this.hurtTime = 10;
 
             // ★ 粒子效果 + 音效
-            if (mc.level != null) {
+            if (Minecraft.getInstance().level != null) {
                 for (int i = 0; i < 30; i++) {
-                    double vx = (mc.level.random.nextDouble() - 0.5) * 0.5;
-                    double vy = mc.level.random.nextDouble() * 0.5;
-                    double vz = (mc.level.random.nextDouble() - 0.5) * 0.5;
-                    mc.level.addParticle(ParticleTypes.TOTEM_OF_UNDYING,
+                    double vx = (Minecraft.getInstance().level.random.nextDouble() - 0.5) * 0.5;
+                    double vy = Minecraft.getInstance().level.random.nextDouble() * 0.5;
+                    double vz = (Minecraft.getInstance().level.random.nextDouble() - 0.5) * 0.5;
+                    Minecraft.getInstance().level.addParticle(ParticleTypes.TOTEM_OF_UNDYING,
                         this.getX() + vx * 2, this.getY() + 1.0 + vy * 2, this.getZ() + vz * 2,
                         vx, vy + 0.5, vz);
                 }
-                mc.level.playSound(null, this.getX(), this.getY(), this.getZ(),
+                Minecraft.getInstance().level.playSound(null, this.getX(), this.getY(), this.getZ(),
                     SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.0F);
             }
 
@@ -476,8 +475,8 @@ public class FakePlayerFeature {
          */
         private void die() {
             this.setHealth(0f);
-            if (mc.level != null) {
-                mc.level.playSound(null, this.getX(), this.getY(), this.getZ(),
+            if (Minecraft.getInstance().level != null) {
+                Minecraft.getInstance().level.playSound(null, this.getX(), this.getY(), this.getZ(),
                     SoundEvents.PLAYER_DEATH, SoundSource.PLAYERS, 1.0F, 1.0F);
             }
             this.remove(RemovalReason.KILLED);

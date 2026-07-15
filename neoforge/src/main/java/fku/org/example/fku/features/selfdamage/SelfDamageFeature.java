@@ -17,7 +17,6 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class SelfDamageFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static Runnable hotkeyCallback = null;
     private static boolean waitingForKey = false;
 
@@ -36,14 +35,14 @@ public class SelfDamageFeature {
 
     /** 执行自伤（临时关闭防摔和32k弓，延迟5tick后恢复） */
     public static void applyDamage() {
-        if (mc.player == null || mc.getConnection() == null) {
-            if (mc.player != null)
-                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 未连接服务器"), false);
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().getConnection() == null) {
+            if (Minecraft.getInstance().player != null)
+                Minecraft.getInstance().player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 未连接服务器"), false);
             return;
         }
 
-        if (mc.player.getAbilities().instabuild) {
-            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 创造模式无法受伤"), false);
+        if (Minecraft.getInstance().player.getAbilities().instabuild) {
+            Minecraft.getInstance().player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 创造模式无法受伤"), false);
             return;
         }
 
@@ -54,7 +53,7 @@ public class SelfDamageFeature {
         if (arrowWasOn) fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(false);
 
         int amount = SelfDamageConfig.getInstance().damageAmount;
-        Vec3 pos = mc.player.position();
+        Vec3 pos = Minecraft.getInstance().player.position();
         int loops = 100;
 
         for (int i = 0; i < loops; i++) {
@@ -68,7 +67,7 @@ public class SelfDamageFeature {
         pendingRestoreArrow = arrowWasOn;
         restoreDelayTicks = 5; // 5 tick ≈ 250ms
 
-        mc.player.displayClientMessage(
+        Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§6[自伤] §a已造成 " + amount + " 点伤害（防摔5tick后恢复）"), false);
     }
 
@@ -108,7 +107,7 @@ public class SelfDamageFeature {
                 cfg.save();
                 waitingForKey = false;
                 if (hotkeyCallback != null) hotkeyCallback.run();
-                mc.player.displayClientMessage(
+                Minecraft.getInstance().player.displayClientMessage(
                         net.minecraft.network.chat.Component.literal("§a[自伤] 热键已绑定: " + cfg.hotkeyName), false);
             }
             return;
@@ -118,6 +117,6 @@ public class SelfDamageFeature {
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
-        mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(x, y, z, true, onGround));
+        Minecraft.getInstance().getConnection().send(new ServerboundMovePlayerPacket.Pos(x, y, z, true, onGround));
     }
 }

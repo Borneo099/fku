@@ -27,7 +27,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class WorldEditFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static boolean initialized = false;
 
     /**
@@ -48,10 +47,10 @@ public class WorldEditFeature {
     public static void onClientTick(Post event) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         if (!cfg.enabled) return;
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         // 非创造模式自动禁用
-        if (!mc.player.getAbilities().instabuild && cfg.safeMode) {
+        if (!Minecraft.getInstance().player.getAbilities().instabuild && cfg.safeMode) {
             if (cfg.enabled) {
                 autoDisable("§cWorldEdit 仅创造模式可用");
             }
@@ -69,7 +68,7 @@ public class WorldEditFeature {
     public static void onRenderLevelStage(AfterParticles event) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         if (!cfg.enabled || !cfg.renderSelection) return;
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         SelectionManager.getInstance().renderSelection(event.getPoseStack(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
@@ -81,10 +80,10 @@ public class WorldEditFeature {
     public static void onClickInput(InputEvent.InteractionKeyMappingTriggered event) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         if (!cfg.enabled) return;
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         // 非创造模式安全检查
-        if (!mc.player.getAbilities().instabuild && cfg.safeMode) return;
+        if (!Minecraft.getInstance().player.getAbilities().instabuild && cfg.safeMode) return;
 
         // 工具处理（选区等）
         int button = event.isAttack() ? 0 : (event.isUseItem() ? 1 : -1);
@@ -125,8 +124,8 @@ public class WorldEditFeature {
         ToolManager.getInstance().disableAll();
         TaskQueue.getInstance().cancel();
 
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§c[WorldEdit] " + reason), true);
         }
     }

@@ -33,7 +33,15 @@ public class AutoDropConfig {
         try {
             Class<?> minecraftClass = Class.forName("net.minecraft.client.Minecraft");
             Object minecraft = minecraftClass.getMethod("getInstance").invoke(null);
-            return (File) minecraftClass.getField("gameDir").get(minecraft);
+            // 1.21.8 官方映射下字段名为 gameDirectory（旧映射为 gameDir）。
+            // 优先用新名，失败回退旧名，确保不同映射环境下都能取到正确游戏目录、不丢功能。
+            File dir;
+            try {
+                dir = (File) minecraftClass.getField("gameDirectory").get(minecraft);
+            } catch (NoSuchFieldException fallback) {
+                dir = (File) minecraftClass.getField("gameDir").get(minecraft);
+            }
+            return dir;
         } catch (Exception e) {
             return Paths.get(".").toAbsolutePath().normalize().toFile();
         }

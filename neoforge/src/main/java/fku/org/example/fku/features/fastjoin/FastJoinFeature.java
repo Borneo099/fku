@@ -21,7 +21,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class FastJoinFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     private static boolean recovering = false;
     private static int targetRd = 12;
@@ -68,10 +67,10 @@ public class FastJoinFeature {
 
     @SubscribeEvent
     public static void onClientTick(Post event) {
-        if (!isEnabled() || mc.player == null) return;
+        if (!isEnabled() || Minecraft.getInstance().player == null) return;
 
         FastJoinConfig cfg = FastJoinConfig.getInstance();
-        int current = mc.options.renderDistance().get();
+        int current = Minecraft.getInstance().options.renderDistance().get();
 
         // ★ 锁定阶段：每 Tick 强制保持目标值
         if (lockedRd > 0 && !recovering) {
@@ -87,8 +86,8 @@ public class FastJoinFeature {
         if (current >= targetRd) {
             recovering = false;
             lockedRd = targetRd; // ★ 进入锁定阶段
-            if (cfg.showLoadingProgress && mc.player != null)
-                mc.player.displayClientMessage(
+            if (cfg.showLoadingProgress && Minecraft.getInstance().player != null)
+                Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§a[FastJoin] §7视距已恢复至 " + targetRd + " 区块"), true);
             return;
         }
@@ -106,14 +105,14 @@ public class FastJoinFeature {
         if (doIncrease) {
             int newRd = Math.min(current + speed, targetRd);
             setRd(newRd);
-            if (cfg.showLoadingProgress && mc.player != null)
-                mc.player.displayClientMessage(
+            if (cfg.showLoadingProgress && Minecraft.getInstance().player != null)
+                Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§6[FastJoin] §7视距: " + newRd + "/" + targetRd), true);
         }
     }
 
     private static void setRd(int rd) {
-        mc.options.renderDistance().set(rd);
+        Minecraft.getInstance().options.renderDistance().set(rd);
     }
 
     public static void fallbackToExtreme() {
@@ -123,13 +122,13 @@ public class FastJoinFeature {
         cfg.setMode("EXTREME"); cfg.setEnabled(true);
         setRd(1); recovering = true; tickCounter = 0; lockedRd = -1;
         targetRd = Math.max(2, cfg.targetRenderDistance);
-        if (mc.player != null) mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(
             Component.literal("§c[FastJoin] 超时回退，请重新连接"), false);
     }
 
     public static boolean isRecovering() { return recovering; }
     public static int getRecoveryProgress() {
         if (!recovering || targetRd <= 1) return 100;
-        return Math.min(100, mc.options.renderDistance().get() * 100 / targetRd);
+        return Math.min(100, Minecraft.getInstance().options.renderDistance().get() * 100 / targetRd);
     }
 }

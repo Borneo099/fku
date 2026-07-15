@@ -28,7 +28,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class FakeRotationManager {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     /** 假位置偏移量（方块），足够大以覆盖原始位置向量，小到不触发反作弊 */
     private static final double POS_OFFSET = 0.3;
@@ -62,7 +61,7 @@ public class FakeRotationManager {
      * 由 MixinMultiPlayerGameMode.onAttackHead() 调用
      */
     public static void setPending(LivingEntity target, float targetYaw) {
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         if (!active) {
@@ -108,7 +107,7 @@ public class FakeRotationManager {
      * @param targetYaw 目标假 Yaw（度）
      */
     public static void enable(LivingEntity target, float targetYaw) {
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         Vec3 playerPos = player.position();
@@ -151,7 +150,7 @@ public class FakeRotationManager {
         active = false;
         restoreTimer = 0;
 
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         // ★ 发送恢复包（原始位置 + 原始旋转）

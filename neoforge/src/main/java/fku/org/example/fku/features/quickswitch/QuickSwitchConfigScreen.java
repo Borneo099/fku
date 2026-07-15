@@ -84,20 +84,19 @@ public class QuickSwitchConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         var cfg = QuickSwitchConfig.getInstance();
 
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
-        g.drawString(font, "§l§bQuickSwitch 鬼手秒切", cx + 10, cy + 10, 0xFFFFFF);
+        g.drawString(font, "§l§bQuickSwitch 鬼手秒切", cx + 10, cy + 10, 0xFFFFFFFF);
 
         String modeDesc = switch (cfg.mode) {
             case "SMART" -> "智能: 附魔评分最高武器";
             case "CUSTOM" -> "自定义: 按列表顺序切换";
             default -> "关闭: 功能未启用";
         };
-        g.drawString(font, "§7" + modeDesc, cx + 10, cy + 54, 0x888888);
-        g.drawString(font, "§7物品列表(逗号分隔):", cx + 10, cy + 98, 0xAAAAAA);
-        g.drawString(font, "§7§o点击「保存并返回」或按 ESC 退出并保存", cx + 10, cy + H - 14, 0x666666);
+        g.drawString(font, "§7" + modeDesc, cx + 10, cy + 54, 0xFF888888);
+        g.drawString(font, "§7物品列表(逗号分隔):", cx + 10, cy + 98, 0xFFAAAAAA);
+        g.drawString(font, "§7§o点击「保存并返回」或按 ESC 退出并保存", cx + 10, cy + H - 14, 0xFF666666);
 
         super.render(g, mx, my, pt);
     }

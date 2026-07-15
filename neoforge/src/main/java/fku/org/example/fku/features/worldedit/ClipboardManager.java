@@ -32,7 +32,6 @@ import java.util.Map;
  */
 public class ClipboardManager {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final ClipboardManager INSTANCE = new ClipboardManager();
 
     private List<BlockPos> copiedPositions = new ArrayList<>();
@@ -76,17 +75,17 @@ public class ClipboardManager {
         for (int y = min.getY(); y <= max.getY(); y++) {
             for (int x = min.getX(); x <= max.getX(); x++) {
                 for (int z = min.getZ(); z <= max.getZ(); z++) {
-                    if (mc.level == null) continue;
+                    if (Minecraft.getInstance().level == null) continue;
                     BlockPos pos = new BlockPos(x, y, z);
-                    BlockState state = mc.level.getBlockState(pos);
+                    BlockState state = Minecraft.getInstance().level.getBlockState(pos);
                     if (state.isAir()) continue;
 
                     copiedPositions.add(pos);
                     copiedStates.add(state);
 
-                    BlockEntity be = mc.level.getBlockEntity(pos);
+                    BlockEntity be = Minecraft.getInstance().level.getBlockEntity(pos);
                     if (be != null) {
-                        copiedBlockEntityData.add(be.saveWithFullMetadata(mc.level.registryAccess()));
+                        copiedBlockEntityData.add(be.saveWithFullMetadata(Minecraft.getInstance().level.registryAccess()));
                     } else {
                         copiedBlockEntityData.add(new CompoundTag());
                     }
@@ -148,7 +147,7 @@ public class ClipboardManager {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         File schematicsDir;
         try {
-            schematicsDir = new File(mc.gameDirectory, cfg.schematicsFolder);
+            schematicsDir = new File(Minecraft.getInstance().gameDirectory, cfg.schematicsFolder);
         } catch (Exception e) {
             schematicsDir = new File("config/fku/schematics");
         }
@@ -166,8 +165,8 @@ public class ClipboardManager {
         for (int y = min.getY(); y <= max.getY(); y++) {
             for (int x = min.getX(); x <= max.getX(); x++) {
                 for (int z = min.getZ(); z <= max.getZ(); z++) {
-                    if (mc.level == null) continue;
-                    BlockState state = mc.level.getBlockState(new BlockPos(x, y, z));
+                    if (Minecraft.getInstance().level == null) continue;
+                    BlockState state = Minecraft.getInstance().level.getBlockState(new BlockPos(x, y, z));
                     if (state.isAir()) continue;
                     String key = stateToString(state);
                     if (!palette.containsKey(key)) {
@@ -192,15 +191,15 @@ public class ClipboardManager {
                 for (int x = 0; x < w; x++) {
                     int index = y * w * l + z * w + x;
                     BlockPos pos = min.offset(x, y, z);
-                    if (mc.level == null) continue;
-                    BlockState state = mc.level.getBlockState(pos);
+                    if (Minecraft.getInstance().level == null) continue;
+                    BlockState state = Minecraft.getInstance().level.getBlockState(pos);
                     String key = stateToString(state);
                     blockData[index] = palette.getOrDefault(key, 0);
 
                     // 保存 BlockEntity
-                    BlockEntity be = mc.level.getBlockEntity(pos);
+                    BlockEntity be = Minecraft.getInstance().level.getBlockEntity(pos);
                     if (be != null) {
-                        CompoundTag te = be.saveWithFullMetadata(mc.level.registryAccess());
+                        CompoundTag te = be.saveWithFullMetadata(Minecraft.getInstance().level.registryAccess());
                         te.putInt("x", x);
                         te.putInt("y", y);
                         te.putInt("z", z);
@@ -253,7 +252,7 @@ public class ClipboardManager {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         File schematicsDir;
         try {
-            schematicsDir = new File(mc.gameDirectory, cfg.schematicsFolder);
+            schematicsDir = new File(Minecraft.getInstance().gameDirectory, cfg.schematicsFolder);
         } catch (Exception e) {
             schematicsDir = new File("config/fku/schematics");
         }
@@ -445,8 +444,8 @@ public class ClipboardManager {
     }
 
     private void sendMessage(String msg) {
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§7[WorldEdit] " + msg), true);
         }
     }

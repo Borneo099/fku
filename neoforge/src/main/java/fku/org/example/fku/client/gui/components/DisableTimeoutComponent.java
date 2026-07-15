@@ -36,10 +36,10 @@ public class DisableTimeoutComponent extends GuiComponent {
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
         String displayStr = "禁连超时: " + (enabled ? "ON" : "OFF");
-        int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
+        int textColor = enabled ? config.getTextColor() : 0xFFAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
         // ★ 右键打开配置提示
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0xFF888888);
     }
 
     @Override

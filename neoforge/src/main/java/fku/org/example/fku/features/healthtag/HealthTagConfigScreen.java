@@ -64,13 +64,12 @@ public class HealthTagConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "HealthTag配置", x + 10, y + 10, 0xFFFFFF);
-        guiGraphics.drawString(font, "X坐标:", x + 20, y + 35, 0xAAAAAA);
-        guiGraphics.drawString(font, "Y坐标:", x + 20, y + 65, 0xAAAAAA);
+        guiGraphics.drawString(font, "HealthTag配置", x + 10, y + 10, 0xFFFFFFFF);
+        guiGraphics.drawString(font, "X坐标:", x + 20, y + 35, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "Y坐标:", x + 20, y + 65, 0xFFAAAAAA);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 

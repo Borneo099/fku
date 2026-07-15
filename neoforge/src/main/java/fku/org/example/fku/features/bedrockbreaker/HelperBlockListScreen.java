@@ -101,18 +101,17 @@ public class HelperBlockListScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
         int cy = (height - HEIGHT) / 2;
 
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "辅助方块列表", cx + 15, cy + 12, 0xFFFFFF);
-        guiGraphics.drawString(font, "§7逗号分隔，优先级从前到后", cx + 15, cy + 26, 0x888888);
+        guiGraphics.drawString(font, "辅助方块列表", cx + 15, cy + 12, 0xFFFFFFFF);
+        guiGraphics.drawString(font, "§7逗号分隔，优先级从前到后", cx + 15, cy + 26, 0xFF888888);
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         if (savedMessageTicks > 0) {
-            guiGraphics.drawString(font, savedMessage, cx + 15, cy + HEIGHT - 18, 0xFFFFFF);
+            guiGraphics.drawString(font, savedMessage, cx + 15, cy + HEIGHT - 18, 0xFFFFFFFF);
         }
     }
 

@@ -31,7 +31,6 @@ import java.util.LinkedList;
  */
 public class KillFXShaderManager {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final LinkedList<ShaderEffect> effects = new LinkedList<>();
 
     public enum ShaderType { NONE, BLACKHOLE, CRYSTAL, SKY_BEAM, SKY_RING, HYPERNOVA, RAY_BURST }

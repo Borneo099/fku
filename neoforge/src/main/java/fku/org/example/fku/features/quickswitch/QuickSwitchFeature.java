@@ -49,7 +49,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @OnlyIn(Dist.CLIENT)
 public class QuickSwitchFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     // ════════════════════════════════════════════════════════════
     // ★ 状态机定义（v7 多步序列版）
@@ -112,8 +111,8 @@ public class QuickSwitchFeature {
         }
         cfg.enabled = v;
         QuickSwitchConfig.save();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
                     v ? "§b[QuickSwitch] §a已启用" : "§b[QuickSwitch] §c已禁用"
                 ),
@@ -146,11 +145,11 @@ public class QuickSwitchFeature {
     public static void onAttackPacket(io.netty.channel.Channel channel) {
         if (state != SwitchState.IDLE) return;
         if (!canHandle()) return;
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
         if (channel == null || !channel.isOpen()) return;
 
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
-        int curSlot = mc.player.getInventory().getSelectedSlot();
+        int curSlot = Minecraft.getInstance().player.getInventory().getSelectedSlot();
 
         switch (cfg.mode) {
             case "SMART" -> {
@@ -171,7 +170,7 @@ public class QuickSwitchFeature {
 
                 // 发送序列中第一个切换包
                 int firstSlot = switchQueue.get(0);
-                mc.player.getInventory().setSelectedSlot(firstSlot);
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(firstSlot);
                 channel.writeAndFlush(new ServerboundSetCarriedItemPacket(firstSlot));
                 switchStepIndex = 1;
 
@@ -180,7 +179,7 @@ public class QuickSwitchFeature {
                 actionTime = System.currentTimeMillis();
 
                 if (cfg.visualFeedback) {
-                    mc.player.displayClientMessage(
+                    Minecraft.getInstance().player.displayClientMessage(
                         net.minecraft.network.chat.Component.literal(
                             "§b[QuickSwitch] §f智能秒切 → 序列 " + sequence + " (共" + sequence.size() + "步)"
                         ),
@@ -203,7 +202,7 @@ public class QuickSwitchFeature {
 
                 // 发送序列中第一个切换包
                 int firstSlot = switchQueue.get(0);
-                mc.player.getInventory().setSelectedSlot(firstSlot);
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(firstSlot);
                 channel.writeAndFlush(new ServerboundSetCarriedItemPacket(firstSlot));
                 switchStepIndex = 1;
 
@@ -212,7 +211,7 @@ public class QuickSwitchFeature {
                 actionTime = System.currentTimeMillis();
 
                 if (cfg.visualFeedback) {
-                    mc.player.displayClientMessage(
+                    Minecraft.getInstance().player.displayClientMessage(
                         net.minecraft.network.chat.Component.literal(
                             "§b[QuickSwitch] §f自定义切 → 序列 " + sequence + " (共" + sequence.size() + "步)"
                         ),
@@ -236,7 +235,7 @@ public class QuickSwitchFeature {
      */
     public static void tick() {
         if (state == SwitchState.IDLE) return;
-        if (mc.player == null) {
+        if (Minecraft.getInstance().player == null) {
             forceReset();
             return;
         }
@@ -251,10 +250,10 @@ public class QuickSwitchFeature {
                     if (switchStepIndex < switchQueue.size()) {
                         // 还有未发的切换包 → 发下一个
                         int nextSlot = switchQueue.get(switchStepIndex);
-                        mc.player.getInventory().setSelectedSlot(nextSlot);
+                        Minecraft.getInstance().player.getInventory().setSelectedSlot(nextSlot);
                         // MULTI_SWITCH 阶段的后续切换包用 connection.send()
-                        if (mc.player.connection != null) {
-                            mc.player.connection.send(new ServerboundSetCarriedItemPacket(nextSlot));
+                        if (Minecraft.getInstance().player.connection != null) {
+                            Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(nextSlot));
                         }
                         switchStepIndex++;
                         actionTime = now;
@@ -307,7 +306,7 @@ public class QuickSwitchFeature {
         int enchSlot = findBestEnchantedWeaponSlot();
         if (enchSlot < 0) return result; // 无附魔武器，不触发秒切
 
-        int curSlot = mc.player.getInventory().getSelectedSlot();
+        int curSlot = Minecraft.getInstance().player.getInventory().getSelectedSlot();
 
         // 2. 如果附魔武器就是当前手持的，无需切换
         if (enchSlot == curSlot) return result;
@@ -331,9 +330,9 @@ public class QuickSwitchFeature {
      */
     private static List<Integer> buildCustomSequence(QuickSwitchConfig cfg) {
         List<Integer> result = new ArrayList<>();
-        if (mc.player == null) return result;
+        if (Minecraft.getInstance().player == null) return result;
 
-        Inventory inv = mc.player.getInventory();
+        Inventory inv = Minecraft.getInstance().player.getInventory();
         String[] itemIds = cfg.customItems.split(",");
         if (itemIds.length == 0) return result;
 
@@ -372,7 +371,7 @@ public class QuickSwitchFeature {
      */
     private static void doRestore() {
         if (originalSlot < 0 || originalSlot > 8) return;
-        if (mc.player == null || mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
 
         int slot = originalSlot;
 
@@ -381,12 +380,12 @@ public class QuickSwitchFeature {
         switchStepIndex = 0;
         originalSlot = -1;
 
-        mc.player.getInventory().setSelectedSlot(slot);
-        mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
+        Minecraft.getInstance().player.getInventory().setSelectedSlot(slot);
+        Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(slot));
 
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
         if (cfg.visualFeedback) {
-            mc.player.displayClientMessage(
+            Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§b[QuickSwitch] §f已恢复原槽位 " + slot),
                 true
             );
@@ -399,9 +398,9 @@ public class QuickSwitchFeature {
     public static void forceReset() {
         if (state != SwitchState.IDLE) {
             // 如果有待恢复的槽位，立即切回
-            if (originalSlot >= 0 && mc.player != null && mc.player.connection != null) {
-                mc.player.getInventory().setSelectedSlot(originalSlot);
-                mc.player.connection.send(new ServerboundSetCarriedItemPacket(originalSlot));
+            if (originalSlot >= 0 && Minecraft.getInstance().player != null && Minecraft.getInstance().player.connection != null) {
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(originalSlot);
+                Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(originalSlot));
             }
             switchQueue.clear();
             switchStepIndex = 0;
@@ -412,7 +411,7 @@ public class QuickSwitchFeature {
 
     private static boolean canHandle() {
         if (!isEnabled()) return false;
-        if (mc.player == null) return false;
+        if (Minecraft.getInstance().player == null) return false;
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
         return cfg.enabled && cfg.isActiveMode();
     }
@@ -427,8 +426,8 @@ public class QuickSwitchFeature {
      * @return 槽位索引（0-8），无合适物品则返回 -1
      */
     private static int findBestEnchantedWeaponSlot() {
-        if (mc.player == null) return -1;
-        Inventory inv = mc.player.getInventory();
+        if (Minecraft.getInstance().player == null) return -1;
+        Inventory inv = Minecraft.getInstance().player.getInventory();
         int bestSlot = -1;
         double bestScore = 0;
 
@@ -459,8 +458,8 @@ public class QuickSwitchFeature {
      * @return 槽位索引（0-8），无合适物品则返回 -1
      */
     private static int findEmptyHandOrNoDurabilitySlot() {
-        if (mc.player == null) return -1;
-        Inventory inv = mc.player.getInventory();
+        if (Minecraft.getInstance().player == null) return -1;
+        Inventory inv = Minecraft.getInstance().player.getInventory();
 
         // 第一优先级：完全空的槽位
         for (int i = 0; i < 9; i++) {

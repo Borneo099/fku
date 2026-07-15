@@ -30,7 +30,6 @@ import java.util.Set;
  */
 public class ToolManager {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final ToolManager INSTANCE = new ToolManager();
 
     private boolean wandMode = false;
@@ -45,11 +44,11 @@ public class ToolManager {
      * @return true 如果点击已被工具处理
      */
     public boolean handleClick(int button, InteractionHand hand) {
-        if (mc.player == null || mc.level == null) return false;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return false;
         if (!wandMode) return false;
 
         // 检查手持物品
-        var heldItem = mc.player.getItemInHand(hand != null ? hand : InteractionHand.MAIN_HAND);
+        var heldItem = Minecraft.getInstance().player.getItemInHand(hand != null ? hand : InteractionHand.MAIN_HAND);
         String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(heldItem.getItem()).toString();
 
         if (itemId.equals(WorldEditConfig.getInstance().toolItem) && currentTool.equals("wand")) {
@@ -76,28 +75,28 @@ public class ToolManager {
      * 自定义射线追踪 — 支持超远距离（使用 BLOCK_REACH 属性值）
      */
     private BlockHitResult customRayTrace() {
-        if (mc.player == null || mc.level == null) return null;
-        Vec3 eyePos = mc.player.getEyePosition(1.0f);
-        Vec3 lookVec = mc.player.getLookAngle();
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return null;
+        Vec3 eyePos = Minecraft.getInstance().player.getEyePosition(1.0f);
+        Vec3 lookVec = Minecraft.getInstance().player.getLookAngle();
 
         // 使用配置的距离倍率
         double range = WorldEditConfig.getInstance().rangeMultiplier;
         Vec3 endPos = eyePos.add(lookVec.scale(range));
 
-        return mc.level.clip(new net.minecraft.world.level.ClipContext(
+        return Minecraft.getInstance().level.clip(new net.minecraft.world.level.ClipContext(
                 eyePos, endPos,
                 net.minecraft.world.level.ClipContext.Block.OUTLINE,
                 net.minecraft.world.level.ClipContext.Fluid.NONE,
-                mc.player));
+                Minecraft.getInstance().player));
     }
 
     /**
      * 处理工具动作
      */
     private boolean handleToolAction(int button, InteractionHand hand) {
-        if (mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) return false;
-        BlockPos targetPos = ((BlockHitResult) mc.hitResult).getBlockPos();
-        BlockState targetState = mc.level.getBlockState(targetPos);
+        if (Minecraft.getInstance().hitResult == null || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK) return false;
+        BlockPos targetPos = ((BlockHitResult) Minecraft.getInstance().hitResult).getBlockPos();
+        BlockState targetState = Minecraft.getInstance().level.getBlockState(targetPos);
 
         switch (currentTool) {
             case "tree":
@@ -132,15 +131,15 @@ public class ToolManager {
      * 生成树木
      */
     private void generateTree(BlockPos pos) {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
         // 简单的橡树生成：在目标位置放置橡木原木和树叶
         // 实际可以用 Feature 系统，这里简化实现
-        int height = 5 + mc.level.random.nextInt(3);
+        int height = 5 + Minecraft.getInstance().level.random.nextInt(3);
 
         // 树干
         for (int i = 0; i < height; i++) {
             BlockPos trunkPos = pos.above(i);
-            if (mc.level.getBlockState(trunkPos).canBeReplaced()) {
+            if (Minecraft.getInstance().level.getBlockState(trunkPos).canBeReplaced()) {
                 sendBlockPacket(trunkPos, Blocks.OAK_LOG.defaultBlockState());
             }
         }
@@ -152,7 +151,7 @@ public class ToolManager {
         leafPositions.addAll(ShapeGenerator.sphere(leafCenter, leafRadius, false));
 
         for (BlockPos leafPos : leafPositions) {
-            if (mc.level.getBlockState(leafPos).canBeReplaced()) {
+            if (Minecraft.getInstance().level.getBlockState(leafPos).canBeReplaced()) {
                 sendBlockPacket(leafPos, Blocks.OAK_LEAVES.defaultBlockState());
             }
         }
@@ -164,7 +163,7 @@ public class ToolManager {
      * 清除指定位置的树木
      */
     private void removeTree(BlockPos pos) {
-        if (mc.level == null) return;
+        if (Minecraft.getInstance().level == null) return;
 
         // 扫描周围的原木和树叶
         int range = 10;
@@ -172,7 +171,7 @@ public class ToolManager {
             for (int y = -range; y <= range; y++) {
                 for (int z = -range; z <= range; z++) {
                     BlockPos scanPos = pos.offset(x, y, z);
-                    BlockState state = mc.level.getBlockState(scanPos);
+                    BlockState state = Minecraft.getInstance().level.getBlockState(scanPos);
                     Block block = state.getBlock();
                     if (block == Blocks.OAK_LOG || block == Blocks.OAK_LEAVES
                             || block == Blocks.BIRCH_LOG || block == Blocks.BIRCH_LEAVES
@@ -192,32 +191,32 @@ public class ToolManager {
      * 显示方块信息
      */
     private void showBlockInfo(BlockPos pos, BlockState state) {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
         Block block = state.getBlock();
         String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).toString();
-        String hardness = String.format("%.2f", state.getDestroySpeed(mc.level, pos));
+        String hardness = String.format("%.2f", state.getDestroySpeed(Minecraft.getInstance().level, pos));
 
-        mc.player.displayClientMessage(
+        Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
                         "§7[WorldEdit] §e方块信息:"), true);
-        mc.player.displayClientMessage(
+        Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
                         " §7ID: §f" + blockId), true);
-        mc.player.displayClientMessage(
+        Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
                         " §7硬度: §f" + hardness), true);
-        mc.player.displayClientMessage(
+        Minecraft.getInstance().player.displayClientMessage(
                         net.minecraft.network.chat.Component.literal(
                                 " §7位置: §f" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()), true);
 
         // 显示可替换的方块
-        mc.player.displayClientMessage(
+        Minecraft.getInstance().player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
                         " §7可替换: §f" + state.canBeReplaced()), true);
     }
 
     private void sendBlockPacket(BlockPos pos, BlockState state) {
-        if (mc.player == null || mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
 
         // 简单发包放置
         var itemStack = new net.minecraft.world.item.ItemStack(state.getBlock().asItem(), 1);
@@ -225,38 +224,38 @@ public class ToolManager {
 
         // 找物品
         for (int i = 0; i < 9; i++) {
-            var invStack = mc.player.getInventory().getItem(i);
+            var invStack = Minecraft.getInstance().player.getInventory().getItem(i);
             if (invStack.getItem() == itemStack.getItem()) {
-                mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(i));
+                Minecraft.getInstance().player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(i));
                 break;
             }
         }
 
         Vec3 blockCenter = Vec3.atCenterOf(pos);
-        Vec3 lookVec = mc.player.getLookAngle();
+        Vec3 lookVec = Minecraft.getInstance().player.getLookAngle();
         net.minecraft.core.Direction face = net.minecraft.core.Direction.getApproximateNearest(lookVec.x, lookVec.y, lookVec.z).getOpposite();
         Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf(face.getUnitVec3i()).scale(-0.5));
 
-        mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundUseItemOnPacket(
+        Minecraft.getInstance().player.connection.send(new net.minecraft.network.protocol.game.ServerboundUseItemOnPacket(
                 net.minecraft.world.InteractionHand.MAIN_HAND,
                 new BlockHitResult(clickPos, face, pos, false),
                 getSequence()));
     }
 
     private void breakBlockPacket(BlockPos pos) {
-        if (mc.player == null || mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
         int seq = getSequence();
-        mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
+        Minecraft.getInstance().player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
                 net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
                 pos, net.minecraft.core.Direction.DOWN, seq));
-        mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
+        Minecraft.getInstance().player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerActionPacket(
                 net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
                 pos, net.minecraft.core.Direction.DOWN, seq));
     }
 
     private int getSequence() {
-        if (mc.level == null) return 0;
-        var handler = ((fku.org.example.fku.mixin.ClientLevelAccessor) mc.level).getBlockStatePredictionHandler_CU();
+        if (Minecraft.getInstance().level == null) return 0;
+        var handler = ((fku.org.example.fku.mixin.ClientLevelAccessor) Minecraft.getInstance().level).getBlockStatePredictionHandler_CU();
         handler.startPredicting();
         int num = handler.currentSequence();
         handler.close();
@@ -268,8 +267,8 @@ public class ToolManager {
     public void setTool(String tool) {
         this.currentTool = tool;
         this.wandMode = !tool.isEmpty();
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal(
                             "§7[WorldEdit] " + getToolDisplayName(tool) + " §a已激活"), true);
         }

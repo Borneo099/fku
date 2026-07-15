@@ -32,7 +32,7 @@ public class ConfigButtonComponent extends GuiComponent {
             int bgColor = config.getPrimaryColorWithAlpha(180);
             GuiRenderHelper.drawRoundedRect(g, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
             g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)",
-                    x + 5, y + (height - 8) / 2, 0xFFFF00);
+                    x + 5, y + (height - 8) / 2, 0xFFFFFF00);
             return;
         }
 
@@ -47,7 +47,7 @@ public class ConfigButtonComponent extends GuiComponent {
             if (hk.getHotkeyKey() >= 0) display += " §7[" + hk.getHotkeyName() + "]";
         }
         g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, config.getTextColor());
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0xFF888888);
     }
 
     @Override

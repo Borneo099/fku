@@ -65,13 +65,12 @@ public class FlightConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width - W) / 2, cy = (height - H) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         super.render(g, mx, my, pt);
         if (speedInput != null) speedInput.render(g, mx, my, pt);
         if (vertInput != null) vertInput.render(g, mx, my, pt);
-        if (tapInput != null) { tapInput.render(g, mx, my, pt); g.drawString(font, "ms", cx + 134, cy + 34, 0x666666); }
+        if (tapInput != null) { tapInput.render(g, mx, my, pt); g.drawString(font, "ms", cx + 134, cy + 34, 0xFF666666); }
     }
 
     @Override public boolean mouseClicked(double mx, double my, int btn) {

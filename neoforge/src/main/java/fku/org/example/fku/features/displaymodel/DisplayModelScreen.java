@@ -78,7 +78,7 @@ public class DisplayModelScreen extends Screen {
 
     // ============ 状态 ============
     private String statusMessage = "";
-    private int statusColor = 0xFFFFFF;
+    private int statusColor = 0xFFFFFFFF;
 
     private final DisplayModelConfig config;
     private final DisplayModelManager manager;
@@ -305,7 +305,7 @@ public class DisplayModelScreen extends Screen {
             String msg = manager.getStatusMessage();
             if (msg != null && !msg.isEmpty()) {
                 this.statusMessage = msg;
-                this.statusColor = msg.startsWith("§c") ? 0xFF5555 : 0x55FF55;
+                this.statusColor = msg.startsWith("§c") ? 0xFFFF5555 : 0xFF55FF55;
             }
             if (summonButton != null) {
                 summonButton.setMessage(Component.literal(
@@ -327,7 +327,7 @@ public class DisplayModelScreen extends Screen {
     // ====================================================================
     private void startSummon() {
         if (manager.isRunning()) {
-            setStatusMessage("§e放置正在进行中...", 0xFFFF55);
+            setStatusMessage("§e放置正在进行中...", 0xFFFFFF55);
             return;
         }
 
@@ -337,7 +337,7 @@ public class DisplayModelScreen extends Screen {
             if (!cmd.isEmpty()) cmds.add(cmd);
         }
         if (cmds.isEmpty()) {
-            setStatusMessage("§c请至少输入一行 /summon 指令", 0xFF5555);
+            setStatusMessage("§c请至少输入一行 /summon 指令", 0xFFFF5555);
             return;
         }
 
@@ -345,7 +345,7 @@ public class DisplayModelScreen extends Screen {
         LocalPlayer player = mc.player;
         if (player == null) return;
         if (!player.isCreative()) {
-            setStatusMessage("§c需要创造模式", 0xFF5555);
+            setStatusMessage("§c需要创造模式", 0xFFFF5555);
             return;
         }
 
@@ -369,7 +369,7 @@ public class DisplayModelScreen extends Screen {
 
         manager.start(queue, generationDelayMs, placeDelayMs, spacing, fixedPos, vr);
         if (manager.isRunning()) {
-            setStatusMessage("§a开始放置，" + cmds.size() + " 行指令...", 0x55FF55);
+            setStatusMessage("§a开始放置，" + cmds.size() + " 行指令...", 0xFF55FF55);
             summonButton.setMessage(Component.literal("放置中..."));
             summonButton.active = false;
         }
@@ -387,7 +387,7 @@ public class DisplayModelScreen extends Screen {
         tryParseDouble(placeZInput, config::setPlaceZ);
         tryParseDouble(viewRangeInput, v -> config.setViewRange(Math.max(0, v)));
 
-        setStatusMessage("§a配置已保存", 0x55FF55);
+        setStatusMessage("§a配置已保存", 0xFF55FF55);
         Fku.LOGGER.info("[DisplayModel] 配置已保存");
     }
 
@@ -449,7 +449,6 @@ public class DisplayModelScreen extends Screen {
     // ====================================================================
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
         int x = (width - WIDTH) / 2;
@@ -460,8 +459,8 @@ public class DisplayModelScreen extends Screen {
         guiGraphics.renderOutline(x - 2, y - 2, WIDTH + 4, totalHeight + 4, 0xFF555555);
 
         // ── 标题行 ──
-        guiGraphics.drawString(font, "§l实体模型展示", x + 10, y + 8, 0xFFFFFF);
-        guiGraphics.drawString(font, "粘贴 /summon 指令（含 Passengers）:", x + 10, y + 24, 0x888888);
+        guiGraphics.drawString(font, "§l实体模型展示", x + 10, y + 8, 0xFFFFFFFF);
+        guiGraphics.drawString(font, "粘贴 /summon 指令（含 Passengers）:", x + 10, y + 24, 0xFF888888);
 
         // ── 分割线（标题与指令区之间） ──
         guiGraphics.fill(x + 10, y + 38, x + WIDTH - 10, y + 39, 0xFF444444);
@@ -483,31 +482,31 @@ public class DisplayModelScreen extends Screen {
         guiGraphics.fill(x + 10, currentY - 4, x + WIDTH - 10, currentY - 3, 0xFF444444);
 
         // ── 配置区 ──
-        guiGraphics.drawString(font, "§7配置选项:", x + 10, currentY, 0x888888);
+        guiGraphics.drawString(font, "§7配置选项:", x + 10, currentY, 0xFF888888);
         currentY += 13;
 
         // 第一行：放置延迟 / 生成间隔 / 实体间距
-        guiGraphics.drawString(font, "放置延迟(ms):", x + 10, currentY + 1, 0xAAAAAA);
+        guiGraphics.drawString(font, "放置延迟(ms):", x + 10, currentY + 1, 0xFFAAAAAA);
         placeDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "生成间隔(ms):", x + 165, currentY + 1, 0xAAAAAA);
+        guiGraphics.drawString(font, "生成间隔(ms):", x + 165, currentY + 1, 0xFFAAAAAA);
         generationDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "实体间距(格):", x + 320, currentY + 1, 0xAAAAAA);
+        guiGraphics.drawString(font, "实体间距(格):", x + 320, currentY + 1, 0xFFAAAAAA);
         entitySpacingInput.render(guiGraphics, mouseX, mouseY, partialTick);
         currentY += 22;
 
         // 第二行：可视距离
-        guiGraphics.drawString(font, "可视距离:", x + 10, currentY + 1, 0xAAAAAA);
+        guiGraphics.drawString(font, "可视距离:", x + 10, currentY + 1, 0xFFAAAAAA);
         viewRangeInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "§7(0=默认)", x + 145, currentY + 1, 0x666666);
+        guiGraphics.drawString(font, "§7(0=默认)", x + 145, currentY + 1, 0xFF666666);
         currentY += 22;
 
         // 第三行：放置坐标 + 辅助按钮
-        guiGraphics.drawString(font, "放置坐标:", x + 10, currentY + 1, 0xAAAAAA);
-        guiGraphics.drawString(font, "X", x + 72, currentY + 1, 0x888888);
+        guiGraphics.drawString(font, "放置坐标:", x + 10, currentY + 1, 0xFFAAAAAA);
+        guiGraphics.drawString(font, "X", x + 72, currentY + 1, 0xFF888888);
         placeXInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "Y", x + 152, currentY + 1, 0x888888);
+        guiGraphics.drawString(font, "Y", x + 152, currentY + 1, 0xFF888888);
         placeYInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "Z", x + 232, currentY + 1, 0x888888);
+        guiGraphics.drawString(font, "Z", x + 232, currentY + 1, 0xFF888888);
         placeZInput.render(guiGraphics, mouseX, mouseY, partialTick);
         writePosButton.render(guiGraphics, mouseX, mouseY, partialTick);
         clearPosButton.render(guiGraphics, mouseX, mouseY, partialTick);

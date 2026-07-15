@@ -191,10 +191,9 @@ public class TpAuraScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width - W) / 2, cy = (height - H) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
-        g.drawString(font, "§l§6TpAura 配置", cx + 8, cy + 20, 0xFFFFFF);
+        g.drawString(font, "§l§6TpAura 配置", cx + 8, cy + 20, 0xFFFFFFFF);
 
         var cfg = TpAuraConfig.getInstance();
         String modeDesc = switch (activeTab) {
@@ -204,7 +203,7 @@ public class TpAuraScreen extends Screen {
             case 3 -> "白名单=" + cfg.whitelistEnabled;
             default -> "图腾=" + cfg.totemBypass + "  路径=" + cfg.renderPath;
         };
-        g.drawString(font, "§7" + modeDesc, cx + 8, cy + H - 12, 0x666666);
+        g.drawString(font, "§7" + modeDesc, cx + 8, cy + H - 12, 0xFF666666);
 
         // 手动渲染 EditBox
         for (var w : new AbstractWidget[]{cooldownInput, delayInput, rangeInput, attackDistInput, tpOffsetInput,

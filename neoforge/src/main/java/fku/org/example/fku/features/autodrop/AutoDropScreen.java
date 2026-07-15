@@ -84,20 +84,19 @@ public class AutoDropScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
 
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;
 
         GuiRenderHelper.drawPanelBackground(g, x, y, WIDTH, HEIGHT, false);
-        g.drawString(font, "自动丢配置", x + 10, y + 8, 0xFFFFFF);
+        g.drawString(font, "自动丢配置", x + 10, y + 8, 0xFFFFFFFF);
 
         // 行0：丢弃模式标签
-        g.drawString(font, "丢弃模式:", x + 10, y + 34, 0xAAAAAA);
+        g.drawString(font, "丢弃模式:", x + 10, y + 34, 0xFFAAAAAA);
 
         // 行1：扫描间隔标签
-        g.drawString(font, "扫描间隔(tick):", x + 10, y + 64, 0xAAAAAA);
-        g.drawString(font, "1~20，越小越快", x + 168, y + 64, 0x888888);
+        g.drawString(font, "扫描间隔(tick):", x + 10, y + 64, 0xFFAAAAAA);
+        g.drawString(font, "1~20，越小越快", x + 168, y + 64, 0xFF888888);
 
         super.render(g, mx, my, pt);
     }

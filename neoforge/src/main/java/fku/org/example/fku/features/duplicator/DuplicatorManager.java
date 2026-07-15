@@ -266,9 +266,8 @@ public class DuplicatorManager {
         @Override
         public void render(GuiGraphics g, int mx, int my, float pt) {
             if (minecraft != null && font != null) {
-                renderBackground(g, mx, my, pt);
-                g.drawString(font, "§6正在自动快速复制三叉戟中...", width / 2, height / 2 - 20, 0xFFFFFF);
-                g.drawString(font, "§7按 Esc 关闭功能并退出", width / 2, height / 2 + 5, 0xAAAAAA);
+                g.drawString(font, "§6正在自动快速复制三叉戟中...", width / 2, height / 2 - 20, 0xFFFFFFFF);
+                g.drawString(font, "§7按 Esc 关闭功能并退出", width / 2, height / 2 + 5, 0xFFAAAAAA);
                 super.render(g, mx, my, pt);
             }
         }

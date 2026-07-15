@@ -31,7 +31,6 @@ import org.joml.Matrix4f;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class ArrowDmgFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static boolean forcedPress = false;
     private static Entity target = null;
     /** 存储目标原始碰撞箱（渲染用） */
@@ -49,7 +48,7 @@ public class ArrowDmgFeature {
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         cfg.enabled = v;
         cfg.save();
-        if (!v) { if (forcedPress) { mc.options.keyUse.setDown(false); forcedPress = false; } target = null; }
+        if (!v) { if (forcedPress) { Minecraft.getInstance().options.keyUse.setDown(false); forcedPress = false; } target = null; }
     }
     public static boolean isEnabled() { return ArrowDmgConfig.getInstance().enabled; }
     /** 获取当前自瞄目标（供 HealthTag 联动） */
@@ -60,14 +59,14 @@ public class ArrowDmgFeature {
      *   返回 true = 取消原包由本方法发送，false = 走原版逻辑
      */
     public static boolean handleManualRelease() {
-        if (!isEnabled() || mc.player == null || mc.player.connection == null) return false;
+        if (!isEnabled() || Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return false;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (cfg.autoShoot) return false;
-        if (mc.player.getMainHandItem().getItem() != Items.BOW) return false;
+        if (Minecraft.getInstance().player.getMainHandItem().getItem() != Items.BOW) return false;
 
         if (target != null && cfg.vClip) {
             // VClip 模式：拦截原包，发 doDMG + 瞬移 + 瞄准 + RELEASE
-            doVClipShoot(mc.player, cfg);
+            doVClipShoot(Minecraft.getInstance().player, cfg);
             return true;
         } else {
             // 非 VClip 模式：发 doDMG，不拦截让原版 RELEASE 走
@@ -78,8 +77,8 @@ public class ArrowDmgFeature {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (mc.player == null || mc.level == null) return;
-        LocalPlayer p = mc.player;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
+        LocalPlayer p = Minecraft.getInstance().player;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!isEnabled()) return;
 
@@ -126,7 +125,7 @@ public class ArrowDmgFeature {
         if (wantCrouch) {
             double targetH = targetOriginalBox != null ? targetOriginalBox.getYsize() : target.getBoundingBox().getYsize();
             if (targetH < 2.0) {
-                mc.options.keyShift.setDown(true);
+                Minecraft.getInstance().options.keyShift.setDown(true);
                 crouchReleaseTimer = 3; // 设释放计时器
                 if (p.getAbilities().flying) {
                     p.connection.send(new ServerboundMovePlayerPacket.Pos(p.getX(), p.getY(), p.getZ(), true, p.onGround()));
@@ -135,10 +134,10 @@ public class ArrowDmgFeature {
         } else if (crouchReleaseTimer > 0) {
             crouchReleaseTimer--;
             if (crouchReleaseTimer == 0) {
-                mc.options.keyShift.setDown(false);
+                Minecraft.getInstance().options.keyShift.setDown(false);
             }
-        } else if (!mc.options.keyShift.isDown()) {
-            mc.options.keyShift.setDown(false);
+        } else if (!Minecraft.getInstance().options.keyShift.isDown()) {
+            Minecraft.getInstance().options.keyShift.setDown(false);
         }
 
         // 箭伤飞行
@@ -149,7 +148,7 @@ public class ArrowDmgFeature {
         }
 
         boolean hasBow = p.getMainHandItem().getItem() == Items.BOW || p.getOffhandItem().getItem() == Items.BOW;
-        if (!hasBow) { if (forcedPress) { mc.options.keyUse.setDown(false); forcedPress = false; } return; }
+        if (!hasBow) { if (forcedPress) { Minecraft.getInstance().options.keyUse.setDown(false); forcedPress = false; } return; }
 
         // ★ 自动释放（VClip 时用 VClip 流程，否则至少发包+RELEASE）
         if (cfg.autoShoot && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW && p.getTicksUsingItem() >= cfg.charge) {
@@ -162,7 +161,7 @@ public class ArrowDmgFeature {
                     ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN));
             }
         }
-        if (!cfg.onlyWhenHoldingRightClick && !p.isUsingItem()) { mc.options.keyUse.setDown(true); forcedPress = true; }
+        if (!cfg.onlyWhenHoldingRightClick && !p.isUsingItem()) { Minecraft.getInstance().options.keyUse.setDown(true); forcedPress = true; }
     }
 
     /** ★ VClip 瞬移射击：发包 + PosRot 原子包 + 服务端/客户端双重瞄准 */
@@ -178,15 +177,15 @@ public class ArrowDmgFeature {
 
         // 检查射击位
         AABB testBox = new AABB(shootPos.x-0.3, shootPos.y, shootPos.z-0.3, shootPos.x+0.3, shootPos.y+1.8, shootPos.z+0.3);
-        if (!mc.level.noCollision(p, testBox)) {
+        if (!Minecraft.getInstance().level.noCollision(p, testBox)) {
             for (double yOff = 1; yOff <= 10; yOff++) {
                 shootPos = new Vec3(orig.x, target.getBoundingBox().getCenter().y + yOff, orig.z);
                 testBox = new AABB(shootPos.x-0.3, shootPos.y, shootPos.z-0.3, shootPos.x+0.3, shootPos.y+1.8, shootPos.z+0.3);
-                if (mc.level.noCollision(p, testBox)) break;
+                if (Minecraft.getInstance().level.noCollision(p, testBox)) break;
             }
             for (double yOff = -1; yOff >= -5; yOff--) {
                 shootPos = new Vec3(orig.x, target.getBoundingBox().getCenter().y + yOff, orig.z);
-                if (mc.level.noCollision(p, testBox)) break;
+                if (Minecraft.getInstance().level.noCollision(p, testBox)) break;
             }
         }
 
@@ -224,19 +223,35 @@ public class ArrowDmgFeature {
     }
 
     private static void doDMG(ArrowDmgConfig cfg) {
-        if (mc.player==null||mc.player.connection==null) return;
-        // ★ 无硬上限，但建议不超过10000（防踢）
-        int n = Math.max(1, (int)cfg.packets);
-        if (n > 10000) n = 10000;
-        double x=mc.player.getX(), y=mc.player.getY(), z=mc.player.getZ();
-        mc.player.connection.send(new ServerboundPlayerCommandPacket(mc.player, ServerboundPlayerCommandPacket.Action.START_SPRINTING));
-        for(int i=0;i<n/2;i++) { mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-1.0E-10,z,true,true)); mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y+1.0E-10,z,true,false)); }
-        if(cfg.useOffset) mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-0.01,z,true,true));
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null || p.connection == null) return;
+
+        // ★ 参考 InvincibleMachineGun/ArrowDmg.java：先发疾跑包（START_SPRINTING），
+        //   再做基于朝向的位置欺骗。1.21.8 下旧的「微型 ±1e-10 抖动」已失效，必须用此方式触发高伤害。
+        p.connection.send(new ServerboundPlayerCommandPacket(p, ServerboundPlayerCommandPacket.Action.START_SPRINTING));
+
+        double x = p.getX(), y = p.getY(), z = p.getZ();
+        // 强度：复用 packets 作为强度，按 ArrowDmg 公式换算偏移量（strength/10 * √500）
+        double currentStrength = Math.max(1, cfg.packets);
+        if (currentStrength > 10000) currentStrength = 10000;
+        double adjustedStrength = (currentStrength / 10.0) * Math.sqrt(500.0);
+        Vec3 lookVec = p.getLookAngle().scale(adjustedStrength);
+        double spoofX = -lookVec.x;
+        double spoofY = cfg.vertical ? -lookVec.y : 0;   // ★ 垂直修正：开启含 Y 方向偏移，关闭则仅水平位移
+        double spoofZ = -lookVec.z;
+        double targetX = x + spoofX, targetY = y + spoofY, targetZ = z + spoofZ;
+
+        // 参考 ArrowDmg.java processShoot：先回弹 4 次原位，再瞬移到欺骗位，再回原位
+        for (int i = 0; i < 4; i++) sendPos(x, y, z, true);
+        sendPos(targetX, targetY, targetZ, false);
+        sendPos(x, y, z, false);
+        // 垂直修正 + 防摔：Y 方向为正时 +0.01 防止摔伤（参考 ArrowDmg.java）
+        if (cfg.useOffset && cfg.vertical && spoofY > 0) sendPos(x, y + 0.01, z, false);
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
-        if (mc.player != null && mc.player.connection != null)
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x, y, z, true, onGround));
+        if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.connection != null)
+            Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Pos(x, y, z, true, onGround));
     }
 
     /** ★ Y校准：找安全的Y坐标，防止卡入方块 */
@@ -245,17 +260,17 @@ public class ArrowDmgFeature {
         double eyeH = playerBox.maxY - playerBox.minY; // 约1.8格
         // 先检查目标Y是否可站立
         AABB testBox = new AABB(x - 0.3, targetY, z - 0.3, x + 0.3, targetY + eyeH, z + 0.3);
-        if (mc.level.noCollision(p, testBox)) return targetY;
+        if (Minecraft.getInstance().level.noCollision(p, testBox)) return targetY;
 
         // 向上搜索（优先）
         for (double yOff = 1; yOff <= 5; yOff++) {
             testBox = new AABB(x - 0.3, targetY + yOff, z - 0.3, x + 0.3, targetY + yOff + eyeH, z + 0.3);
-            if (mc.level.noCollision(p, testBox)) return targetY + yOff;
+            if (Minecraft.getInstance().level.noCollision(p, testBox)) return targetY + yOff;
         }
         // 向下搜索
         for (double yOff = -1; yOff >= -3; yOff--) {
             testBox = new AABB(x - 0.3, targetY + yOff, z - 0.3, x + 0.3, targetY + yOff + eyeH, z + 0.3);
-            if (mc.level.noCollision(p, testBox)) return targetY + yOff;
+            if (Minecraft.getInstance().level.noCollision(p, testBox)) return targetY + yOff;
         }
         return targetY; // 实在找不到就返回原值
     }
@@ -282,21 +297,21 @@ public class ArrowDmgFeature {
     // ════════ 目标 ════════
     private static void findTarget(ArrowDmgConfig cfg) {
         target = null;
-        if(mc.player==null||mc.level==null) return;
-        boolean hasBow = mc.player.getMainHandItem().getItem()==Items.BOW||mc.player.getOffhandItem().getItem()==Items.BOW;
+        if(Minecraft.getInstance().player==null||Minecraft.getInstance().level==null) return;
+        boolean hasBow = Minecraft.getInstance().player.getMainHandItem().getItem()==Items.BOW||Minecraft.getInstance().player.getOffhandItem().getItem()==Items.BOW;
         if(!hasBow) return;
         double maxDist = cfg.aimRange;
         Entity best=null; double bestS=Double.MAX_VALUE;
-        Vec3 eye=mc.player.getEyePosition(), look=mc.player.getLookAngle().normalize();
-        for(Entity e:mc.level.entitiesForRendering()) {
-            if(!(e instanceof LivingEntity)||e==mc.player||!e.isAlive()) continue;
+        Vec3 eye=Minecraft.getInstance().player.getEyePosition(), look=Minecraft.getInstance().player.getLookAngle().normalize();
+        for(Entity e:Minecraft.getInstance().level.entitiesForRendering()) {
+            if(!(e instanceof LivingEntity)||e==Minecraft.getInstance().player||!e.isAlive()) continue;
             if(e instanceof net.minecraft.world.entity.player.Player pl&&(pl.isCreative()||pl.isSpectator())) continue;
             double d=eye.distanceTo(e.position()); if(d>maxDist) continue;
             Vec3 cen=e.getBoundingBox().getCenter();
             double ang=Math.toDegrees(Math.acos(Math.min(1,Math.max(-1,look.dot(cen.subtract(eye).normalize())))));
             double maxAng = 6 + cfg.expandHitbox * 2;
             if(ang > maxAng) continue;
-            if(!cfg.ignoreWalls&&mc.level.clip(new ClipContext(eye,cen, ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,mc.player)).getType()!=HitResult.Type.MISS) continue;
+            if(!cfg.ignoreWalls&&Minecraft.getInstance().level.clip(new ClipContext(eye,cen, ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,Minecraft.getInstance().player)).getType()!=HitResult.Type.MISS) continue;
             double sc=switch(cfg.priority){case"Distance"->d;case"Health"->((LivingEntity)e).getHealth();default->ang;};
             if(sc<bestS){bestS=sc;best=e;}
         }
@@ -305,17 +320,18 @@ public class ArrowDmgFeature {
 
     // ════════ ESP 渲染（仅方框） ════════
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!isEnabled() || target == null || !target.isAlive() || mc.player == null) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterEntities event) {
+        // RenderLevelStageEvent 在 NeoForge 21.8.53 起变为 abstract，必须监听其具体子类
+        if (!isEnabled() || target == null || !target.isAlive() || Minecraft.getInstance().player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
 
         PoseStack ps = event.getPoseStack();
-        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 cam = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         ps.pushPose();
         ps.translate(-cam.x, -cam.y, -cam.z);
 
-        VertexConsumer buf = mc.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
+        VertexConsumer buf = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(RenderType.LINES);
         Matrix4f mat = ps.last().pose();
 
         // 仅方框（TpAura 方式）— 使用实体当前碰撞箱
@@ -346,12 +362,12 @@ public class ArrowDmgFeature {
     @SubscribeEvent
     public static void onRenderOverlay(net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Pre event) {
         if (event.getName() != net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR) return;
-        if (!isEnabled() || target == null || mc.player == null) return;
+        if (!isEnabled() || target == null || Minecraft.getInstance().player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
 
         double targetY = target.getY();
-        double playerY = mc.player.getY();
+        double playerY = Minecraft.getInstance().player.getY();
         String text;
         if (Math.abs(targetY - playerY) < 0.5) {
             text = "Y: §a" + String.format("%.1f", targetY);
@@ -359,10 +375,10 @@ public class ArrowDmgFeature {
             text = "Y: " + String.format("%.1f", targetY);
         }
 
-        int sw = mc.getWindow().getGuiScaledWidth();
-        int sh = mc.getWindow().getGuiScaledHeight();
+        int sw = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int sh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
         int cx = sw / 2;
         int cy = sh / 2;
-        event.getGuiGraphics().drawString(mc.font, text, cx - mc.font.width(text) / 2, cy + 15, 0xFFFFFF);
+        event.getGuiGraphics().drawString(Minecraft.getInstance().font, text, cx - Minecraft.getInstance().font.width(text) / 2, cy + 15, 0xFFFFFFFF);
     }
 }

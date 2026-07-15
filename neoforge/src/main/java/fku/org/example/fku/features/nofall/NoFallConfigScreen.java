@@ -58,13 +58,12 @@ public class NoFallConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width - WIDTH) / 2;
         int cy = (height - HEIGHT) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, WIDTH, HEIGHT, false);
         super.render(g, mx, my, pt);
         if (minDistInput != null) minDistInput.render(g, mx, my, pt);
-        g.drawString(font, "格（低于此不保护）", cx + 135, cy + 12, 0x666666);
+        g.drawString(font, "格（低于此不保护）", cx + 135, cy + 12, 0xFF666666);
     }
 
     @Override

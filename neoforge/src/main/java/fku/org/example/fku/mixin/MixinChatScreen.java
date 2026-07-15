@@ -9,7 +9,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * MixinChatScreen — 在 ChatScreen 层拦截 // 开头的 WorldEdit 命令
@@ -33,7 +33,7 @@ public abstract class MixinChatScreen {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void fku$onHandleChatInput(String text, boolean addToHistory, CallbackInfoReturnable<Object> cir) {
+    private void fku$onHandleChatInput(String text, boolean addToHistory, CallbackInfo ci) {
         if (text != null && text.startsWith("//")) {
             Minecraft mc = Minecraft.getInstance();
 
@@ -47,7 +47,9 @@ public abstract class MixinChatScreen {
             CommandRegistry.getInstance().execute(text);
 
             // 阻止原方法执行（不发送到服务器，不关闭聊天栏）
-            cir.cancel();
+            // 注意：1.21.8 的 ChatScreen.handleChatInput(String, boolean) 为 void 方法，
+            // 因此回调类型必须用 CallbackInfo（不能用 CallbackInfoReturnable）。
+            ci.cancel();
         }
     }
 }

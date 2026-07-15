@@ -43,6 +43,10 @@ public class HealthTagRenderer {
         int borderColor = new Color(60, 60, 60, alphaInt).getRGB();
         if (editing) borderColor = new Color(0, 120, 215, alphaInt).getRGB();
 
+        // ★ 裁剪到面板矩形：1.21.8 实体模型渲染可能溢出 180x45 面板（连到屏幕左上角形成黑块），
+        //   用 scissor 把整块 healthtag 渲染限制在面板范围内，拖动 UI 时黑块随面板移动而非铺满屏幕。
+        guiGraphics.enableScissor(config.x, config.y, WIDTH, HEIGHT);
+
         drawBetterRoundedRect(guiGraphics, config.x, config.y, config.x + WIDTH, config.y + HEIGHT, 6, bgColor, borderColor);
 
         if (entity != null) {
@@ -132,6 +136,8 @@ public class HealthTagRenderer {
         if (editing && entity == null) {
             guiGraphics.drawCenteredString(Minecraft.getInstance().font, "拖动我 (3D 模型区域)", config.x + WIDTH / 2, config.y + HEIGHT / 2 - 4, 0x55FFFFFF);
         }
+
+        guiGraphics.disableScissor();
     }
 
     private static int getHealthColor(float ratio, int alpha) {

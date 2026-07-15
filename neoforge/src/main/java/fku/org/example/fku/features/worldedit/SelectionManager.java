@@ -23,7 +23,6 @@ import net.minecraft.client.renderer.RenderType;
  */
 public class SelectionManager {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final SelectionManager INSTANCE = new SelectionManager();
 
     private BlockPos pos1;
@@ -40,8 +39,8 @@ public class SelectionManager {
     public void setPos1(BlockPos pos) {
         this.pos1 = pos;
         this.hasPos1 = true;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§7[WorldEdit] §aPos1 已设置: " + formatPos(pos)), true);
             showSelectionInfo();
         }
@@ -50,8 +49,8 @@ public class SelectionManager {
     public void setPos2(BlockPos pos) {
         this.pos2 = pos;
         this.hasPos2 = true;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§7[WorldEdit] §aPos2 已设置: " + formatPos(pos)), true);
             showSelectionInfo();
         }
@@ -62,8 +61,8 @@ public class SelectionManager {
         pos2 = null;
         hasPos1 = false;
         hasPos2 = false;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§7[WorldEdit] §e选区已清除"), true);
         }
     }
@@ -77,8 +76,8 @@ public class SelectionManager {
         int dy = Math.abs(pos1.getY() - pos2.getY()) + 1;
         int dz = Math.abs(pos1.getZ() - pos2.getZ()) + 1;
         long volume = (long) dx * dy * dz;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§7[WorldEdit] §e选区: " + dx + "×" + dy + "×" + dz + " = " + volume + " 方块"),
                     true);
         }
@@ -129,14 +128,14 @@ public class SelectionManager {
      */
     public void renderSelection(PoseStack poseStack, float partialTick) {
         if (!hasSelection() || !WorldEditConfig.getInstance().renderSelection) return;
-        if (mc.level == null || mc.player == null) return;
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) return;
 
         BlockPos min = getMin();
         BlockPos max = getMax();
         if (min == null || max == null) return;
 
         // 相机位置
-        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 camPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
 
         // 计算相机相对坐标
         float x1 = (float)(min.getX() - camPos.x);
@@ -156,7 +155,7 @@ public class SelectionManager {
         float b = (color & 0xFF) / 255.0f;
         float a = 0.8f;
 
-        MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.LINES);
 
         // 底部矩形

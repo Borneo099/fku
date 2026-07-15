@@ -241,43 +241,42 @@ public class BedrockBreakerScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
 
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy(0), WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "基岩破坏器配置", cx + 10, cy(8), 0xFFFFFF);
+        guiGraphics.drawString(font, "基岩破坏器配置", cx + 10, cy(8), 0xFFFFFFFF);
 
         // ── 行2：目标方块 ──
-        guiGraphics.drawString(font, "目标方块:", cx + 10, cy(ROW_TARGET), 0xAAAAAA);
-        guiGraphics.drawString(font, "§7(点击【写入】写入准星处方块)", cx + 96, cy(ROW_TARGET + 28), 0x666666);
+        guiGraphics.drawString(font, "目标方块:", cx + 10, cy(ROW_TARGET), 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7(点击【写入】写入准星处方块)", cx + 96, cy(ROW_TARGET + 28), 0xFF666666);
 
         // ── 行3：替换方块 ──
-        guiGraphics.drawString(font, "替换方块:", cx + 10, cy(ROW_REPLACE), 0xAAAAAA);
-        guiGraphics.drawString(font, "§7(空=不替换)", cx + 10, cy(ROW_REPLACE + 28), 0x666666);
+        guiGraphics.drawString(font, "替换方块:", cx + 10, cy(ROW_REPLACE), 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7(空=不替换)", cx + 10, cy(ROW_REPLACE + 28), 0xFF666666);
 
         // ── 行4：模式 ──
-        guiGraphics.drawString(font, "§7| 扫描模式自动扫描周围目标方块", cx + 115, cy(ROW_MODE + 1), 0x666666);
+        guiGraphics.drawString(font, "§7| 扫描模式自动扫描周围目标方块", cx + 115, cy(ROW_MODE + 1), 0xFF666666);
 
         // ── 行5：双列超时 ──
-        guiGraphics.drawString(font, "破坏超时:", cx + 10, cy(ROW_TIMEOUT), 0xAAAAAA);
-        guiGraphics.drawString(font, "§7(tick)", cx + 110, cy(ROW_TIMEOUT), 0x666666);
-        guiGraphics.drawString(font, "伸出超时:", cx + 126, cy(ROW_TIMEOUT), 0xAAAAAA);
-        guiGraphics.drawString(font, "§7(tick)", cx + 212, cy(ROW_TIMEOUT), 0x666666);
+        guiGraphics.drawString(font, "破坏超时:", cx + 10, cy(ROW_TIMEOUT), 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7(tick)", cx + 110, cy(ROW_TIMEOUT), 0xFF666666);
+        guiGraphics.drawString(font, "伸出超时:", cx + 126, cy(ROW_TIMEOUT), 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7(tick)", cx + 212, cy(ROW_TIMEOUT), 0xFF666666);
 
         // ── 行6：拉杆超时 ──
-        guiGraphics.drawString(font, "拉杆超时:", cx + 10, cy(ROW_LEVER), 0xAAAAAA);
-        guiGraphics.drawString(font, "§7(tick)", cx + 110, cy(ROW_LEVER), 0x666666);
+        guiGraphics.drawString(font, "拉杆超时:", cx + 10, cy(ROW_LEVER), 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7(tick)", cx + 110, cy(ROW_LEVER), 0xFF666666);
 
         // ── 行7：辅助方块（v2.2 新增） ──
-        guiGraphics.drawString(font, "§7| 找不到拉杆位置时自动放置辅助方块", cx + 10, cy(ROW_HELPER_SWITCH + 18), 0x666666);
+        guiGraphics.drawString(font, "§7| 找不到拉杆位置时自动放置辅助方块", cx + 10, cy(ROW_HELPER_SWITCH + 18), 0xFF666666);
 
         // ── 行8：辅助方块列表（v2.2 新增） ──
-        guiGraphics.drawString(font, "辅助方块列表:", cx + 10, cy(ROW_HELPER_LIST), 0xAAAAAA);
-        guiGraphics.drawString(font, "§7(逗号分隔,优先级从前到后)", cx + 10, cy(ROW_HELPER_LIST + 28), 0x666666);
+        guiGraphics.drawString(font, "辅助方块列表:", cx + 10, cy(ROW_HELPER_LIST), 0xFFAAAAAA);
+        guiGraphics.drawString(font, "§7(逗号分隔,优先级从前到后)", cx + 10, cy(ROW_HELPER_LIST + 28), 0xFF666666);
 
         // ── 行9：使用方法 ──
-        guiGraphics.drawString(font, "§7使用方法：看向目标方块按热键（默认 B）", cx + 10, cy(ROW_HINT), 0x888888);
-        guiGraphics.drawString(font, "§7需手持活塞和拉杆(快捷栏)，有镐更快", cx + 10, cy(ROW_HINT + 12), 0x888888);
+        guiGraphics.drawString(font, "§7使用方法：看向目标方块按热键（默认 B）", cx + 10, cy(ROW_HINT), 0xFF888888);
+        guiGraphics.drawString(font, "§7需手持活塞和拉杆(快捷栏)，有镐更快", cx + 10, cy(ROW_HINT + 12), 0xFF888888);
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }

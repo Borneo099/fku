@@ -23,6 +23,8 @@ public class ArrowDmgConfig {
     /** 发包数 (1~7000) */
     public double packets = 50;
     public boolean useOffset = true;
+    /** 垂直修正：开启后包含 Y 方向偏移（自由角度射击），关闭则仅水平位移（参考 ArrowDmg.java） */
+    public boolean vertical = true;
     public boolean yeetTridents = false;
     /** 箭伤飞行：蓄力弓时开启创造飞行，稳定箭矢伤害 */
     public boolean arrowDmgFly = true;

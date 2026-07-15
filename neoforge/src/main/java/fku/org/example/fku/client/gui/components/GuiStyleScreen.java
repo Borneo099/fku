@@ -180,7 +180,6 @@ public class GuiStyleScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;
@@ -206,7 +205,7 @@ public class GuiStyleScreen extends Screen {
         drawColorButton(guiGraphics, mouseX, mouseY, x + 20, btnY + 90, btnWidth, btnHeight, "文字色", textColorR, textColorG, textColorB, 3);
         
         // 绘制提示
-        guiGraphics.drawString(font, "点击颜色按钮选择颜色", x + 20, y + HEIGHT - 55, 0x888888);
+        guiGraphics.drawString(font, "点击颜色按钮选择颜色", x + 20, y + HEIGHT - 55, 0xFF888888);
 
         // 绘制颜色轮盘
         if (colorPicker.isOpen()) {
@@ -218,7 +217,7 @@ public class GuiStyleScreen extends Screen {
     
     private void drawColorButton(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, int width, int height, String label, int r, int g, int b, int index) {
         // 绘制标签
-        guiGraphics.drawString(font, label, x, y, 0xAAAAAA);
+        guiGraphics.drawString(font, label, x, y, 0xFFAAAAAA);
         
         // 绘制颜色预览框
         int colorPreviewX = x;

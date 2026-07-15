@@ -14,8 +14,7 @@ public class NoJumpDelayHandler {
     private static boolean wasOnGround = false;
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent event) {
-        if (!(event instanceof PlayerTickEvent.Post)) return;
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!MovementConfig.getInstance().noJumpDelayEnabled) {
             wasOnGround = false;
             return;

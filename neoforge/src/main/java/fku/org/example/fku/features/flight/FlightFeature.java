@@ -25,7 +25,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class FlightFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static boolean active = false;
 
     /** ★ 从配置文件静默恢复开关状态 */
@@ -53,8 +52,8 @@ public class FlightFeature {
         cfg.save();
         if (!val) deactivate();
         else {
-            if (cfg.soundFeedback && mc.player != null)
-                mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
+            if (cfg.soundFeedback && Minecraft.getInstance().player != null)
+                Minecraft.getInstance().player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
             if (!NoFallFeature.isEnabled()) NoFallFeature.setEnabled(true);
             Fku.LOGGER.debug("[Flight] 已启用");
         }
@@ -65,8 +64,8 @@ public class FlightFeature {
 
     @SubscribeEvent
     public static void onClientTick(Post event) {
-        if (mc.player == null || mc.level == null) return;
-        LocalPlayer player = mc.player;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
+        LocalPlayer player = Minecraft.getInstance().player;
         FlightConfig cfg = FlightConfig.getInstance();
         if (!isEnabled()) return;
         if (cfg.onlyInCreative && !player.isCreative()) { deactivate(); return; }
@@ -95,7 +94,7 @@ public class FlightFeature {
         }
 
         // ── 飞行控制 ──
-        float camYaw = mc.gameRenderer.getMainCamera().getYRot();
+        float camYaw = Minecraft.getInstance().gameRenderer.getMainCamera().getYRot();
         float fwd = player.input.getMoveVector().y;
         float str = -player.input.getMoveVector().x;
         Vec3 h = Vec3.directionFromRotation(0, camYaw).multiply(fwd, 0, fwd)
@@ -118,8 +117,8 @@ public class FlightFeature {
         }
 
         player.noPhysics = cfg.disableCollision;
-        if (cfg.disableCollision && player.getY() < mc.level.dimensionType().minY())
-            player.setPos(player.getX(), mc.level.dimensionType().minY() + 1, player.getZ());
+        if (cfg.disableCollision && player.getY() < Minecraft.getInstance().level.dimensionType().minY())
+            player.setPos(player.getX(), Minecraft.getInstance().level.dimensionType().minY() + 1, player.getZ());
 
         // 双击降落
         if (jumping && !prevJumping) {
@@ -133,7 +132,7 @@ public class FlightFeature {
 
         if (!cfg.allowSprint) player.setSprinting(false);
         if (cfg.particleEffect && player.tickCount % 3 == 0)
-            mc.level.addParticle(ParticleTypes.CLOUD,
+            Minecraft.getInstance().level.addParticle(ParticleTypes.CLOUD,
                 player.getX() + (player.getRandom().nextDouble() - 0.5) * player.getBbWidth(),
                 player.getY(),
                 player.getZ() + (player.getRandom().nextDouble() - 0.5) * player.getBbWidth(),
@@ -143,29 +142,29 @@ public class FlightFeature {
     }
 
     private static void activate() {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
         active = true; antiKickTicks = 0;
         savedSprintMode = SprintConfig.getInstance().mode;
         if ("OMNIROTATIONAL".equals(savedSprintMode)) {
             SprintConfig.getInstance().mode = "OMNIDIRECTIONAL";
             SprintConfig.save();
         }
-        if (FlightConfig.getInstance().soundFeedback && mc.player != null)
-            mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
+        if (FlightConfig.getInstance().soundFeedback && Minecraft.getInstance().player != null)
+            Minecraft.getInstance().player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
         if (!NoFallFeature.isEnabled()) NoFallFeature.setEnabled(true);
         Fku.LOGGER.debug("[Flight] 起飞");
     }
 
     private static void deactivate() {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
         active = false;
         if (savedSprintMode != null) {
             SprintConfig.getInstance().mode = savedSprintMode;
             SprintConfig.save(); savedSprintMode = null;
         }
-        mc.player.noPhysics = false;
+        Minecraft.getInstance().player.noPhysics = false;
         if (FlightConfig.getInstance().soundFeedback)
-            mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 0.3f, 0.8f);
+            Minecraft.getInstance().player.playNotifySound(SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 0.3f, 0.8f);
         Fku.LOGGER.debug("[Flight] 降落");
     }
 }

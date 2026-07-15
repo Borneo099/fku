@@ -89,7 +89,7 @@ public class AutoDropPanel {
 
         // 标题栏
         guiGraphics.fill(x, y, x + PANEL_WIDTH, y + TITLE_BAR_HEIGHT, titleBarColor.getRGB());
-        guiGraphics.drawString(Minecraft.getInstance().font, "黑名单", x + 5, y + 6, 0xFFFFFF);
+        guiGraphics.drawString(Minecraft.getInstance().font, "黑名单", x + 5, y + 6, 0xFFFFFFFF);
         
         // 主体
         guiGraphics.fill(x, y + TITLE_BAR_HEIGHT, x + PANEL_WIDTH, y + PANEL_HEIGHT, bgColor.getRGB());
@@ -98,8 +98,8 @@ public class AutoDropPanel {
         // 提示
         String hint1 = "拖动物品长按添加黑名单";
         String hint2 = "右键物品取消黑名单";
-        guiGraphics.drawString(Minecraft.getInstance().font, hint1, x + 5, y + TITLE_BAR_HEIGHT + 4, 0x888888);
-        guiGraphics.drawString(Minecraft.getInstance().font, hint2, x + 5, y + TITLE_BAR_HEIGHT + 14, 0x888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, hint1, x + 5, y + TITLE_BAR_HEIGHT + 4, 0xFF888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, hint2, x + 5, y + TITLE_BAR_HEIGHT + 14, 0xFF888888);
     }
 
     private static void drawAddSlot(GuiGraphics guiGraphics, int x, int y) {
@@ -112,7 +112,7 @@ public class AutoDropPanel {
         String plus = "+";
         int textX = x + ADD_SLOT_SIZE / 2 - 4;
         int textY = y + ADD_SLOT_SIZE / 2 - 5;
-        guiGraphics.drawString(Minecraft.getInstance().font, plus, textX, textY, 0xFFFFFF);
+        guiGraphics.drawString(Minecraft.getInstance().font, plus, textX, textY, 0xFFFFFFFF);
     }
 
     private static void drawItems(GuiGraphics guiGraphics, int x, int y) {
@@ -141,7 +141,7 @@ public class AutoDropPanel {
             int itemX = startX + col * (ICON_SIZE + ICON_SPACING);
             int itemY = y + row * (ICON_SIZE + ICON_SPACING);
 
-            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(ResourceLocation.withDefaultNamespace(itemId));
+            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(ResourceLocation.tryParse(itemId));
             ItemStack stack = new ItemStack(item != null ? item : Items.PAPER);
 
             guiGraphics.fill(itemX, itemY, itemX + ICON_SIZE, itemY + ICON_SIZE, 0x44444444);

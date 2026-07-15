@@ -3,6 +3,7 @@ package fku.org.example.fku.mixin; /* water */
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
@@ -50,11 +51,11 @@ public abstract class MixinConnectionAttackInterceptor {
      *   备份份仍能覆盖攻击包到达的时间窗口，提高击退方向控制成功率。
      */
     @Inject(
-            method = "send(Lnet/minecraft/network/protocol/Packet;)V",
+            method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V",
             at = @At(value = "HEAD"),
             cancellable = true
     )
-    private void fku$onSendPacket(Packet<?> packet, CallbackInfo ci) {
+    private void fku$onSendPacket(Packet<?> packet, ChannelFutureListener listener, CallbackInfo ci) {
         if (fku$sendingPending) return;
         if (!(packet instanceof ServerboundInteractPacket)) return;
 

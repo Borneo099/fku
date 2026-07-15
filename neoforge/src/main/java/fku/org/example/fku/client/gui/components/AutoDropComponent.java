@@ -43,10 +43,10 @@ public class AutoDropComponent extends GuiComponent {
 
         // 绘制文字
         String displayStr = label + ": " + (enabled ? "ON" : "OFF");
-        int textColor = enabled ? config.getTextColor() : (0xAAAAAA);
+        int textColor = enabled ? config.getTextColor() : (0xFFAAAAAA);
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
         // ★ 右键打开配置提示
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0xFF888888);
     }
 
     @Override

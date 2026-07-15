@@ -113,18 +113,17 @@ public class StructureLocatorScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         var cfg = StructureLocatorConfig.getInstance();
 
         // ── 主面板 ──
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
 
-        g.drawString(font, "§l§6结构定位", cx + 10, cy + 8, 0xFFFFFF);
-        g.drawString(font, "§7种子: " + seedStr(cfg), cx + 10, cy + 28, 0xFFFFFF);
-        g.drawString(font, "§7手动种子 (留空用捕获的):", cx + 10, cy + 40, 0xCCCCCC);
+        g.drawString(font, "§l§6结构定位", cx + 10, cy + 8, 0xFFFFFFFF);
+        g.drawString(font, "§7种子: " + seedStr(cfg), cx + 10, cy + 28, 0xFFFFFFFF);
+        g.drawString(font, "§7手动种子 (留空用捕获的):", cx + 10, cy + 40, 0xFFCCCCCC);
         g.fill(cx + 10, cy + 94, cx + W - 10, cy + 95, 0xFF444444);
-        g.drawString(font, "§7目标结构:", cx + 10, cy + 100, 0xCCCCCC);
-        g.drawString(font, "§7搜索范围: §f" + cfg.searchRadius + " §7区域", cx + 10, cy + 142, 0xCCCCCC);
+        g.drawString(font, "§7目标结构:", cx + 10, cy + 100, 0xFFCCCCCC);
+        g.drawString(font, "§7搜索范围: §f" + cfg.searchRadius + " §7区域", cx + 10, cy + 142, 0xFFCCCCCC);
 
         super.render(g, mx, my, pt);
 
@@ -133,12 +132,12 @@ public class StructureLocatorScreen extends Screen {
             int lx = cx + W + 4, ly = cy + 20;
             int lh = Math.min(StructureLocatorFeature.TARGETS.size() * 13 + 20, H - 20);
             GuiRenderHelper.drawPanelBackground(g, lx, ly, LIST_W, lh, false);
-            g.drawString(font, "§7选择结构", lx + 6, ly + 6, 0xCCCCCC);
+            g.drawString(font, "§7选择结构", lx + 6, ly + 6, 0xFFCCCCCC);
             g.fill(lx + 4, ly + 16, lx + LIST_W - 4, ly + 17, 0xFF444444);
             for (Button b : structButtons) b.render(g, mx, my, pt);
         }
 
-        g.drawString(font, "§7§o①取种子 ②选结构(▶) ③定位", cx + 10, cy + H - 14, 0x888888);
+        g.drawString(font, "§7§o①取种子 ②选结构(▶) ③定位", cx + 10, cy + H - 14, 0xFF888888);
     }
 
     private String seedStr(StructureLocatorConfig cfg) {

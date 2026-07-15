@@ -690,7 +690,7 @@ public class BedrockBreakerManager {
             // 替换方块（如配置）- 使用 plan.apply() 模式
             if (cfg.replaceBlockId != null && !cfg.replaceBlockId.isEmpty()) {
                 Block replaceBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(
-                        net.minecraft.resources.ResourceLocation.withDefaultNamespace(cfg.replaceBlockId));
+                        net.minecraft.resources.ResourceLocation.tryParse(cfg.replaceBlockId));
                 if (replaceBlock != null && replaceBlock != Blocks.AIR) {
                     int repSlot = findItem(replaceBlock.asItem());
                     if (repSlot >= 0) {
@@ -1061,7 +1061,7 @@ public class BedrockBreakerManager {
         if (mc.level == null) return false;
         if (cfg.allBlocks) return true;  // allBlocks 模式：对所有硬方块生效
         Block target = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(
-                net.minecraft.resources.ResourceLocation.withDefaultNamespace(cfg.targetBlockId));
+                net.minecraft.resources.ResourceLocation.tryParse(cfg.targetBlockId));
         return target != null && mc.level.getBlockState(pos).is(target);
     }
 
@@ -1148,7 +1148,7 @@ public class BedrockBreakerManager {
                 blockId = blockId.trim();
                 if (blockId.isEmpty()) continue;
 
-                Block helperBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(blockId));
+                Block helperBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.tryParse(blockId));
                 if (helperBlock == null || helperBlock == Blocks.AIR) continue;
                 // 必须是固体方块才能提供拉杆附着面
                 if (!helperBlock.defaultBlockState().isSolid()) continue;

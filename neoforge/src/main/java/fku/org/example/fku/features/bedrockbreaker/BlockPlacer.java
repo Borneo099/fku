@@ -29,7 +29,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public class BlockPlacer {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     /**
      * 创建放置计划
@@ -115,14 +114,14 @@ public class BlockPlacer {
          * @param fakePitch 假Pitch（服务端朝向）
          */
         public CompletableFuture<Void> apply(float fakeYaw, float fakePitch) {
-            if (mc.player == null) return CompletableFuture.completedFuture(null);
+            if (Minecraft.getInstance().player == null) return CompletableFuture.completedFuture(null);
 
             // ★ 发送假旋转包：客户端视角不受影响，仅服务端朝向改变
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                    fakeYaw, fakePitch, mc.player.onGround(), true));
+            Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Rot(
+                    fakeYaw, fakePitch, Minecraft.getInstance().player.onGround(), true));
 
             // ★ 右键放置方块
-            mc.player.connection.send(new ServerboundUseItemOnPacket(
+            Minecraft.getInstance().player.connection.send(new ServerboundUseItemOnPacket(
                     InteractionHand.MAIN_HAND,
                     hitResult,
                     getSequenceNumber()));
@@ -135,8 +134,8 @@ public class BlockPlacer {
          *   确保服务端能正确匹配客户端预测，否则数据包会被服务端拒绝。
          */
         private int getSequenceNumber() {
-            if (mc.level == null) return 0;
-            BlockStatePredictionHandler handler = ((ClientLevelAccessor) mc.level).getBlockStatePredictionHandler_CU();
+            if (Minecraft.getInstance().level == null) return 0;
+            BlockStatePredictionHandler handler = ((ClientLevelAccessor) Minecraft.getInstance().level).getBlockStatePredictionHandler_CU();
             handler.startPredicting();
             int num = handler.currentSequence();
             handler.close();

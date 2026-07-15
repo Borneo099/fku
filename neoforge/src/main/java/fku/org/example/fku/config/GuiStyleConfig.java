@@ -160,15 +160,15 @@ public class GuiStyleConfig {
     }
     
     public int getTextColor() {
-        return (textColorR << 16) | (textColorG << 8) | textColorB;
+        return 0xFF000000 | (textColorR << 16) | (textColorG << 8) | textColorB;
     }
     
     public int getEnabledColor() {
-        return (enabledColorR << 16) | (enabledColorG << 8) | enabledColorB;
+        return 0xFF000000 | (enabledColorR << 16) | (enabledColorG << 8) | enabledColorB;
     }
     
     public int getDisabledColor() {
-        return (disabledColorR << 16) | (disabledColorG << 8) | disabledColorB;
+        return 0xFF000000 | (disabledColorR << 16) | (disabledColorG << 8) | disabledColorB;
     }
 
     // ============ Setter方法（自动保存） ============

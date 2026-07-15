@@ -33,7 +33,7 @@ public class BedrockBreakerComponent extends GuiComponent {
         if (HotkeySystem.isWaitingFor("基岩破坏器")) {
             GuiRenderHelper.drawComponentBackground(g, x, y, width, height, true);
             g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消, Delete删除)",
-                    x + 5, y + (height - 8) / 2 - 4, 0xFFFF00);
+                    x + 5, y + (height - 8) / 2 - 4, 0xFFFFFF00);
             return;
         }
 
@@ -44,9 +44,9 @@ public class BedrockBreakerComponent extends GuiComponent {
         String displayStr = "基岩破坏器: " + status;
         var hk = FeatureHotkeyManager.getInstance().getHotkey("基岩破坏器");
         if (hk.getHotkeyKey() >= 0) displayStr += " §7[" + hk.getHotkeyName() + "]";
-        int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
+        int textColor = enabled ? config.getTextColor() : 0xFFAAAAAA;
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0xFF888888);
     }
 
     @Override

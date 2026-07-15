@@ -65,7 +65,7 @@ public class ClickGuiScreen extends Screen {
         if (!HotkeySystem.isWaiting()) {
             String hint = "§7§o中键点击组件可绑定热键";
             int hw = font.width(hint.replace("§7§o", "").replace("§r", ""));
-            g.drawString(font, hint, (width - hw) / 2, 8, 0x888888);
+            g.drawString(font, hint, (width - hw) / 2, 8, 0xFF888888);
         }
     }
 

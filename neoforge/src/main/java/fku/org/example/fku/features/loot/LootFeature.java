@@ -164,7 +164,7 @@ public class LootFeature {
     // ════════ 事件处理器 ════════
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent event) {
+    public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         LootConfig cfg = LootConfig.getInstance();

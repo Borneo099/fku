@@ -39,7 +39,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class SprintHandler {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final boolean DEBUG = false;
 
     /** 从持久化配置读取 */
@@ -87,8 +86,8 @@ public class SprintHandler {
         if (DEBUG) System.out.println("[Sprint] setEnabled: " + value);
         setEnabledPersist(value);
         if (!value) {
-            if (mc.player != null) {
-                mc.player.setSprinting(false);
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.setSprinting(false);
             }
             restoreAll();
         }
@@ -105,7 +104,7 @@ public class SprintHandler {
 
     @SubscribeEvent
     public static void onClientTickPre(ClientTickEvent.Pre event) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         SprintConfig cfg = SprintConfig.getInstance();
 
@@ -123,12 +122,12 @@ public class SprintHandler {
 
     @SubscribeEvent
     public static void onClientTickPost(ClientTickEvent.Post event) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         // ★ END：恢复真实视角（yaw 在 aiStep 发包后不再需要）
         if (yawModified) {
-            mc.player.setYRot(realYaw);
-            mc.player.setXRot(realPitch);
+            Minecraft.getInstance().player.setYRot(realYaw);
+            Minecraft.getInstance().player.setXRot(realPitch);
             yawModified = false;
             overrideInputThisTick = false;
 
@@ -160,21 +159,21 @@ public class SprintHandler {
     private static void handleLegit(SprintConfig cfg) {
         if (!canSprint(cfg)) return;
 
-        if (mc.options.keyUp.isDown()) {
-            mc.player.setSprinting(true);
+        if (Minecraft.getInstance().options.keyUp.isDown()) {
+            Minecraft.getInstance().player.setSprinting(true);
         } else {
-            if (!mc.player.isSprinting()) return;
-            if (cfg.stopOnGround && mc.player.onGround()) {
-                mc.player.setSprinting(false);
-            } else if (cfg.stopOnAir && !mc.player.onGround()) {
-                mc.player.setSprinting(false);
+            if (!Minecraft.getInstance().player.isSprinting()) return;
+            if (cfg.stopOnGround && Minecraft.getInstance().player.onGround()) {
+                Minecraft.getInstance().player.setSprinting(false);
+            } else if (cfg.stopOnAir && !Minecraft.getInstance().player.onGround()) {
+                Minecraft.getInstance().player.setSprinting(false);
             }
         }
     }
 
     private static void handleOmnidirectional(SprintConfig cfg) {
         if (!canSprint(cfg)) return;
-        mc.player.setSprinting(true);
+        Minecraft.getInstance().player.setSprinting(true);
     }
 
     /**
@@ -190,14 +189,14 @@ public class SprintHandler {
      */
     private static void handleOmnirotational(SprintConfig cfg) {
         // ★ 1. 保存真实视角
-        realYaw = mc.player.getYRot();
-        realPitch = mc.player.getXRot();
+        realYaw = Minecraft.getInstance().player.getYRot();
+        realPitch = Minecraft.getInstance().player.getXRot();
 
         // ★ 2. 读取真实键状态
-        savedUp    = mc.options.keyUp.isDown();
-        savedDown  = mc.options.keyDown.isDown();
-        savedLeft  = mc.options.keyLeft.isDown();
-        savedRight = mc.options.keyRight.isDown();
+        savedUp    = Minecraft.getInstance().options.keyUp.isDown();
+        savedDown  = Minecraft.getInstance().options.keyDown.isDown();
+        savedLeft  = Minecraft.getInstance().options.keyLeft.isDown();
+        savedRight = Minecraft.getInstance().options.keyRight.isDown();
 
         // ★ 3. 计算键组合 hash
         int curHash = 0;
@@ -210,8 +209,8 @@ public class SprintHandler {
         if (curHash == 0) {
             smoothYaw = Float.NaN;
             lastKeyHash = 0;
-            if (mc.player.isSprinting()) {
-                mc.player.setSprinting(false);
+            if (Minecraft.getInstance().player.isSprinting()) {
+                Minecraft.getInstance().player.setSprinting(false);
             }
             return;
         }
@@ -220,7 +219,7 @@ public class SprintHandler {
             return;
         }
 
-        mc.player.setSprinting(true);
+        Minecraft.getInstance().player.setSprinting(true);
 
         // ★ 5. 键组合变化 → 重置平滑旋转（防止跨组合角度误差累积）
         if (curHash != lastKeyHash) {
@@ -254,7 +253,7 @@ public class SprintHandler {
         smoothYaw += (float) ((Math.random() - 0.5) * 0.002);
 
         // ★ 9. 应用假 yaw → aiStep 发包用
-        mc.player.setYRot(smoothYaw);
+        Minecraft.getInstance().player.setYRot(smoothYaw);
         yawModified = true;
         // ★ 标注本 Tick 需要强制纯向前输入
         overrideInputThisTick = true;
@@ -296,22 +295,22 @@ public class SprintHandler {
     // ════════════════════════════════════════════════════════
 
     private static boolean canSprint(SprintConfig cfg) {
-        if (mc.player == null) return false;
+        if (Minecraft.getInstance().player == null) return false;
 
-        boolean isHungry = mc.player.getFoodData().getFoodLevel() <= 6 && !mc.player.isCreative();
+        boolean isHungry = Minecraft.getInstance().player.getFoodData().getFoodLevel() <= 6 && !Minecraft.getInstance().player.isCreative();
         if (isHungry && !cfg.ignoreHunger) return false;
 
-        if (mc.player.hasEffect(MobEffects.BLINDNESS) && !cfg.ignoreBlindness) {
+        if (Minecraft.getInstance().player.hasEffect(MobEffects.BLINDNESS) && !cfg.ignoreBlindness) {
             return false;
         }
 
-        if (mc.player.horizontalCollision && !cfg.ignoreCollision) return false;
+        if (Minecraft.getInstance().player.horizontalCollision && !cfg.ignoreCollision) return false;
 
         if (!(savedUp || savedDown || savedLeft || savedRight)) return false;
 
-        if (mc.player.isShiftKeyDown()) return false;
-        if (mc.player.isPassenger()) return false;
-        if (mc.player.isInWater() || mc.player.isInLava()) return false;
+        if (Minecraft.getInstance().player.isShiftKeyDown()) return false;
+        if (Minecraft.getInstance().player.isPassenger()) return false;
+        if (Minecraft.getInstance().player.isInWater() || Minecraft.getInstance().player.isInLava()) return false;
 
         return true;
     }
@@ -322,9 +321,9 @@ public class SprintHandler {
 
     /** 恢复所有临时修改（禁用功能时调用） */
     private static void restoreAll() {
-        if (yawModified && mc.player != null) {
-            mc.player.setYRot(realYaw);
-            mc.player.setXRot(realPitch);
+        if (yawModified && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.setYRot(realYaw);
+            Minecraft.getInstance().player.setXRot(realPitch);
             yawModified = false;
         }
         overrideInputThisTick = false;

@@ -89,7 +89,6 @@ public class FastJoinConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width - W) / 2, cy = (height - H) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         super.render(g, mx, my, pt);
@@ -98,10 +97,10 @@ public class FastJoinConfigScreen extends Screen {
         if (speedInput != null) speedInput.render(g, mx, my, pt);
 
         // 分组标签
-        g.drawString(font, "§7- - - 模式 - - -", cx + 10, cy + 5, 0x666666);
-        g.drawString(font, "§7- - - 参数 - - -", cx + 10, cy + 50, 0x666666);
-        g.drawString(font, "§7- - - 选项 - - -", cx + 10, cy + 115, 0x666666);
-        g.drawString(font, "§7连接时自动联动禁连超时", cx + 10, cy + 180, 0x666666);
+        g.drawString(font, "§7- - - 模式 - - -", cx + 10, cy + 5, 0xFF666666);
+        g.drawString(font, "§7- - - 参数 - - -", cx + 10, cy + 50, 0xFF666666);
+        g.drawString(font, "§7- - - 选项 - - -", cx + 10, cy + 115, 0xFF666666);
+        g.drawString(font, "§7连接时自动联动禁连超时", cx + 10, cy + 180, 0xFF666666);
 
         // ★ 悬浮提示：当鼠标在小问号上时显示
         if (mx >= cx + 106 && mx <= cx + 122 && my >= cy + 20 && my <= cy + 38) {
@@ -109,7 +108,7 @@ public class FastJoinConfigScreen extends Screen {
             if (!tip.isEmpty()) {
                 int tw = Math.max(180, font.width(tip));
                 g.fill(mx + 10, my + 10, mx + 10 + tw, my + 30, 0xE0333333);
-                g.drawString(font, tip, mx + 12, my + 14, 0xFFFFFF);
+                g.drawString(font, tip, mx + 12, my + 14, 0xFFFFFFFF);
             }
         }
     }

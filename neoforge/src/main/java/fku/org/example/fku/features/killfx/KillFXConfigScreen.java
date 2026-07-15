@@ -607,7 +607,7 @@ public class KillFXConfigScreen extends Screen {
         // 行3：色调 — 显示当前HEX颜色方块 + 选色按钮
         drawLabel("色调:", cx, row);
         int colorInt;
-        try { colorInt = Integer.parseInt(cfg.crystalTintColor, 16); } catch (Exception e) { colorInt = 0x88CCFF; }
+        try { colorInt = Integer.parseInt(cfg.crystalTintColor, 16); } catch (Exception e) { colorInt = 0xFF88CCFF; }
         int finalColorInt = colorInt;
         addRenderableWidget(Button.builder(
             Component.literal("§" + (cfg.crystalTintColor.length() == 6 ? "a●" : "7?")),
@@ -877,7 +877,6 @@ public class KillFXConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         int cx = (width - WIDTH) / 2;
         int cy = (height - VISIBLE_HEIGHT) / 2;
@@ -886,7 +885,7 @@ public class KillFXConfigScreen extends Screen {
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, WIDTH, VISIBLE_HEIGHT, false);
 
         // 绘制标题
-        guiGraphics.drawString(font, "击杀特效配置 - " + activeCategory, cx + 10, cy + 25, 0xFFFFFF);
+        guiGraphics.drawString(font, "击杀特效配置 - " + activeCategory, cx + 10, cy + 25, 0xFFFFFFFF);
 
         // 启用裁剪，防止内容超出面板
         guiGraphics.enableScissor(cx + 2, cy + 35, cx + WIDTH - 2, cy + VISIBLE_HEIGHT - 32);
@@ -920,7 +919,7 @@ public class KillFXConfigScreen extends Screen {
         for (String[] pair : labelDefs) {
             int yRow = cy + Integer.parseInt(pair[1]) - scrollOffset;
             if (yRow + 4 >= cy + 35 && yRow < cy + VISIBLE_HEIGHT - 35) {
-                guiGraphics.drawString(font, pair[0], cx + 10, yRow + 4, 0xAAAAAA);
+                guiGraphics.drawString(font, pair[0], cx + 10, yRow + 4, 0xFFAAAAAA);
             }
         }
 

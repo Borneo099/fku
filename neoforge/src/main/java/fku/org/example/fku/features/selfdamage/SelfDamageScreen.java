@@ -46,11 +46,10 @@ public class SelfDamageScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
-        g.drawString(font, "§l§4自伤配置", cx + 10, cy + 8, 0xFFFFFF);
-        g.drawString(font, "§7伤害值: §c" + SelfDamageConfig.getInstance().damageAmount + " §7(1~20)", cx + 10, cy + 34, 0xCCCCCC);
-        g.drawString(font, "§7§o点击「执行自伤」或左键组件立刻生效", cx + 10, cy + H - 14, 0x666666);
+        g.drawString(font, "§l§4自伤配置", cx + 10, cy + 8, 0xFFFFFFFF);
+        g.drawString(font, "§7伤害值: §c" + SelfDamageConfig.getInstance().damageAmount + " §7(1~20)", cx + 10, cy + 34, 0xFFCCCCCC);
+        g.drawString(font, "§7§o点击「执行自伤」或左键组件立刻生效", cx + 10, cy + H - 14, 0xFF666666);
         super.render(g, mx, my, pt);
     }
 

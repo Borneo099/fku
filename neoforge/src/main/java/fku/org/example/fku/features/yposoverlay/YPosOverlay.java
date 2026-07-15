@@ -60,7 +60,7 @@ public class YPosOverlay {
             color = 0x00FF00;
         } else {
             text = "Y: " + String.format("%.1f", targetY);
-            color = 0xFFFFFF;
+            color = 0xFFFFFFFF;
         }
 
         int screenWidth = mc.getWindow().getGuiScaledWidth();

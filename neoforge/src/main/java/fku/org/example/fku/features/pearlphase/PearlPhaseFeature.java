@@ -41,7 +41,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 @OnlyIn(Dist.CLIENT)
 public class PearlPhaseFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     // ════════ 状态机 ════════
     public enum PhaseState {
@@ -81,10 +80,10 @@ public class PearlPhaseFeature {
     public static void onKeyInput(InputEvent.Key event) {
         if (!PearlPhaseConfig.getInstance().enabled) return;
 
-        int keyW = mc.options.keyUp.getKey().getValue();
-        int keyS = mc.options.keyDown.getKey().getValue();
-        int keyA = mc.options.keyLeft.getKey().getValue();
-        int keyD = mc.options.keyRight.getKey().getValue();
+        int keyW = Minecraft.getInstance().options.keyUp.getKey().getValue();
+        int keyS = Minecraft.getInstance().options.keyDown.getKey().getValue();
+        int keyA = Minecraft.getInstance().options.keyLeft.getKey().getValue();
+        int keyD = Minecraft.getInstance().options.keyRight.getKey().getValue();
 
         if (event.getKey() == keyW) savedUp = event.getAction() != 0;
         if (event.getKey() == keyS) savedDown = event.getAction() != 0;
@@ -98,13 +97,13 @@ public class PearlPhaseFeature {
 
     @SubscribeEvent
     public static void onClientTick(Post event) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         PearlPhaseConfig cfg = PearlPhaseConfig.getInstance();
         if (!cfg.enabled) {
             // 禁用时立即恢复
             if (state != PhaseState.IDLE) resetState();
-            if (mc.player.noPhysics) mc.player.noPhysics = false;
+            if (Minecraft.getInstance().player.noPhysics) Minecraft.getInstance().player.noPhysics = false;
             wasInsideBlock = false;
             return;
         }
@@ -112,17 +111,17 @@ public class PearlPhaseFeature {
         stateTick++;
 
         // ★ 检测是否在方块内
-        boolean inside = isInsideBlock(mc.player);
+        boolean inside = isInsideBlock(Minecraft.getInstance().player);
         if (inside) {
             // 卡入方块 → 进入 INSIDE 状态
-            handleInsideBlock(mc.player, cfg);
+            handleInsideBlock(Minecraft.getInstance().player, cfg);
             wasInsideBlock = true;
             return;
         }
 
         // 从方块内出来后清除 NoClip
         if (wasInsideBlock && !inside) {
-            mc.player.noPhysics = false;
+            Minecraft.getInstance().player.noPhysics = false;
             wasInsideBlock = false;
         }
 
@@ -135,12 +134,12 @@ public class PearlPhaseFeature {
 
         // ★ 移除窒息贴图（ClientPlayer 覆盖，由 mixin 处理）
         if (cfg.removeOverlay) {
-            mc.player.setNoGravity(false);
+            Minecraft.getInstance().player.setNoGravity(false);
         }
 
         // ★ 禁用前方第三人称
-        if (cfg.noFront && mc.options.getCameraType() == net.minecraft.client.CameraType.THIRD_PERSON_FRONT) {
-            mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+        if (cfg.noFront && Minecraft.getInstance().options.getCameraType() == net.minecraft.client.CameraType.THIRD_PERSON_FRONT) {
+            Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
         }
     }
 
@@ -212,12 +211,12 @@ public class PearlPhaseFeature {
      *   本功能自动计算该角度并执行投掷。
      */
     private static void handleAutoThrow(PearlPhaseConfig cfg) {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
 
         switch (state) {
             case IDLE:
                 // ★ 检测准星是否指向方块
-                if (mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) {
+                if (Minecraft.getInstance().hitResult == null || Minecraft.getInstance().hitResult.getType() != HitResult.Type.BLOCK) {
                     resetState();
                     return;
                 }
@@ -228,9 +227,9 @@ public class PearlPhaseFeature {
                     return;
                 }
 
-                BlockHitResult blockHit = (BlockHitResult) mc.hitResult;
+                BlockHitResult blockHit = (BlockHitResult) Minecraft.getInstance().hitResult;
                 BlockPos targetPos = blockHit.getBlockPos();
-                BlockState targetState = mc.level.getBlockState(targetPos);
+                BlockState targetState = Minecraft.getInstance().level.getBlockState(targetPos);
 
                 // 只对固体方块触发
                 if (targetState.isAir() || !targetState.isSolid()) {
@@ -282,8 +281,8 @@ public class PearlPhaseFeature {
                     return;
                 }
                 // 如果玩家突然进入方块内，说明珍珠穿墙成功
-                if (isInsideBlock(mc.player)) {
-                    handleInsideBlock(mc.player, cfg);
+                if (isInsideBlock(Minecraft.getInstance().player)) {
+                    handleInsideBlock(Minecraft.getInstance().player, cfg);
                 }
                 break;
 
@@ -303,8 +302,8 @@ public class PearlPhaseFeature {
      * 参考 PearlPhase.java isInsideBlock()
      */
     private static boolean isInsideBlock(LocalPlayer player) {
-        if (mc.level == null) return false;
-        return mc.level.getBlockCollisions(player, player.getBoundingBox().contract(0.001, 0.001, 0.001))
+        if (Minecraft.getInstance().level == null) return false;
+        return Minecraft.getInstance().level.getBlockCollisions(player, player.getBoundingBox().contract(0.001, 0.001, 0.001))
                 .iterator().hasNext();
     }
 
@@ -319,11 +318,11 @@ public class PearlPhaseFeature {
      * @return [yaw, pitch] 或 null（计算失败）
      */
     private static float[] calculateTargetAngle(BlockPos blockPos, double edgeOffset) {
-        if (mc.player == null || mc.level == null) return null;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return null;
 
         // ★ 获取方块碰撞箱
-        BlockState state = mc.level.getBlockState(blockPos);
-        VoxelShape shape = state.getCollisionShape(mc.level, blockPos);
+        BlockState state = Minecraft.getInstance().level.getBlockState(blockPos);
+        VoxelShape shape = state.getCollisionShape(Minecraft.getInstance().level, blockPos);
         if (shape.isEmpty()) return null;
 
         // 计算方块包围盒
@@ -336,12 +335,12 @@ public class PearlPhaseFeature {
         double maxZ = blockPos.getZ() + bounds.maxZ;
 
         // ★ 计算玩家眼睛位置到方块各边缘的方向，选择最接近当前视线的方向
-        double eyeX = mc.player.getX();
-        double eyeY = mc.player.getEyeY();
-        double eyeZ = mc.player.getZ();
-        double lookX = mc.player.getLookAngle().x;
-        double lookY = mc.player.getLookAngle().y;
-        double lookZ = mc.player.getLookAngle().z;
+        double eyeX = Minecraft.getInstance().player.getX();
+        double eyeY = Minecraft.getInstance().player.getEyeY();
+        double eyeZ = Minecraft.getInstance().player.getZ();
+        double lookX = Minecraft.getInstance().player.getLookAngle().x;
+        double lookY = Minecraft.getInstance().player.getLookAngle().y;
+        double lookZ = Minecraft.getInstance().player.getLookAngle().z;
 
         // 生成 8 个边缘候选点
         double[][] candidates = {
@@ -393,12 +392,12 @@ public class PearlPhaseFeature {
      * @return true 如果旋转完成
      */
     private static boolean smoothRotate(int aimTimeMs) {
-        if (mc.player == null) return true;
+        if (Minecraft.getInstance().player == null) return true;
 
         // 初始化平滑值
         if (Float.isNaN(smoothYaw)) {
-            smoothYaw = mc.player.getYRot();
-            smoothPitch = mc.player.getXRot();
+            smoothYaw = Minecraft.getInstance().player.getYRot();
+            smoothPitch = Minecraft.getInstance().player.getXRot();
         }
 
         int totalTicks = Math.max(1, aimTimeMs / 50);  // 毫秒 → tick
@@ -410,8 +409,8 @@ public class PearlPhaseFeature {
         smoothPitch = smoothPitch + (targetPitch - smoothPitch) * factor;
 
         // 直接应用
-        mc.player.setYRot(smoothYaw);
-        mc.player.setXRot(smoothPitch);
+        Minecraft.getInstance().player.setYRot(smoothYaw);
+        Minecraft.getInstance().player.setXRot(smoothPitch);
 
         return progress >= 1.0f || Math.abs(smoothYaw - targetYaw) < 0.1f;
     }
@@ -420,10 +419,10 @@ public class PearlPhaseFeature {
      * ★ 检查玩家是否持有末影珍珠
      */
     private static boolean hasPearl() {
-        if (mc.player == null) return false;
+        if (Minecraft.getInstance().player == null) return false;
         // 检查主手和背包
-        for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
-            var stack = mc.player.getInventory().getItem(i);
+        for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
+            var stack = Minecraft.getInstance().player.getInventory().getItem(i);
             if (!stack.isEmpty() && stack.getItem() == Items.ENDER_PEARL) {
                 return true;
             }
@@ -437,30 +436,30 @@ public class PearlPhaseFeature {
      * @return true 如果切换成功
      */
     private static boolean selectPearl() {
-        if (mc.player == null) return false;
+        if (Minecraft.getInstance().player == null) return false;
 
         // 先检查主手是否已经是珍珠
-        if (mc.player.getMainHandItem().getItem() == Items.ENDER_PEARL) {
+        if (Minecraft.getInstance().player.getMainHandItem().getItem() == Items.ENDER_PEARL) {
             return true;
         }
 
         // 遍历热栏（0-8）
         for (int i = 0; i < 9; i++) {
-            var stack = mc.player.getInventory().getItem(i);
+            var stack = Minecraft.getInstance().player.getInventory().getItem(i);
             if (!stack.isEmpty() && stack.getItem() == Items.ENDER_PEARL) {
-                mc.player.getInventory().setSelectedSlot(i);
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(i);
                 return true;
             }
         }
 
         // 热栏没有，找背包
-        for (int i = 9; i < mc.player.getInventory().getContainerSize(); i++) {
-            var stack = mc.player.getInventory().getItem(i);
+        for (int i = 9; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
+            var stack = Minecraft.getInstance().player.getInventory().getItem(i);
             if (!stack.isEmpty() && stack.getItem() == Items.ENDER_PEARL) {
                 // 快捷交换到热栏
-                mc.player.getInventory().setSelectedSlot(0);
-                mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(
-                        mc.player.getYRot(), mc.player.getXRot(), true, mc.player.onGround()
+                Minecraft.getInstance().player.getInventory().setSelectedSlot(0);
+                Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Rot(
+                        Minecraft.getInstance().player.getYRot(), Minecraft.getInstance().player.getXRot(), true, Minecraft.getInstance().player.onGround()
                 ));
                 return false;  // 背包交换太复杂，暂不支持
             }
@@ -476,10 +475,10 @@ public class PearlPhaseFeature {
      * 内部自动发送 ServerboundUseItemPacket。
      */
     private static void throwPearl() {
-        if (mc.player == null || mc.gameMode == null) return;
-        mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().gameMode == null) return;
+        Minecraft.getInstance().gameMode.useItem(Minecraft.getInstance().player, InteractionHand.MAIN_HAND);
         // 使用后挥动手（视觉效果）
-        mc.player.swing(InteractionHand.MAIN_HAND);
+        Minecraft.getInstance().player.swing(InteractionHand.MAIN_HAND);
     }
 
     /**
@@ -511,7 +510,7 @@ public class PearlPhaseFeature {
         cfg.setEnabled(!cfg.enabled);
         if (!cfg.enabled) {
             resetState();
-            if (mc.player != null) mc.player.noPhysics = false;
+            if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.noPhysics = false;
             wasInsideBlock = false;
         }
     }

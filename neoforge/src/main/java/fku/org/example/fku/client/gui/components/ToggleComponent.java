@@ -36,7 +36,7 @@ public abstract class ToggleComponent extends GuiComponent {
         if (fn != null && HotkeySystem.isWaitingFor(fn)) {
             GuiRenderHelper.drawComponentBackground(g, x, y, width, height, true);
             g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)",
-                    x + 5, y + (height - 8) / 2, 0xFFFF00);
+                    x + 5, y + (height - 8) / 2, 0xFFFFFF00);
             return true;
         }
         return false;
@@ -73,7 +73,7 @@ public abstract class ToggleComponent extends GuiComponent {
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
 
         String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
-        int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
+        int textColor = enabled ? config.getTextColor() : 0xFFAAAAAA;
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
     }
 

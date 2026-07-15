@@ -46,7 +46,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class KillFXFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
 
     private static final int MAX_DEATHS = 15;
     private static final int MAX_LIGHTNING = 5;
@@ -121,17 +120,18 @@ public class KillFXFeature {
     }
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterEntities event) {
+        // RenderLevelStageEvent 在 NeoForge 21.8.53 起变为 abstract，必须监听其具体子类
         KillFXShaderManager.renderEffects(event.getPoseStack(), event.getPartialTick().getGameTimeDeltaPartialTick(false));
     }
 
     /** 只检测死亡，不渲染——解决遍历实体列表时修改列表导致的卡死 */
     private static void detectDeaths(KillFXConfig cfg, long now) {
-        if (mc.level == null) return;
+        if (Minecraft.getInstance().level == null) return;
 
         int deaths = 0;
-        for (Entity entity : mc.level.entitiesForRendering()) {
-            if (!(entity instanceof LivingEntity living) || entity == mc.player) continue;
+        for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
+            if (!(entity instanceof LivingEntity living) || entity == Minecraft.getInstance().player) continue;
             int id = living.getId();
 
             float health;
@@ -173,7 +173,7 @@ public class KillFXFeature {
 
     /** END phase：安全渲染队列中的特效 */
     private static void renderQueued(KillFXConfig cfg) {
-        if (mc.level == null) return;
+        if (Minecraft.getInstance().level == null) return;
         int rendered = 0;
         LivingEntity entity;
         while ((entity = renderQueue.poll()) != null && rendered < 10) {
@@ -224,7 +224,7 @@ public class KillFXFeature {
     // ════════════════════════════════════════════════════════
 
     private static void renderEffects(LivingEntity entity, KillFXConfig cfg) {
-        ClientLevel level = mc.level;
+        ClientLevel level = Minecraft.getInstance().level;
         if (level == null || entity == null) return;
 
         Vec3 pos = entity.position();
@@ -268,7 +268,7 @@ public class KillFXFeature {
         if (cfg.useSound) {
             try {
                 SoundEvent s = resolveSound(cfg);
-                if (s != null) level.playSound(mc.player, x, y, z, s, SoundSource.WEATHER,
+                if (s != null) level.playSound(Minecraft.getInstance().player, x, y, z, s, SoundSource.WEATHER,
                     (float) cfg.volume, (float) cfg.pitch);
             } catch (Exception ignored) {}
         }
@@ -381,7 +381,7 @@ public class KillFXFeature {
             default -> se("entity.lightning_bolt.thunder");
         };
     }
-    private static SoundEvent se(String s) { return SoundEvent.createVariableRangeEvent(ResourceLocation.withDefaultNamespace(s)); }
+    private static SoundEvent se(String s) { return SoundEvent.createVariableRangeEvent(ResourceLocation.tryParse(s)); }
     private static SoundEvent combatS(String n) { return switch (n) {
         case "THUNDER" -> se("entity.lightning_bolt.thunder"); case "EXPLODE" -> se("entity.generic.explode");
         case "ANVIL" -> se("block.anvil.land"); case "TRIDENT_THUNDER" -> se("item.trident.thunder");

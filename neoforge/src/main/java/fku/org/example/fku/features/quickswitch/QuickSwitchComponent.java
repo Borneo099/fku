@@ -24,7 +24,7 @@ public class QuickSwitchComponent extends GuiComponent {
 
         if (HotkeySystem.isWaitingFor("鬼手秒切")) {
             GuiRenderHelper.drawComponentBackground(g, x, y, width, height, true);
-            g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)", x + 5, y + (height - 8) / 2 - 4, 0xFFFF00);
+            g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)", x + 5, y + (height - 8) / 2 - 4, 0xFFFFFF00);
             return;
         }
 
@@ -35,8 +35,8 @@ public class QuickSwitchComponent extends GuiComponent {
         String status = enabled ? "ON [" + modeLabel + "]" : "OFF";
         var hk = FeatureHotkeyManager.getInstance().getHotkey("鬼手秒切");
         if (hk.getHotkeyKey() >= 0) status += " §7[" + hk.getHotkeyName() + "]";
-        g.drawString(Minecraft.getInstance().font, "鬼手秒切: " + status, x + 5, y + (height - 8) / 2 - 4, enabled ? config.getTextColor() : 0xAAAAAA);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        g.drawString(Minecraft.getInstance().font, "鬼手秒切: " + status, x + 5, y + (height - 8) / 2 - 4, enabled ? config.getTextColor() : 0xFFAAAAAA);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0xFF888888);
     }
 
     @Override

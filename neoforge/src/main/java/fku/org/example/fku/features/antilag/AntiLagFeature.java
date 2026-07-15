@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @EventBusSubscriber(modid = Fku.MOD_ID, value = Dist.CLIENT)
 public class AntiLagFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static boolean initialized = false;
 
     /** 每秒包计数（线程安全） */
@@ -67,7 +66,7 @@ public class AntiLagFeature {
         AntiLagConfig cfg = AntiLagConfig.getInstance();
         if (!cfg.enabled) return;
 
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || player.connection == null) return;
 
         // ★ 服务端目标位置 vs 玩家当前位置
@@ -128,9 +127,9 @@ public class AntiLagFeature {
         // event is Pre, no phase check needed
         AntiLagConfig cfg = AntiLagConfig.getInstance();
         if (!cfg.enabled) return;
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
 
         // ★ 每秒重置包计数器
         long now = System.currentTimeMillis();
@@ -166,7 +165,7 @@ public class AntiLagFeature {
      * 发送假位置包（带速率计数）
      */
     private static void sendMovePacket(double x, double y, double z, boolean onGround) {
-        LocalPlayer player = mc.player;
+        LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || player.connection == null) return;
 
         // 速率限制检查

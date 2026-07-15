@@ -37,7 +37,6 @@ import java.util.function.Consumer;
  */
 public class TaskQueue {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final TaskQueue INSTANCE = new TaskQueue();
 
     private final Queue<BlockOperation> queue = new ArrayDeque<>();
@@ -61,8 +60,8 @@ public class TaskQueue {
         boolean isAir = targetState.isAir();
 
         for (BlockPos pos : positions) {
-            if (mc.level == null) continue;
-            BlockState oldState = mc.level.getBlockState(pos);
+            if (Minecraft.getInstance().level == null) continue;
+            BlockState oldState = Minecraft.getInstance().level.getBlockState(pos);
             snapshots.add(new BlockSnapshot(pos, oldState, null));
             queue.add(new BlockOperation(pos, targetState, null, isAir ? BlockOperation.Type.BREAK : BlockOperation.Type.SET));
         }
@@ -75,7 +74,7 @@ public class TaskQueue {
             if (!item.isEmpty()) {
                 int slot = ensureInHotbarSlot(item.getItem());
                 if (slot >= 0 && originalSlot < 0) {
-                    originalSlot = mc.player != null ? mc.player.getInventory().getSelectedSlot() : -1;
+                    originalSlot = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.getInventory().getSelectedSlot() : -1;
                 }
             }
         }
@@ -90,8 +89,8 @@ public class TaskQueue {
         List<BlockSnapshot> snapshots = new ArrayList<>();
 
         for (BlockPos pos : positions) {
-            if (mc.level == null) continue;
-            BlockState oldState = mc.level.getBlockState(pos);
+            if (Minecraft.getInstance().level == null) continue;
+            BlockState oldState = Minecraft.getInstance().level.getBlockState(pos);
             if (fromState != null && !matchesBlock(oldState, fromState)) continue;
             snapshots.add(new BlockSnapshot(pos, oldState, null));
             queue.add(new BlockOperation(pos, targetState, null, BlockOperation.Type.REPLACE));
@@ -115,8 +114,8 @@ public class TaskQueue {
 
         for (int i = 0; i < positions.size(); i++) {
             BlockPos pos = positions.get(i);
-            if (mc.level == null) continue;
-            BlockState oldState = mc.level.getBlockState(pos);
+            if (Minecraft.getInstance().level == null) continue;
+            BlockState oldState = Minecraft.getInstance().level.getBlockState(pos);
             snapshots.add(new BlockSnapshot(pos, oldState, null));
             queue.add(new BlockOperation(pos, states.get(i), i < blockEntityData.size() ? blockEntityData.get(i) : null, BlockOperation.Type.PASTE));
         }
@@ -168,9 +167,9 @@ public class TaskQueue {
     }
 
     private void executeOperation(BlockOperation op) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
-        boolean isCreative = mc.player.getAbilities().instabuild;
+        boolean isCreative = Minecraft.getInstance().player.getAbilities().instabuild;
 
         switch (op.type) {
             case SET:
@@ -208,7 +207,7 @@ public class TaskQueue {
      * 包序列：Swing → FakeRot → SetCarriedItem → PRESS_SHIFT → UseItemOn → RELEASE_SHIFT
      */
     private void placeBlockPacket(BlockPos pos, BlockState state, boolean orient) {
-        if (mc.player == null || mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
 
         ItemStack item = findItemForBlock(state);
         if (item.isEmpty()) return;
@@ -217,16 +216,16 @@ public class TaskQueue {
         if (targetSlot < 0) return;
 
         if (originalSlot < 0) {
-            originalSlot = mc.player.getInventory().getSelectedSlot();
+            originalSlot = Minecraft.getInstance().player.getInventory().getSelectedSlot();
         }
 
         int seq = getSequence();
 
         // ① 挥动手
-        mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+        Minecraft.getInstance().player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
 
         // ② 假旋转
-        Vec3 eyePos = mc.player.getEyePosition(1.0f);
+        Vec3 eyePos = Minecraft.getInstance().player.getEyePosition(1.0f);
         Vec3 blockCenter = Vec3.atCenterOf(pos);
         Vec3 dir = blockCenter.subtract(eyePos).normalize();
         float yaw, pitch;
@@ -250,11 +249,11 @@ public class TaskQueue {
 
         // 发送假旋转包
         if (!Float.isNaN(yaw) && !Float.isNaN(pitch)) {
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, mc.player.onGround()));
+            Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, Minecraft.getInstance().player.onGround()));
         }
 
         // ③ 切物品
-        mc.player.connection.send(new ServerboundSetCarriedItemPacket(targetSlot));
+        Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(targetSlot));
 
         // ④ 放置
         if (!orient || placeFace == null) {
@@ -264,19 +263,19 @@ public class TaskQueue {
         BlockHitResult hitResult = new BlockHitResult(clickPos, placeFace, pos, false);
 
         // In 1.21.8, sneaking is no longer sent via player command packets
-        mc.player.connection.send(new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, seq));
+        Minecraft.getInstance().player.connection.send(new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, seq));
     }
 
     /**
      * 恢复 BlockEntity NBT（容器内容、木牌文字等）
      */
     private void restoreBlockEntity(BlockPos pos, CompoundTag tag) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
         // 客户端预测：直接设置 BlockEntity 数据
-        if (mc.level.getBlockEntity(pos) != null) {
+        if (Minecraft.getInstance().level.getBlockEntity(pos) != null) {
             try {
                 // In 1.21.8, BlockEntity.load(CompoundTag) was removed; client-side prediction skipped
-            // mc.level.getBlockEntity(pos).loadWithComponents(...);
+            // Minecraft.getInstance().level.getBlockEntity(pos).loadWithComponents(...);
             } catch (Exception e) {
                 // ignore
             }
@@ -290,35 +289,35 @@ public class TaskQueue {
      * 生存模式：START_DESTROY + STOP_DESTROY（需完整挖掘序列）
      */
     private void breakBlockPacket(BlockPos pos, boolean isCreative) {
-        if (mc.player == null || mc.player.connection == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return;
 
         int seq = getSequence();
 
         // ① 挥动手
-        mc.player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+        Minecraft.getInstance().player.connection.send(new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
 
         // ② 假旋转
-        Vec3 eyePos = mc.player.getEyePosition(1.0f);
+        Vec3 eyePos = Minecraft.getInstance().player.getEyePosition(1.0f);
         Vec3 blockCenter = Vec3.atCenterOf(pos);
         Vec3 dir = blockCenter.subtract(eyePos).normalize();
         float yaw = (float) (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
         float pitch = (float) (-Math.asin(dir.y) * 180.0 / Math.PI);
-        mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, mc.player.onGround()));
+        Minecraft.getInstance().player.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, Minecraft.getInstance().player.onGround()));
 
         // ③ 破坏包
-        mc.player.connection.send(new ServerboundPlayerActionPacket(
+        Minecraft.getInstance().player.connection.send(new ServerboundPlayerActionPacket(
                 ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
 
         if (!isCreative) {
             // 非创造模式需要 STOP_DESTROY（同序列号）
-            mc.player.connection.send(new ServerboundPlayerActionPacket(
+            Minecraft.getInstance().player.connection.send(new ServerboundPlayerActionPacket(
                     ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
         }
     }
 
     private int getSequence() {
-        if (mc.level == null) return 0;
-        var handler = ((fku.org.example.fku.mixin.ClientLevelAccessor) mc.level).getBlockStatePredictionHandler_CU();
+        if (Minecraft.getInstance().level == null) return 0;
+        var handler = ((fku.org.example.fku.mixin.ClientLevelAccessor) Minecraft.getInstance().level).getBlockStatePredictionHandler_CU();
         handler.startPredicting();
         int num = handler.currentSequence();
         handler.close();
@@ -334,8 +333,8 @@ public class TaskQueue {
      * 不限制9格槽位，适用于大量不同方块的粘贴
      */
     private int ensureInHotbarSlot(net.minecraft.world.item.Item item) {
-        if (mc.player == null) return -1;
-        var inv = mc.player.getInventory();
+        if (Minecraft.getInstance().player == null) return -1;
+        var inv = Minecraft.getInstance().player.getInventory();
         int curr = inv.getSelectedSlot();
 
         // 主手已是目标物品
@@ -345,7 +344,7 @@ public class TaskQueue {
         for (int i = 0; i < 9; i++) {
             if (inv.getItem(i).is(item)) {
                 inv.setSelectedSlot(i);
-                mc.player.connection.send(new ServerboundSetCarriedItemPacket(i));
+                Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(i));
                 return i;
             }
         }
@@ -356,17 +355,17 @@ public class TaskQueue {
                 var temp = inv.getItem(curr).copy();
                 inv.setItem(curr, inv.getItem(i).copy());
                 inv.setItem(i, temp);
-                mc.player.connection.send(new ServerboundSetCarriedItemPacket(curr));
+                Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(curr));
                 return curr;
             }
         }
 
         // 创造模式自动 give
-        if (mc.player.getAbilities().instabuild) {
+        if (Minecraft.getInstance().player.getAbilities().instabuild) {
             var stack = new net.minecraft.world.item.ItemStack(item, 64);
             inv.setItem(curr, stack);
-            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket(curr + 36, stack));
-            mc.player.connection.send(new ServerboundSetCarriedItemPacket(curr));
+            Minecraft.getInstance().player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket(curr + 36, stack));
+            Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(curr));
             return curr;
         }
 
@@ -382,9 +381,9 @@ public class TaskQueue {
         if (!stack.isEmpty()) return stack;
 
         // 兜底：遍历背包找第一个同种方块
-        if (mc.player == null) return ItemStack.EMPTY;
-        for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
-            ItemStack invStack = mc.player.getInventory().getItem(i);
+        if (Minecraft.getInstance().player == null) return ItemStack.EMPTY;
+        for (int i = 0; i < Minecraft.getInstance().player.getInventory().getContainerSize(); i++) {
+            ItemStack invStack = Minecraft.getInstance().player.getInventory().getItem(i);
             if (invStack.getItem() instanceof BlockItem bi) {
                 if (bi.getBlock() == block) {
                     return invStack.copyWithCount(1);
@@ -398,9 +397,9 @@ public class TaskQueue {
      * 在快捷栏找指定物品
      */
     private int findHotbarSlot(ItemStack stack) {
-        if (mc.player == null) return -1;
+        if (Minecraft.getInstance().player == null) return -1;
         for (int i = 0; i < 9; i++) {
-            if (mc.player.getInventory().getItem(i).getItem() == stack.getItem()) {
+            if (Minecraft.getInstance().player.getInventory().getItem(i).getItem() == stack.getItem()) {
                 return i;
             }
         }
@@ -419,8 +418,8 @@ public class TaskQueue {
         cfg.taskRunning = false;
 
         // 恢复原始快捷栏槽位
-        if (originalSlot >= 0 && mc.player != null) {
-            mc.player.connection.send(new ServerboundSetCarriedItemPacket(originalSlot));
+        if (originalSlot >= 0 && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.connection.send(new ServerboundSetCarriedItemPacket(originalSlot));
             originalSlot = -1;
         }
 
@@ -439,8 +438,8 @@ public class TaskQueue {
     }
 
     private void sendStatus(String msg) {
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("§7[WorldEdit] " + msg), true);
         }
     }

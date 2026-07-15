@@ -165,7 +165,6 @@ public class ListSelectScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width - PANEL_W) / 2;
         int cy = (height - PANEL_H) / 2;
 
@@ -178,10 +177,10 @@ public class ListSelectScreen extends Screen {
         g.fill(cx + PANEL_W - 1, cy, cx + PANEL_W, cy + PANEL_H, 0xFF444444);
 
         // ── 标题 ──
-        g.drawString(font, screenTitle, cx + 20, cy + 12, 0xFFFFFF);
+        g.drawString(font, screenTitle, cx + 20, cy + 12, 0xFFFFFFFF);
 
         // ── 已选计数 ──
-        g.drawString(font, "§7已选: " + selected.size() + " / " + filteredItems.size() + " 项", cx + 20, cy + PANEL_H - 52, 0xAAAAAA);
+        g.drawString(font, "§7已选: " + selected.size() + " / " + filteredItems.size() + " 项", cx + 20, cy + PANEL_H - 52, 0xFFAAAAAA);
 
         // ── 列表渲染 ──
         int listY = cy + LIST_TOP;
@@ -212,7 +211,7 @@ public class ListSelectScreen extends Screen {
 
             // 选择标记 [ ] 或 [x]
             String marker = isSelected ? "§a[✓]" : "§7[ ]";
-            g.drawString(font, marker + " " + item, cx + LIST_X + 4, y + 2, isSelected ? 0x55FF55 : 0xCCCCCC);
+            g.drawString(font, marker + " " + item, cx + LIST_X + 4, y + 2, isSelected ? 0xFF55FF55 : 0xFFCCCCCC);
         }
 
         g.disableScissor();

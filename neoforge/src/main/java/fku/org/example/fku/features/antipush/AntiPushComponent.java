@@ -30,7 +30,7 @@ public class AntiPushComponent extends ToggleComponent {
         boolean en = isEnabled();
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, en);
         String display = hotkeyAppend(label + ": " + (en ? "开" : "关"));
-        g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, en ? config.getTextColor() : 0xAAAAAA);
+        g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, en ? config.getTextColor() : 0xFFAAAAAA);
     }
 
     @Override

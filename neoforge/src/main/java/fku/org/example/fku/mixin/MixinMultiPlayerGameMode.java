@@ -33,7 +33,7 @@ public abstract class MixinMultiPlayerGameMode {
      *   连射开启时由 ClientTick 处理，此处不拦截
      */
     @Inject(method = "releaseUsingItem", at = @At("HEAD"), cancellable = true)
-    public void onReleaseUsingItem(CallbackInfo ci) {
+    public void onReleaseUsingItem(Player player, CallbackInfo ci) {
         if (ArrowDmgFeature.handleManualRelease()) {
             ci.cancel();
         }

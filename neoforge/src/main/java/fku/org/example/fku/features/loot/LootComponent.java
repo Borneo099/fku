@@ -57,7 +57,7 @@ public class LootComponent extends GuiComponent {
 
         if (HotkeySystem.isWaitingFor("一键取物")) {
             GuiRenderHelper.drawComponentBackground(g, x, y, width, height, true);
-            g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)", x + 5, y + (height - 8) / 2 - 4, 0xFFFF00);
+            g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)", x + 5, y + (height - 8) / 2 - 4, 0xFFFFFF00);
             return;
         }
 
@@ -66,12 +66,12 @@ public class LootComponent extends GuiComponent {
         String status = enabled ? "ON" : "OFF";
         var hk = FeatureHotkeyManager.getInstance().getHotkey("一键取物");
         String hkStr = hk.getHotkeyKey() >= 0 ? " §7[" + hk.getHotkeyName() + "]" : "";
-        g.drawString(Minecraft.getInstance().font, "一键取物: " + status + hkStr, x + 5, y + (height - 8) / 2 - 4, enabled ? config.getTextColor() : 0xAAAAAA);
+        g.drawString(Minecraft.getInstance().font, "一键取物: " + status + hkStr, x + 5, y + (height - 8) / 2 - 4, enabled ? config.getTextColor() : 0xFFAAAAAA);
         if (LootFeature.isRunning()) {
             String rs = LootFeature.getStatus();
-            if (!rs.isEmpty()) g.drawString(Minecraft.getInstance().font, "§a" + rs, x + 5, y + (height - 8) / 2 + 8, 0x55FF55);
+            if (!rs.isEmpty()) g.drawString(Minecraft.getInstance().font, "§a" + rs, x + 5, y + (height - 8) / 2 + 8, 0xFF55FF55);
         }
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0xFF888888);
     }
 
     @Override

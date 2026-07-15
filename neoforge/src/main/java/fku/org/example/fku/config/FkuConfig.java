@@ -1,20 +1,8 @@
 package fku.org.example.fku.config;
 
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import com.electronwill.nightconfig.core.io.WritingMode;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import java.io.File;
 
 public class FkuConfig {
-
-    private static File getConfigDir() {
-        File configDir = new File("fku");
-        if (!configDir.exists()) {
-            configDir.mkdirs();
-        }
-        return configDir;
-    }
-    private static final String FILE_NAME = "fku-config.toml";
 
     public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
     public static ModConfigSpec SPEC;
@@ -85,20 +73,5 @@ public class FkuConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
-    }
-
-    public static void init() {
-        // TODO: NeoForge 1.21.8 uses a different config loading mechanism
-        // SPEC.setConfig() was removed, use NeoForge event system instead
-        File configDir = getConfigDir();
-        File configFile = new File(configDir, FILE_NAME);
-        final CommentedFileConfig configData = CommentedFileConfig.builder(configFile)
-                .sync()
-                .autosave()
-                .writingMode(WritingMode.REPLACE)
-                .build();
-        configData.load();
-        // In NeoForge 1.21.8, config is loaded via the ModConfigEvent.Loading event
-        // SPEC.acceptConfig(new IConfigSpec.ILoadedConfig() { ... });
     }
 }

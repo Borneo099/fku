@@ -221,46 +221,45 @@ public class KnockbackConfigScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
         int cx = (width - WIDTH) / 2;
         int cy = cy(0);
 
         // ── 面板背景 ──
         GuiRenderHelper.drawPanelBackground(g, cx, cy(0), WIDTH, HEIGHT, false);
         g.enableScissor(cx + 2, cy + 20, cx + WIDTH - 2, cy + HEIGHT - 30);
-        g.drawString(font, "自由击退配置", cx + 10, cy(8), 0xFFFFFF);
+        g.drawString(font, "自由击退配置", cx + 10, cy(8), 0xFFFFFFFF);
 
         boolean isCustom = "CUSTOM".equals(cfg.mode);
         boolean isCliff = "CLIFF".equals(cfg.mode);
 
         // ── 模式 ──
-        g.drawString(font, "§7| 击退方向模式", cx + 135, cy(ROW_MODE_BTN + 2), 0x666666);
+        g.drawString(font, "§7| 击退方向模式", cx + 135, cy(ROW_MODE_BTN + 2), 0xFF666666);
 
         // ── 自定义角度 ──
         if (isCustom) {
-            g.drawString(font, "自定义角度:", cx + 10, cy(ROW_CUSTOM), 0xAAAAAA);
-            g.drawString(font, "§7(-180~180°)", cx + 142, cy(ROW_CUSTOM + 14), 0x666666);
+            g.drawString(font, "自定义角度:", cx + 10, cy(ROW_CUSTOM), 0xFFAAAAAA);
+            g.drawString(font, "§7(-180~180°)", cx + 142, cy(ROW_CUSTOM + 14), 0xFF666666);
         }
 
         // ── 悬崖半径 ──
         if (isCliff) {
-            g.drawString(font, "搜索半径:", cx + 10, cy(ROW_CLIFF), 0xAAAAAA);
-            g.drawString(font, "§7(1~20 方块)", cx + 122, cy(ROW_CLIFF + 14), 0x666666);
+            g.drawString(font, "搜索半径:", cx + 10, cy(ROW_CLIFF), 0xFFAAAAAA);
+            g.drawString(font, "§7(1~20 方块)", cx + 122, cy(ROW_CLIFF + 14), 0xFF666666);
         }
 
         // ── 平滑步数 ──
         if (cfg.smoothRotation) {
-            g.drawString(font, "平滑步数:", cx + 10, cy(ROW_SMOOTH_STEPS), 0xAAAAAA);
-            g.drawString(font, "§7(2~10)", cx + 122, cy(ROW_SMOOTH_STEPS + 14), 0x666666);
+            g.drawString(font, "平滑步数:", cx + 10, cy(ROW_SMOOTH_STEPS), 0xFFAAAAAA);
+            g.drawString(font, "§7(2~10)", cx + 122, cy(ROW_SMOOTH_STEPS + 14), 0xFF666666);
         }
 
         // ── 旋转延迟 ──
-        g.drawString(font, "旋转延迟:", cx + 10, cy(ROW_DELAY), 0xAAAAAA);
-        g.drawString(font, "§7(Tick, 0~5)", cx + 122, cy(ROW_DELAY + 14), 0x666666);
-        g.drawString(font, "§7攻击后延迟多少 Tick 恢复原始旋转", cx + 10, cy(ROW_DELAY + 28), 0x666666);
+        g.drawString(font, "旋转延迟:", cx + 10, cy(ROW_DELAY), 0xFFAAAAAA);
+        g.drawString(font, "§7(Tick, 0~5)", cx + 122, cy(ROW_DELAY + 14), 0xFF666666);
+        g.drawString(font, "§7攻击后延迟多少 Tick 恢复原始旋转", cx + 10, cy(ROW_DELAY + 28), 0xFF666666);
 
         // ── 激进模式 ──
-        g.drawString(font, "§7| 强制发送旋转包（无视旋转检测）", cx + 125, cy(ROW_AGGRESSIVE + 2), 0x666666);
+        g.drawString(font, "§7| 强制发送旋转包（无视旋转检测）", cx + 125, cy(ROW_AGGRESSIVE + 2), 0xFF666666);
 
         // ── 模式说明 ──
         String modeHint = switch (cfg.mode) {
@@ -270,7 +269,7 @@ public class KnockbackConfigScreen extends Screen {
             case "CUSTOM" -> "§7基于玩家视角偏移指定角度击退（如90°=右侧击退）";
             default -> "";
         };
-        g.drawString(font, modeHint, cx + 10, cy(ROW_MODE_LABEL), 0x888888);
+        g.drawString(font, modeHint, cx + 10, cy(ROW_MODE_LABEL), 0xFF888888);
 
         g.disableScissor();
         super.render(g, mouseX, mouseY, partialTick);

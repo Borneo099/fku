@@ -56,6 +56,7 @@ public class ArrowDmgConfigScreen extends Screen {
                 });
                 addRenderableWidget(newButton(cx+2, ly+sp*4, "倍数:"));
                 expandInput = mkEdit(cx+40, ly+sp*4, 30, String.format("%.1f",cfg.expandHitbox), "expand");
+                addC(cx+85, ly+sp*4, "垂直修正", cfg.vertical, v -> cfg.vertical = v);
                 addC(cx+85, ly+sp*3, "Y校准", cfg.yCalibrate, v -> cfg.yCalibrate = v);
                 addC(cx+2, ly+sp*5, "自动下蹲", cfg.autoCrouch, v -> cfg.autoCrouch = v);
             }
@@ -156,6 +157,7 @@ public class ArrowDmgConfigScreen extends Screen {
             case "显示方框" -> cfg.showBox;
             case "碰撞箱放大" -> cfg.expandHitbox > 1.0;
             case "Y校准" -> cfg.yCalibrate;
+            case "垂直修正" -> cfg.vertical;
             case "自动下蹲" -> cfg.autoCrouch;
             default -> false;
         };
@@ -170,7 +172,6 @@ public class ArrowDmgConfigScreen extends Screen {
     }
 
     @Override public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g, mx, my, pt);
         int cx = (width-W)/2, cy = (height-H)/2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
         super.render(g, mx, my, pt);
@@ -182,7 +183,7 @@ public class ArrowDmgConfigScreen extends Screen {
         if (expandInput instanceof EditBox e) e.render(g, mx, my, pt);
         // 底部提示
         if (activeTab == 0)
-            g.drawString(font, "§7提示: 高发包数+VClip开启易卡死", cx + 5, cy + H - 12, 0x666666);
+            g.drawString(font, "§7提示: 高发包数+VClip开启易卡死", cx + 5, cy + H - 12, 0xFF666666);
     }
     @Override public boolean mouseClicked(double mx, double my, int btn) {
         if (packetsInput instanceof EditBox e) e.mouseClicked(mx, my, btn);

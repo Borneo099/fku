@@ -45,7 +45,6 @@ import java.util.Map;
  */
 public class CommandRegistry {
 
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final CommandRegistry INSTANCE = new CommandRegistry();
 
     private final Map<String, CommandHandler> commands = new HashMap<>();
@@ -139,33 +138,33 @@ public class CommandRegistry {
     }
 
     private void giveToolItem() {
-        if (mc.player == null) return;
+        if (Minecraft.getInstance().player == null) return;
         String toolId = WorldEditConfig.getInstance().toolItem;
-        Block toolBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(toolId));
+        Block toolBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.tryParse(toolId));
         if (toolBlock == null) {
             // fallback to wooden axe
             toolId = "minecraft:wooden_axe";
         }
-        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(ResourceLocation.withDefaultNamespace(toolId));
+        var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(ResourceLocation.tryParse(toolId));
         if (item == null) return;
 
         // 检查快捷栏是否有
         for (int i = 0; i < 9; i++) {
-            if (mc.player.getInventory().getItem(i).getItem() == item) return;
+            if (Minecraft.getInstance().player.getInventory().getItem(i).getItem() == item) return;
         }
         // 检查背包
         for (int i = 9; i < 36; i++) {
-            if (mc.player.getInventory().getItem(i).getItem() == item) {
+            if (Minecraft.getInstance().player.getInventory().getItem(i).getItem() == item) {
                 // 移到快捷栏
-                var targetStack = mc.player.getInventory().getItem(i).copy();
-                mc.player.getInventory().setItem(mc.player.getInventory().getSelectedSlot(), targetStack);
-                mc.player.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+                var targetStack = Minecraft.getInstance().player.getInventory().getItem(i).copy();
+                Minecraft.getInstance().player.getInventory().setItem(Minecraft.getInstance().player.getInventory().getSelectedSlot(), targetStack);
+                Minecraft.getInstance().player.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
                 return;
             }
         }
         // 创造模式直接给
-        if (mc.player.getAbilities().instabuild) {
-            mc.player.getInventory().add(new net.minecraft.world.item.ItemStack(item, 1));
+        if (Minecraft.getInstance().player.getAbilities().instabuild) {
+            Minecraft.getInstance().player.getInventory().add(new net.minecraft.world.item.ItemStack(item, 1));
         }
     }
 
@@ -214,7 +213,7 @@ public class CommandRegistry {
         if (radius <= 0) { sendMsg("§c半径必须大于0"); return; }
 
         boolean hollow = args.length >= 3 && args[2].equalsIgnoreCase("hollow");
-        BlockPos center = mc.player != null ? mc.player.blockPosition() : BlockPos.ZERO;
+        BlockPos center = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.blockPosition() : BlockPos.ZERO;
 
         List<BlockPos> positions = ShapeGenerator.sphere(center, radius, hollow);
         TaskQueue.getInstance().submitSet(positions, state, hollow ? "//sphere hollow" : "//sphere");
@@ -231,7 +230,7 @@ public class CommandRegistry {
         if (radius <= 0 || height <= 0) { sendMsg("§c半径和高度必须大于0"); return; }
 
         boolean hollow = args.length >= 4 && args[3].equalsIgnoreCase("hollow");
-        BlockPos center = mc.player != null ? mc.player.blockPosition() : BlockPos.ZERO;
+        BlockPos center = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.blockPosition() : BlockPos.ZERO;
 
         List<BlockPos> positions = ShapeGenerator.cylinder(center, radius, height, hollow);
         TaskQueue.getInstance().submitSet(positions, state, "//cyl");
@@ -247,7 +246,7 @@ public class CommandRegistry {
         if (size <= 0) { sendMsg("§c大小必须大于0"); return; }
 
         boolean hollow = args.length >= 3 && args[2].equalsIgnoreCase("hollow");
-        BlockPos baseCenter = mc.player != null ? mc.player.blockPosition() : BlockPos.ZERO;
+        BlockPos baseCenter = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.blockPosition() : BlockPos.ZERO;
 
         List<BlockPos> positions = ShapeGenerator.pyramid(baseCenter, size, hollow);
         TaskQueue.getInstance().submitSet(positions, state, "//pyramid");
@@ -286,7 +285,7 @@ public class CommandRegistry {
     private void cmdPaste(String[] args) {
         SelectionManager sel = SelectionManager.getInstance();
         BlockPos target = sel.hasPos1() ? sel.getPos1() :
-                (mc.player != null ? mc.player.blockPosition() : BlockPos.ZERO);
+                (Minecraft.getInstance().player != null ? Minecraft.getInstance().player.blockPosition() : BlockPos.ZERO);
         ClipboardManager.getInstance().paste(target);
     }
 
@@ -384,13 +383,13 @@ public class CommandRegistry {
     }
 
     private void cmdPos1(String[] args) {
-        if (mc.player == null) return;
-        SelectionManager.getInstance().setPos1(mc.player.blockPosition());
+        if (Minecraft.getInstance().player == null) return;
+        SelectionManager.getInstance().setPos1(Minecraft.getInstance().player.blockPosition());
     }
 
     private void cmdPos2(String[] args) {
-        if (mc.player == null) return;
-        SelectionManager.getInstance().setPos2(mc.player.blockPosition());
+        if (Minecraft.getInstance().player == null) return;
+        SelectionManager.getInstance().setPos2(Minecraft.getInstance().player.blockPosition());
     }
 
     private void cmdHelp(String[] args) {
@@ -491,11 +490,11 @@ public class CommandRegistry {
     private BlockState parseBlockState(String input) {
         // 支持格式: minecraft:stone, stone, dirt
         String blockId = input.contains(":") ? input : "minecraft:" + input;
-        Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(blockId));
+        Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.tryParse(blockId));
         if (block == null) {
             // 尝试不同格式
             blockId = "minecraft:" + input;
-            block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.withDefaultNamespace(blockId));
+            block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(ResourceLocation.tryParse(blockId));
         }
         if (block == null) {
             sendMsg("§c未知方块: " + input);
@@ -525,8 +524,8 @@ public class CommandRegistry {
     }
 
     private void sendMsg(String msg) {
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
                     Component.literal("§7[WorldEdit] " + msg), true);
         }
     }

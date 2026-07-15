@@ -36,7 +36,6 @@ import java.util.regex.Pattern;
 public class StructureLocatorFeature {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("StructureLocator");
-    private static final Minecraft mc = Minecraft.getInstance();
     private static final Pattern SEED_PATTERN = Pattern.compile("\\[\\s*(-?\\d+)\\s*\\]");
     private static volatile boolean expectingSeed = false;
 
@@ -102,9 +101,9 @@ public class StructureLocatorFeature {
 
     // ──────── API ────────
     public static void requestSeed() {
-        if (mc.player == null || mc.player.connection == null) { msg("§c未连接服务器"); return; }
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) { msg("§c未连接服务器"); return; }
         expectingSeed = true;
-        mc.player.connection.sendCommand("seed");
+        Minecraft.getInstance().player.connection.sendCommand("seed");
         msg("§7已发送 /seed, 正在等待种子...");
     }
 
@@ -125,7 +124,7 @@ public class StructureLocatorFeature {
     }
 
     public static void locate(boolean travel) {
-        if (mc.player == null || mc.level == null) return;
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
         Long seed = resolveSeed();
         if (seed == null) { msg("§f还没有种子。先点[取种子]或填[手动种子]"); return; }
         Target t = selectedTarget();
@@ -159,7 +158,7 @@ public class StructureLocatorFeature {
         int mx = lastTargetCx * 16 + 8, mz = lastTargetCz * 16 + 8;
         if (!dimOk) { msg("§e当前不在[" + dimName(t.dim) + "], 无法标记"); return; }
         markedX = mx; markedZ = mz;
-        markedY = (int) mc.player.getY();
+        markedY = (int) Minecraft.getInstance().player.getY();
         markName = t.name;
         msg("§a已标记「" + t.name + "」(" + mx + ", " + mz + ")，光柱指引到达后自动清除");
     }
@@ -180,7 +179,7 @@ public class StructureLocatorFeature {
     private static void locateRandomSpread(Target t, long seed, boolean travel, boolean dimOk) {
         if (t.biomes != null && !SeedBiomeSampler.ensureReady()) { msg("§c群系数据初始化失败"); return; }
         int r = StructureLocatorConfig.getInstance().searchRadius;
-        int px = (int) mc.player.getX(), pz = (int) mc.player.getZ();
+        int px = (int) Minecraft.getInstance().player.getX(), pz = (int) Minecraft.getInstance().player.getZ();
         int centerGx = Math.floorDiv(px, t.spacing);
         int centerGz = Math.floorDiv(pz, t.spacing);
         String key = blKey(seed, t.id);
@@ -221,7 +220,7 @@ public class StructureLocatorFeature {
 
     private static void locateStronghold(Target t, long seed, boolean travel, boolean dimOk) {
         List<ChunkPos> positions = strongholdPositions(seed, t.ringCount, t.ringDist, t.ringSpread);
-        int px = (int) mc.player.getX(), pz = (int) mc.player.getZ();
+        int px = (int) Minecraft.getInstance().player.getX(), pz = (int) Minecraft.getInstance().player.getZ();
         String key = blKey(seed, t.id);
         Set<Long> bl = skipped.get(key);
         long bestDistSq = Long.MAX_VALUE;
@@ -244,11 +243,11 @@ public class StructureLocatorFeature {
     /** 自动清除 + 粒子光柱（150 格内渲染 END_ROD 光柱） */
     @SubscribeEvent
     public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
-        if (markedX < 0 || mc.player == null || mc.level == null) return;
+        if (markedX < 0 || Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         // ── 到达检测 ──
-        double dx = mc.player.getX() - markedX;
-        double dz = mc.player.getZ() - markedZ;
+        double dx = Minecraft.getInstance().player.getX() - markedX;
+        double dz = Minecraft.getInstance().player.getZ() - markedZ;
         double distSq = dx * dx + dz * dz;
         if (distSq <= 100) { // 10 格内
             markedX = markedZ = -1; markedY = 80; markName = "";
@@ -297,8 +296,8 @@ public class StructureLocatorFeature {
     private static long packChunk(int cx, int cz) { return (long) cx << 32 | (long) cz & 0xFFFFFFFFL; }
 
     private static Dim currentDim() {
-        if (mc.level == null) return Dim.OVERWORLD;
-        ResourceKey<Level> d = mc.level.dimension();
+        if (Minecraft.getInstance().level == null) return Dim.OVERWORLD;
+        ResourceKey<Level> d = Minecraft.getInstance().level.dimension();
         if (d == Level.NETHER) return Dim.NETHER;
         if (d == Level.END) return Dim.END;
         return Dim.OVERWORLD;
@@ -315,7 +314,7 @@ public class StructureLocatorFeature {
     }
 
     public static void msg(String s) {
-        if (mc.player != null) mc.player.displayClientMessage(Component.literal(PREFIX + s), false);
+        if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(Component.literal(PREFIX + s), false);
     }
 
     // ════════════════════════════════════════════════════════
@@ -331,18 +330,18 @@ public class StructureLocatorFeature {
     /** 渲染 HUD：方向指示 + 距离 + 近距离大箭头 */
     @SubscribeEvent
     public static void onRenderHUD(net.neoforged.neoforge.client.event.RenderGuiLayerEvent.Post event) {
-        if (markedX < 0 || mc.player == null || mc.level == null) return;
+        if (markedX < 0 || Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
 
         var g = event.getGuiGraphics();
-        var font = mc.font;
-        int sw = mc.getWindow().getGuiScaledWidth();
-        int sh = mc.getWindow().getGuiScaledHeight();
+        var font = Minecraft.getInstance().font;
+        int sw = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int sh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
 
         // ── Vec3 3D 方向 ──
-        Vec3 look = mc.player.getLookAngle();
-        Vec3 toTarget = new Vec3(markedX - mc.player.getX(),
-                                 (markedY + 32) - mc.player.getEyeY(),
-                                 markedZ - mc.player.getZ());
+        Vec3 look = Minecraft.getInstance().player.getLookAngle();
+        Vec3 toTarget = new Vec3(markedX - Minecraft.getInstance().player.getX(),
+                                 (markedY + 32) - Minecraft.getInstance().player.getEyeY(),
+                                 markedZ - Minecraft.getInstance().player.getZ());
         double dist = toTarget.length();
         Vec3 dir = toTarget.normalize();
 
@@ -355,7 +354,7 @@ public class StructureLocatorFeature {
         double fwd   = dir.dot(look);       // 正=前方
 
         // ── 底部坐标 ──
-        g.drawString(font, String.format("§7%d, %d", markedX, markedZ), 8, sh - 16, 0x666666);
+        g.drawString(font, String.format("§7%d, %d", markedX, markedZ), 8, sh - 16, 0xFF666666);
 
 
         int cx = sw / 2, cy = sh / 2;
@@ -373,27 +372,27 @@ public class StructureLocatorFeature {
             // 大字标记（近距离⛭，远距离✦），加阴影描边
             String marker = close ? "§b⛭" : "§b✦";
             g.drawString(font, marker, sx + 1, sy, 0x00000044); // 阴影
-            g.drawString(font, marker, sx, sy, 0x88CCFF);
+            g.drawString(font, marker, sx, sy, 0xFF88CCFF);
         } else {
             // 在后方 → 边缘大箭头
             int arrowX = horiz > 0 ? sw - 26 : 4;
             String a = horiz > 0 ? "§b▸" : "§b◂";
             g.drawString(font, a, arrowX + 1, cy + 1, 0x00000044);
-            g.drawString(font, a, arrowX, cy, 0x88CCFF);
-            if (vert > 2)  { g.drawString(font, "§b▲", cx - 3, 3, 0x88CCFF); g.drawString(font, "§b▲", cx - 2, 2, 0x00000044); }
-            else if (vert < -2) { g.drawString(font, "§b▼", cx - 3, sh - 33, 0x88CCFF); g.drawString(font, "§b▼", cx - 2, sh - 32, 0x00000044); }
+            g.drawString(font, a, arrowX, cy, 0xFF88CCFF);
+            if (vert > 2)  { g.drawString(font, "§b▲", cx - 3, 3, 0xFF88CCFF); g.drawString(font, "§b▲", cx - 2, 2, 0x00000044); }
+            else if (vert < -2) { g.drawString(font, "§b▼", cx - 3, sh - 33, 0xFF88CCFF); g.drawString(font, "§b▼", cx - 2, sh - 32, 0x00000044); }
         }
 
         // ── 近距离中心超大箭头 ──
         if (close && fwd > 0) {
             int bigY = sh - 75;
             g.drawString(font, "§b⬆", cx - 7, bigY + 1, 0x00000044);
-            g.drawString(font, "§b⬆", cx - 8, bigY, 0x88CCFF);
+            g.drawString(font, "§b⬆", cx - 8, bigY, 0xFF88CCFF);
         }
 
         // ── HUD 指示下方显示距离 + 名称 ──
         String distText = String.format("§b%.0fm  §7%s", dist, markName);
-        g.drawString(font, distText, cx - font.width(distText) / 2, sh - 110, 0x88CCFF);
+        g.drawString(font, distText, cx - font.width(distText) / 2, sh - 110, 0xFF88CCFF);
     }
 
     // ──────── 类型 ────────
