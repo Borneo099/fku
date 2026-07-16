@@ -690,12 +690,13 @@ text
 ```
 fku/
 ├── common/src/main/java/    ← ★ 所有共享逻辑代码（主要开发入口）
-├── forge/                   ← Forge 1.20.1 独立构建
-│   ├── build.gradle         ← ForgeGradle + Mixin
-│   └── src/main/java/       ← 仅平台入口（Fku.java + ClientSetup.java）
-├── neoforge/                ← NeoForge 1.21.8 独立构建
-│   ├── build.gradle         ← NeoGradle
-│   └── src/main/java/       ← 仅平台入口
+├── forge/                   ← Forge 1.20.1 独立构建（JDK 17）
+│   ├── build.gradle         ← ForgeGradle 6.0.16 + Mixin
+│   └── src/main/java/       ← 仅平台入口；通过 srcDir '../common/src/main/java' 直接编译 common（1.20.1 原生，无需转换）
+├── neoforge/                ← NeoForge 1.21.8 独立构建（JDK 21）
+│   ├── build.gradle         ← NeoForgeGradle userdev 7.0.170
+│   ├── gradle.properties     ← neoVersion=21.8.53（+ TLSv1.3 修复）
+│   └── src/main/java/       ← common 同步副本 + 1.21.x 专属适配（由 sync-neoforge.sh 维护，非仅入口）
 ├── scripts/
 │   └── sync-neoforge.sh     ← 自动同步脚本（common → 各平台）
 ├── MULTIVERSION_MAPPING.md  ← 版本差异映射表
@@ -707,25 +708,36 @@ fku/
 - 平台模块仅包含 `@Mod` 入口类和 `ClientSetup` 启动逻辑
 - 新增平台（如 fabric）时：新建目录 + 入口类 + 在 `sync-xxx.sh` 中添加转换规则
 
-#### 30.2 同步脚本工作机制
+#### 30.2 同步脚本安全机制（强制）
 
-`scripts/sync-neoforge.sh` 执行流程：
-1. 复制 `common/src/main/java/` → 目标平台目录
-2. 执行 sed 替换规则（约 20+ 条），自动转换导入路径
-3. 检查残留 Forge 引用，确保无遗漏
+`scripts/sync-neoforge.sh` 是「**安全同步脚本**」，**绝不做无脑整目录复制覆盖 common**。核心原则：
 
-**当前覆盖的转换规则**：
+1. **默认 dry-run**：不加 `--apply` 只打印将要做什么、不写磁盘；确认无误后加 `--apply` 才真正写入。
+2. **识别并保护 1.21.x 专属适配**（三种机制，自动 + 手动）：
+   - **专属 API 标记（EXCLUSIVE_MARKERS）**：检测 neoforge 文件是否含「仅 1.21.8 才有、common 绝不会有」的写法（如 `DataComponents.ENTITY_DATA`、`CustomData`、`Operation.ADD_VALUE`、`ResourceLocation.parse(`、`EXTENDED_CODEC`）。若含 → 判定为专属适配，跳过、绝不覆盖。
+   - **手动保护列表（MANUAL_PROTECTED）**：对已知专属适配文件显式列出。例：`SprintHandler.java`（含全向旋转 `targetYaw -= 90.0F` 的 +90° 映射修正）、`DisplayModelManager.java`、`ArrowDmgFeature.java`、`HotkeySystem.java`。
+   - **专属子包**：路径含 `/neoforge/` 子包的文件直接保护。
+3. **安全更新（＝自动更新）**：对「common 已改动、且 neoforge 无专属标记」的共享文件，自动用「导入转换后的 common 版本」覆盖 neoforge 对应文件——这就是 **「每次修复错误自动更新」**：在 `common/` 修共享 bug → 跑 `bash scripts/sync-neoforge.sh --apply` → 改动自动同步到 neoforge。
+4. **漂移提示**：受保护文件若相对 common 的 `expected`（导入转换后版本）发生漂移（说明共享逻辑已更新但 neo 适配未同步），脚本打印 `diff`，便于把共享改动手动并入 neo 适配。
+5. **绝不整目录删除**；导入转换幂等（`s/forge/neoforge/` 等 40+ 条 sed 规则）；结尾检查 neoforge 是否残留未转换的 `net.minecraftforge` 引用。
+
+**转换规则示例（Forge 1.20.1 → NeoForge 1.21.8）**：
 ```
-MinecraftForge.EVENT_BUS          → NeoForge.EVENT_BUS
-net.minecraftforge.event.TickEvent → net.neoforged.neoforge.event.tick.TickEvent
-@OnlyIn(Dist.CLIENT)              → 包路径改为 neoforged
-RenderLevelStageEvent              → 包路径改为 neoforged
-AttackEntityEvent                  → 包路径改为 neoforged
-FMLClientSetupEvent                → 包路径改为 neoforged
-…（共 20+ 条）
+MinecraftForge.EVENT_BUS              → NeoForge.EVENT_BUS
+net.minecraftforge.event.TickEvent     → net.neoforged.neoforge.event.tick.TickEvent
+@Mod.EventBusSubscriber(...Bus.FORGE) → @EventBusSubscriber(...Bus.MOD/FORGE 映射)
+RenderLevelStageEvent / FMLClientSetupEvent / AttackEntityEvent … → 包路径改为 neoforged
+…（共 40+ 条，随 API 变更同步更新）
 ```
 
-**扩展新平台**：复制 `sync-neoforge.sh` 为 `sync-fabric.sh`，修改替换规则即可。
+**安全写法要点（给后续维护者）**：写/改同步脚本务必
+- 默认 dry-run，显式 `--apply` 才落盘，避免误覆盖；
+- 用「专属标记 + 手动保护列表」区分**共享文件**与**平台适配**，绝不无脑覆盖后者；
+- 整文件比较（cmp）而非逐行 patch，避免半同步的中间态；
+- 结尾做「残留旧平台引用」自检，防止漏转换导致编译失败；
+- 新平台适配：先更新 `MULTIVERSION_MAPPING.md` 映射表，再补 `sync-xxx.sh` 的转换规则与专属标记。
+
+**扩展新平台**：复制 `sync-neoforge.sh` 为 `sync-fabric.sh`，补充该平台的导入转换规则与专属标记即可。
 
 #### 30.3 差异映射表
 

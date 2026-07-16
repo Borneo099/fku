@@ -25,6 +25,10 @@ MANUAL_PROTECTED=(
   "fku/org/example/fku/features/displaymodel/DisplayModelManager.java"
   "fku/org/example/fku/features/arrowdmg/ArrowDmgFeature.java"
   "fku/org/example/fku/util/HotkeySystem.java"
+  # 1.21.8 强制疾跑全向旋转：含「yaw→世界移动映射 +90°」专属修正（targetYaw -= 90.0F），
+  # 以及 ClientTickEvent.Pre/Post 拆分、ClientInput 等 1.21.x 适配。common 版为 1.20.1，
+  # 不含这些改动，故整体保护，绝不参与同步、永不被回滚。
+  "fku/org/example/fku/features/sprint/SprintHandler.java"
 )
 
 # 1.21.8 专属 API 标记：仅出现在 1.21.8、绝不会出现在 1.20.1 common 中的写法。
@@ -132,9 +136,19 @@ while IFS= read -r src; do
   rel="${src#$COMMON_DIR/src/main/java/}"
   dst="$NEO_DIR/src/main/java/$rel"
 
-  # 1) 手动保护列表
+  # 先生成 expected：common 文件经导入转换后的 NeoForge 版本（幂等）
+  cp "$src" "$TMP"
+  transform_inplace "$TMP"
+
+  # 1) 手动保护列表 —— 永不覆盖；但若 common 的共享逻辑已更新（expected≠dst），
+  #    打印差异，便于「修复错误后自动更新」时把共享改动手动合并进 neo 适配。
   if is_manual_protected "$rel"; then
-    echo "  [保护] $rel  (手动保护列表)"
+    if [ -f "$dst" ] && ! cmp -s "$TMP" "$dst"; then
+      echo "  [保护] $rel  (手动保护列表；common 有更新，附差异待人工合并)"
+      diff -u "$TMP" "$dst" | sed 's/^/      /' | head -40
+    else
+      echo "  [保护] $rel  (手动保护列表)"
+    fi
     PROTECTED=$((PROTECTED+1)); continue
   fi
   # 2) 路径含 /neoforge/ 专属子包的文件也保护（设计上的专属目录）
@@ -142,10 +156,6 @@ while IFS= read -r src; do
     echo "  [保护] $rel  (neoforge 专属子包)"
     PROTECTED=$((PROTECTED+1)); continue
   fi
-
-  # 生成 expected：common 文件经导入转换后的 NeoForge 版本
-  cp "$src" "$TMP"
-  transform_inplace "$TMP"
 
   if [ ! -f "$dst" ]; then
     echo "  [新增] $rel"
@@ -165,6 +175,9 @@ done < <(find "$COMMON_DIR/src/main/java" -name "*.java")
 
 [ "$APPLY" -eq 1 ] && echo "=== 已写入 ===" || echo "=== 预演完成（未写入；加 --apply 执行）==="
 echo "新增: $ADDED，更新: $UPDATED，已同步跳过: $SKIPPED，保护跳过: $PROTECTED"
-echo "提示: 被保护的文件若需同步 common 的改动，请人工把变更移植到 neoforge 对应文件。"
+echo "── 自动更新工作流 ──"
+echo "  · 修复【共享逻辑】错误 → 改 common/ → 运行本脚本 --apply，自动同步到 neoforge（仅更新 diff）。"
+echo "  · 修复【1.21.x 专属】错误（如全向旋转 yaw 映射）→ 直接改 neoforge/，受保护、永不被回滚。"
+echo "  · 受保护文件若 common 有新改动，脚本会打印差异，按提示把共享改动手动并入 neo 适配即可。"
 echo "剩余 Forge 引用检查:"
 grep -rn "net\.minecraftforge" "$NEO_DIR/src/main/java" --include="*.java" 2>/dev/null | grep -v "neoforge" || echo " (无残留)"

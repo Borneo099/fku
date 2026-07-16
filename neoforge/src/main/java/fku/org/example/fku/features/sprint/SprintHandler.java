@@ -232,6 +232,12 @@ public class SprintHandler {
         // ★ 6. 基于【真实键】计算目标 yaw
         float targetYaw = getMovementDirection(realYaw, savedUp, savedDown, savedLeft, savedRight);
 
+        // ★ 6.5 版本约定修正（仅 NeoForge 1.21.x）：1.21.8 的 yaw→世界移动映射相对
+        //   1.20.1 Forge 整体 +90°，故假旋转目标 yaw 回退 90°，使「按 D 朝镜头右前方
+        //   走」与 1.20.1 Forge 行为对齐（而非后退）。此调整为 1.21.x 专属适配，
+        //   同步脚本不会覆盖本文件（见 MANUAL_PROTECTED / 专属标记）。
+        targetYaw -= 90.0F;
+
         // ★ 7. 平滑旋转：渐进插值
         if (cfg.smoothRotation && cfg.rotationSpeed > 0) {
             if (Float.isNaN(smoothYaw)) {

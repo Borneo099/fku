@@ -82,9 +82,10 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
   - neoforge ≠ expected 且无专属标记 → 视为共享文件被 common 改动，**安全更新**。
 - 被保护的文件若需同步 common 的改动，请**人工移植**到 neoforge 对应文件。
 
-> 真正的「单源多版本」长期方案是 **Stonecutter 预处理**：同一份 `common` 代码用
-> `#//if MC_1_21_8 … #//else … #//endif` 在构建时自动适配，不再需要复制式同步。
-> 见文末「路线图」。
+> ⚠️ **Stonecutter 单源方案已评估并放弃**（2026-07）：实测将 `common` 迁移为 Stonecutter 单源后，
+> 1.21.8 出现 200+ 编译错误（事件类拆分、渲染 API 不存在等），证明机械化的包名替换并未真正
+> 编译通过；且单源预处理会让「全向旋转 +90° 映射」这类逻辑差异混入 `//? if` 块，可读性下降。
+> **当前选定方案 = `common/` 共享源 + `sync-neoforge.sh` 安全同步**，稳定可编译，见文末说明。
 
 ## 7️⃣ 专属修改 / 不可自动同步的逻辑差异
 
@@ -98,6 +99,7 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
 | `features/arrowdmg/ArrowDmgFeature.java` | `Vec3.multiply(double)` | `Vec3.scale(double)`（1.21.8 无 `multiply(double)`） | API 改名 |
 | `features/arrowdmg/ArrowDmgFeature.java` | 旧微抖动疾跑包（±1e-10） | 基于视线向量的位置欺骗序列（参考 `ArrowDmg.java`） | 逻辑重写 |
 | `util/HotkeySystem.java` | `for(key=32; key<512; key++)` 读 GLFW 键盘缓冲 | 上界 `GLFW.GLFW_KEY_LAST` + `isKeyDown` 安全包装 | 崩溃修复 |
+| `features/sprint/SprintHandler.java` | 全向旋转 `targetYaw = getMovementDirection(...)` 直接用于 `setYRot` | 额外 `targetYaw -= 90.0F` 修正 1.21.8 的 yaw→世界移动映射整体 +90°（另含 `ClientTickEvent.Pre/Post` 拆分、`ClientInput` 等事件/API 重写） | 逻辑/事件重写 |
 | 通用 | `AttributeModifier.Operation.ADDITION` | `Operation.ADD_VALUE` | 枚举改名 |
 | 通用 | `new ResourceLocation(x)` | `ResourceLocation.parse(x)` | API 惯用法 |
 | 通用 | `ForgeRegistries.X.getValue(new ResourceLocation(...))` | 原版注册表改用 `BuiltInRegistries.X.getValue(ResourceLocation.parse(...))` | 注册表来源 |
@@ -110,15 +112,19 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
 3. 把对应的 1.20.1↔1.21.8 差异补进本表第 7 节；
 4. 绝不要把专属逻辑写回 `common/`，否则会被同步脚本当作共享代码复制。
 
-## 🗺️ 路线图：从「复制式同步」到「Stonecutter 单源」
+## 🗺️ 方案决策：放弃 Stonecutter，安全同步即终态
 
-当前 `neoforge/` 是独立模块，`sync-neoforge.sh` 用「导入归一化 + 专属标记」避免覆盖。
-下一步彻底消除维护陷阱的做法：
+`neoforge/` 是独立模块，`sync-neoforge.sh` 用「导入归一化 + 专属标记 + 手动保护列表」避免覆盖，
+已能稳定编译出 1.21.8 jar。**不采用 Stonecutter 单源预处理**，原因：
 
-1. 引入 **Stonecutter** Gradle 插件到 `common/`；
-2. 把第 7 节的「专属修改」改写为同一文件内的 `#//if MC_1_21_8 … #//else … #//endif` 预处理块；
-3. `forge/` 与 `neoforge/` 仅保留各自的 `gradle.build` / 资源 / 真正平台独有的新特性；
-4. 构建 1.20.1 与 1.21.8 时，Stonecutter 自动裁剪出对应版本代码 —— **不再有任何复制脚本**，
-   专属逻辑也绝不会被覆盖。
+1. **实测失败**：将 `common` 迁为 Stonecutter 单源后，1.21.8 出现 200+ 编译错误（1.20.1 事件类
+   `TickEvent` 拆分为 `ClientTickEvent/ServerTickEvent/PlayerTickEvent`；`RenderGuiOverlayEvent`、
+   `RegisterShadersEvent`、`ShaderInstance` 等在 1.21.8 根本不存在等）。机械化的 `//? if` 包名替换
+   并未真正编译通过，反而引入维护陷阱。
+2. **逻辑差异难塞进预处理块**：「强制疾跑全向旋转的 yaw→世界移动 +90° 映射修正」（`targetYaw -= 90.0F`）、
+   `ClientTickEvent.Pre/Post` 拆分、`ClientInput` 等，是整段逻辑重写而非包名差异，硬塞 `//?` 反而更乱。
+3. **安全同步已满足需求**：共享 bug 在 `common` 修 → `bash scripts/sync-neoforge.sh --apply` 自动同步；
+   专属适配受保护、永不被回滚。这正是「一次开发，多版本构建」的目标，且风险可控。
 
-> 此迁移涉及构建系统改动，建议在确认 `sync-neoforge.sh` 安全策略稳定后再实施。
+> 结论：保持 `common/`（共享源）+ `forge/`（直编 common）+ `neoforge/`（安全同步副本）+ `scripts/`
+> 的结构，不引入 Stonecutter。如未来确有强需求，再单独评估，但当前不是优先项。
