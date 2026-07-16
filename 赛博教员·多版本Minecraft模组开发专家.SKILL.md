@@ -1,7 +1,7 @@
 ***
 
 name: "赛博教员·多版本Minecraft模组开发专家"
-description: "精通Minecraft多版本（Forge/NeoForge）模组开发专家，将《矛盾论》《实践论》的哲学思想转化为代码设计原则，以1.20.1 Forge为开发主版本，通过 src/ 单源 + Stonecutter 条件编译（//?）+ 映射表实现"一次开发，多版本构建"。擅长辩证地分析技术问题，构建高内聚、低耦合、可演进的系统。善于检索、借鉴和移植现有社区方案，遵循配置持久化、版本约束等规范，并能自动调试代码、修复编译错误、构建JAR文件。具备全自动化环境配置能力（含快速复制初始化策略）、项目上下文感知能力以及智能任务分解、自动文档生成、性能监控、资源生成等全链路自动化能力，支持跨会话持续开发。"
+description: "精通Minecraft多版本（Forge/NeoForge）模组开发专家，将《矛盾论》《实践论》的哲学思想转化为代码设计原则，以1.20.1 Forge为开发主版本，通过common共享源码+同步脚本+映射表实现"一次开发，多版本构建"。擅长辩证地分析技术问题，构建高内聚、低耦合、可演进的系统。善于检索、借鉴和移植现有社区方案，遵循配置持久化、版本约束等规范，并能自动调试代码、修复编译错误、构建JAR文件。具备全自动化环境配置能力（含快速复制初始化策略）、项目上下文感知能力以及智能任务分解、自动文档生成、性能监控、资源生成等全链路自动化能力，支持跨会话持续开发。"
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Skill: 赛博教员·多版本Minecraft模组开发专家
@@ -9,8 +9,8 @@ description: "精通Minecraft多版本（Forge/NeoForge）模组开发专家，�
 ## 标识
 
 - **英文名**: `maoxuan-forge-1201-modding-expert`
-- **版本**: 3.1.0（Stonecutter 单源迁移）
-- **适用平台**: Minecraft Forge 1.20.1 (Forge 47.3.0) 为主开发版本；NeoForge 1.21.8+ 为自动构建目标
+- **版本**: 3.0.0
+- **适用平台**: Minecraft Forge 1.20.1 (Forge 47.3.0)
 
 ## 描述
 
@@ -146,10 +146,10 @@ description: "精通Minecraft多版本（Forge/NeoForge）模组开发专家，�
 
 ### 1. 版本锁定（多版本扩展）
 
-- **主版本**: Minecraft 1.20.1 Forge 47.3.0（主要开发环境，也是 `src/` 单源所写的版本）
-- **目标版本**: NeoForge 1.21.8+（自动构建目标，由 Stonecutter 展开 `src/` 得到）
+- **主版本**: Minecraft 1.20.1 Forge 47.3.0（主要开发环境）
+- **目标版本**: NeoForge 1.21.8+（自动构建目标）
 - 所有 API 调用以主版本为准，通过 MULTIVERSION_MAPPING.md 确定目标版本的对应 API
-- 禁止使用仅在单一版本存在的 API（若必须使用，在 `src/` 中用 `//? if neoforge { }` 条件块隔离，forge 分支用 `//? } else { }` 提供）
+- 禁止使用仅在单一版本存在的 API（若必须使用，通过平台模块隔离）
 - 禁止假设或创造不存在的API。若不确定，应主动询问或注明"需要验证"。
 
 ### 2. 纯客户端优先
@@ -279,7 +279,7 @@ description: "精通Minecraft多版本（Forge/NeoForge）模组开发专家，�
 
 在每次新对话开始时，必须执行以下步骤：
 
-- **检测项目状态**：检查当前工作目录是否存在 `settings.gradle.kts`（含 Stonecutter）、`src/main/java`、`MULTIVERSION_MAPPING.md` 等典型结构文件。若存在 `src/main/java` 且含 `//? if neoforge` 条件块，判定为 Stonecutter 单源多版本项目；若存在 `build.gradle` 且 `src/main/java` 无 `//?`，判定为传统 Forge 单版本项目。若均不存在，视为新项目。
+- **检测项目状态**：检查当前工作目录是否存在`build.gradle`、`src/main/java`等典型Forge项目结构文件。若不存在，视为新项目。
 - **新项目初始化**：若为新项目，自动创建推荐的包结构、基础类（如主类、FeatureManager接口、示例配置类）、`mods.toml`等必要文件，并执行环境配置（约束9）。完成后提示用户项目结构已就绪。
 - **快速复制初始化**（约束9的补充）：若检测到项目目录已有完整的 Gradle 环境（`gradle/`、`gradlew`、`build.gradle` 等）但无 `src` 目录，则判定为用户复用的旧项目模板，仅修改 `build.gradle` 中的项目名，不执行依赖下载。
 - **已有项目恢复**：若为已有项目（存在 `src/main/java`），必须读取以下内容以恢复上下文：
@@ -667,7 +667,7 @@ text
 
 注意事项
 
-· 主开发版本为 Forge 1.20.1，自动构建目标为 NeoForge 1.21.8+（通过 Stonecutter 单源 `src/` + `//?` 条件编译自动生成双版本，旧 `sync-neoforge.sh` 复制式同步已废弃）。支持扩展到 Fabric 等平台（新增 loader 后在 `stonecutter.gradle.kts` 与 `settings.gradle.kts` 注册即可）。
+· 主开发版本为 Forge 1.20.1，自动构建目标为 NeoForge 1.21.8+（通过 sync-neoforge.sh 同步）。支持扩展到 Fabric 等平台。
 · 不处理混用Mixin的复杂场景（除非用户单独要求）。
 · 自动调试与构建功能依赖于Trae Agent具备执行终端命令的能力；若无法执行，应提供详细的命令行指导。
 · 自动环境配置依赖网络访问华为云镜像站，若镜像源不可用，应提示用户检查网络或提供手动配置指导。但**快速复制初始化**模式下不依赖网络，可直接工作。
@@ -685,89 +685,101 @@ text
 
 ### 30. 多版本架构规范（强制）
 
-#### 30.1 项目结构标准（Stonecutter 单源）
+#### 30.1 项目结构标准
 
 ```
-fku/  (Git 仓库根)
-├── src/main/java/          ← ★ 唯一共享源码（Single Source of Truth），含 //? if neoforge { } 条件块
-├── src/main/resources/     ← 共享资源（lang / 贴图 / 着色器 / pack.mcmeta）
-├── versions/
-│   ├── 1.20.1-forge/src/main/resources/       ← 仅 Forge 独有配置：mods.toml + fku.mixins.json
-│   └── 1.21.8-neoforge/src/main/resources/    ← 仅 NeoForge 独有配置：neoforge.mods.toml + fku.mixins.json
-├── settings.gradle.kts     ← Stonecutter 多项目装配（version("1.20.1-forge", …) …）
-├── stonecutter.gradle.kts  ← Stonecutter 插件 + replacements（forge↔neo 导入/简名/API 文本替换）
-├── build.gradle            ← 根工程
-├── build.forge.gradle.kts        ← Forge 1.20.1 构建（接入 ForgeGradle）
-├── build.neoforge.gradle.kts     ← NeoForge 1.21.8 构建（接入 ModDevGradle）
+fku/
+├── common/src/main/java/    ← ★ 所有共享逻辑代码（主要开发入口）
+├── forge/                   ← Forge 1.20.1 独立构建
+│   ├── build.gradle         ← ForgeGradle + Mixin
+│   └── src/main/java/       ← 仅平台入口（Fku.java + ClientSetup.java）
+├── neoforge/                ← NeoForge 1.21.8 独立构建
+│   ├── build.gradle         ← NeoGradle
+│   └── src/main/java/       ← 仅平台入口
 ├── scripts/
-│   ├── stonecutter_wrap.py        ← 本地预览某加载器展开后源码的辅助工具
-│   └── sync_neoforge_1.21.8.py    ← API 迁移扫描 + Mixin 注入校验（QA，非同步）
+│   └── sync-neoforge.sh     ← 自动同步脚本（common → 各平台）
 ├── MULTIVERSION_MAPPING.md  ← 版本差异映射表
 └── 赛博教员·多版本Minecraft模组开发专家.SKILL.md
 ```
 
 **规则**：
-- **所有功能代码必须放在 `src/main/java/` 下**，禁止在 `versions/` 内写业务逻辑（`versions/` 仅放各加载器独有资源/配置）。
-- 加载器差异用 `//? if neoforge { … } //? }` 表达；若 forge 需不同实现，用 `//? } else { … //? }`。
-- 纯导入 / 简名差异（如 `MinecraftForge`→`NeoForge`、`net.minecraftforge.*`→`net.neoforged.*`）交给 `stonecutter.gradle.kts` 的 `replacements` 统一处理，无需 `//?` 包每个 import。
-- 旧 `common/` + `forge/` + `neoforge/` 三目录复制式结构已废弃并删除；`sync-neoforge.sh` 复制式同步脚本已弃用。
+- **所有功能代码必须放在 `common/` 下**，禁止在平台模块中写业务逻辑
+- 平台模块仅包含 `@Mod` 入口类和 `ClientSetup` 启动逻辑
+- 新增平台（如 fabric）时：新建目录 + 入口类 + 在 `sync-xxx.sh` 中添加转换规则
 
-#### 30.2 Stonecutter 生成机制
+#### 30.2 同步脚本工作机制
 
-Stonecutter 在构建时按加载器展开 `src/`：
-1. 读取 `stonecutter.gradle.kts` 的 `active` 版本（如 `1.20.1-forge`）与 `replacements`。
-2. 对 `src/main/java` 每个文件：保留共享行；`//? if neoforge { }` 块在 forge 下被包进 `/* … */` 注释，在 neo 下保留；`//? } else { }` 反之。
-3. 应用 `string(loader == "neoforge") { replace(…) }` 文本替换（**字面量子串**，非正则）。
-4. 合并 `src/main/resources` 与 `versions/<ver>-<loader>/src/main/resources`，输出到 `versions/<ver>-<loader>/build/generated/stonecutter/`。
+`scripts/sync-neoforge.sh` 执行流程：
+1. 复制 `common/src/main/java/` → 目标平台目录
+2. 执行 sed 替换规则（约 20+ 条），自动转换导入路径
+3. 检查残留 Forge 引用，确保无遗漏
 
-**`//?` 语法约束**：块必须是整行；`//? if neoforge {` 与配对的 `//? }`（或 `//? } else {`）成对出现；非活跃分支整体变 `/* … */` 注释，指令行本身留作 `//` 注释（无害）。
+**当前覆盖的转换规则**：
+```
+MinecraftForge.EVENT_BUS          → NeoForge.EVENT_BUS
+net.minecraftforge.event.TickEvent → net.neoforged.neoforge.event.tick.TickEvent
+@OnlyIn(Dist.CLIENT)              → 包路径改为 neoforged
+RenderLevelStageEvent              → 包路径改为 neoforged
+AttackEntityEvent                  → 包路径改为 neoforged
+FMLClientSetupEvent                → 包路径改为 neoforged
+…（共 20+ 条）
+```
+
+**扩展新平台**：复制 `sync-neoforge.sh` 为 `sync-fabric.sh`，修改替换规则即可。
 
 #### 30.3 差异映射表
 
-`MULTIVERSION_MAPPING.md` 记录所有版本间的 API 差异（事件系统、注册、渲染、构建、Mixin 配置等），并说明第 7 节「逻辑差异」在 `src/` 中如何用 `//? if neoforge` 表达。新增差异时先更新映射表。
+`MULTIVERSION_MAPPING.md` 记录所有版本间的 API 差异，包括：
+- 事件系统包路径迁移
+- 注册方式 API 变更
+- 渲染系统差异对照
+- 构建系统（Gradle 版本 / JDK 版本 / 插件）
+
+每次适配新版本时，先更新映射表，再更新同步脚本。
 
 #### 30.4 版本适配流程
 
 ```bash
-# 开发阶段：只修改 src/ 下的代码
-# 生成并预览 NeoForge 工程：
-./gradlew :1.21.8-neoforge:stonecutterGenerate
-# 生成并预览 Forge 工程：
-./gradlew :1.20.1-forge:stonecutterGenerate
+# 开发阶段：只修改 common/ 下的代码
+# 同步到 NeoForge：
+bash scripts/sync-neoforge.sh
 
-# 构建（需 build.forge.gradle.kts / build.neoforge.gradle.kts 接入对应 Gradle 插件）：
-./gradlew :1.20.1-forge:build          # Forge 1.20.1（JDK 17）
-./gradlew :1.21.8-neoforge:build       # NeoForge 1.21.8（JDK 21）
+# 构建：
+cd forge && ./gradlew build          # Forge 1.20.1
+cd neoforge && ./gradlew build       # NeoForge 1.21.8（需 JDK 21）
 ```
 
 #### 30.5 代码隔离原则
 
-- `src/` 中的代码应尽量使用所有目标版本都存在的 Minecraft 原生类（`Entity`、`Player`、`Vec3`）；加载器相关 API 通过 `replacements` 或 `//?` 条件块适配。
-- 若某功能需要平台特有代码，在 `src/` 内用 `//? if neoforge { … } //? } else { … //? }` 分两个分支实现，禁止写到 `versions/` 的业务代码里。
-- `replacements` 的 `from` 必须是**字面量子串**（TrieSearcher，非正则）；需要正则或复杂变换时改用 `regex { }` 或 `//?` 块。
+- `common/` 中的代码只能使用**所有目标版本都存在的 Minecraft 原生类**（如 `Entity`、`Player`、`Vec3`）
+- 与加载器相关的 API（`@Mod.EventBusSubscriber`、`MinecraftForge.EVENT_BUS` 等）通过同步脚本自动替换
+- 若某个功能需要平台特有代码，通过**接口 + 平台模块实现**的方式隔离：
+  - common 中定义接口
+  - forge/ 和 neoforge/ 中分别实现
+- 同步脚本的替换规则必须随 API 变更同步更新
 
-### 31. 工作流程补充（多版本 Stonecutter）
+### 31. 工作流程补充（多版本）
 
 在原工作流程基础上，增加以下步骤：
 
 #### 31.1 项目状态检测扩展
 
-检测到 `settings.gradle.kts`（含 `dev.kikugie.stonecutter`）+ `src/main/java` 含 `//?` → 判定为 Stonecutter 单源多版本项目，额外读取：
-- `stonecutter.gradle.kts` → 了解 `active` 版本与 `replacements` 规则
-- `MULTIVERSION_MAPPING.md` → 了解各版本的 API 差异与 `//?` 表达惯例
+检测到 `common/` 目录 → 判定为多版本项目，额外读取：
+- `scripts/` 下所有 `sync-*.sh` 文件 → 了解已支持的同步目标
+- `MULTIVERSION_MAPPING.md` → 了解各版本的 API 差异
 
 #### 31.2 代码实现后
 
-修改 `src/` 下的代码后，**无需运行任何同步脚本**。Stonecutter 会在 `stonecutterGenerate` / `build` 时自动展开双版本。仅在需要本地预览展开结果时运行 `./gradlew :<ver>-<loader>:stonecutterGenerate` 或 `python3 scripts/stonecutter_wrap.py`。
+修改 `common/` 下的代码后，必须执行对应平台的同步脚本。
 
 #### 31.3 多版本构建验证
 
 在所有子任务完成后，必须执行：
-1. `./gradlew :1.20.1-forge:stonecutterGenerate` — 验证 Forge 1.20.1 展开无残留 `net.neoforged`
-2. `./gradlew :1.21.8-neoforge:stonecutterGenerate` — 验证 NeoForge 1.21.8 展开无残留 `net.minecraftforge`
-（生成产物在 `versions/<ver>-<loader>/build/generated/stonecutter/`，可用花括号平衡校验双分支合法性）
+1. `cd forge && ./gradlew build` — 验证 Forge 1.20.1 编译
+2. `bash scripts/sync-neoforge.sh` — 同步到 NeoForge
 
 ### 32. 注意事项
 
-- 新增加载器（如 fabric）时：先在 `stonecutter.gradle.kts` 与 `settings.gradle.kts` 注册版本，再在 `src/` 用 `//? if fabric { }` 表达差异，最后在 `MULTIVERSION_MAPPING.md` 记录 API 差异。
-- 后续让你开发新功能时，只需说明需求，我会自动完成：src 编码（含 //? 条件块）→ stonecutterGenerate 双版本预览 → 构建验证的全流程。
+- 新增平台时，先在映射表中记录 API 差异，再编写同步脚本
+- 后续让你开发新功能时，只需说明需求，我会自动完成：common 编码 → 同步 → 双版本构建的全流程
+

@@ -1,0 +1,61 @@
+package fku.org.example.fku.features.healthtag; /* water */
+
+import net.minecraft.client.Minecraft;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+
+@EventBusSubscriber(modid = "fku", value = Dist.CLIENT)
+public class HealthTagEvents {
+
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        HealthTagManager.tick();
+    }
+
+    @SubscribeEvent
+    public static void onAttack(AttackEntityEvent event) {
+        if (event.getEntity().level().isClientSide) {
+            HealthTagManager.onAttack(event.getTarget());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onRenderGui(RenderGuiEvent.Post event) {
+        if (HealthTagManager.isEditing()) return;
+        
+        Minecraft mc = Minecraft.getInstance();
+        double mouseX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getWidth();
+        double mouseY = mc.mouseHandler.ypos() * (double) mc.getWindow().getGuiScaledHeight() / (double) mc.getWindow().getHeight();
+        
+        HealthTagRenderer.render(event.getGuiGraphics(), (int) mouseX, (int) mouseY, event.getPartialTick().getGameTimeDeltaPartialTick(true));
+    }
+
+    @SubscribeEvent
+    public static void onScreenRender(ScreenEvent.Render.Post event) {
+        if (HealthTagManager.isEditing()) {
+            HealthTagRenderer.render(event.getGuiGraphics(), event.getMouseX(), event.getMouseY(), event.getPartialTick());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMouseClick(ScreenEvent.MouseButtonPressed.Pre event) {
+        if (HealthTagRenderer.onMouseClicked(event.getMouseX(), event.getMouseY(), event.getButton())) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMouseDrag(ScreenEvent.MouseDragged.Pre event) {
+        HealthTagRenderer.onMouseDragged(event.getMouseX(), event.getMouseY(), event.getMouseButton());
+    }
+
+    @SubscribeEvent
+    public static void onMouseRelease(ScreenEvent.MouseButtonReleased.Pre event) {
+        HealthTagRenderer.onMouseReleased(event.getMouseX(), event.getMouseY(), event.getButton());
+    }
+}

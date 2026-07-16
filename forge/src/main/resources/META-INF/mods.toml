@@ -1,0 +1,12 @@
+# This is an example mods.toml file for your mod.
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All rights reserved"
+
+[[mods]]
+modId="fku"
+version="1.0.0"
+displayName="FKU Mod"
+logoFile="fku.png"
+authors="Borneo099"
+description="一个无敌吊炸天的mod"
