@@ -1,11 +1,12 @@
 # FKU 多版本差异映射表
 
 > 1.20.1 Forge ↔ 1.21.8 NeoForge  
-> 自动维护：编辑 `common/` → 运行 `scripts/sync-neoforge.sh` 同步至 neoforge
+> 单源模型（Stonecutter 迁移已完成 ✅）：唯一事实来源是 `src/`（由旧 `common/` 重命名而来），
+> 加载器差异用 `//? if neoforge { … } //? }` 条件编译表达，Stonecutter 在生成时按加载器展开。
 >
-> ⚠️ **neoforge/ 是独立模块**：其「专属 1.21.8 适配」永不参与同步、永不被覆盖。
-> `sync-neoforge.sh` 默认 dry-run，用「导入路径归一化 + 1.21.8 专属标记」自动识别并保护专属文件，
-> 绝不会执行整目录删除。详见第 7 节与脚本内 `MANUAL_PROTECTED` / `EXCLUSIVE_MARKERS`。
+> ⚠️ `scripts/sync-neoforge.sh` 已**废弃**（原 `common/` → `neoforge/` 复制式同步脚本）：
+> 单源模型下不再有第二个可覆盖的项目，原「无脑覆盖 1.21.8 专属适配」的危险已从根本上根除。
+> 新工作流见第 6 节。
 
 ---
 
@@ -60,37 +61,39 @@
 | 映射 | `official` | `neoform` (默认) |
 | 启动类 | `@Mod` | `@Mod` (NeoForge包) |
 
-## 6️⃣ 自动同步命令（安全模式）
+## 6️⃣ 单源工作流（Stonecutter）
 
 ```bash
-# 1) 预演：看 sync 会改变哪些文件（默认，不写盘）
-bash scripts/sync-neoforge.sh
+# 1) 生成 NeoForge 1.21.8 工程（在 versions/1.21.8-neoforge/build/generated/stonecutter/ 展开 src/）
+./gradlew :1.21.8-neoforge:stonecutterGenerate
 
-# 2) 确认无误后，实际写入
-bash scripts/sync-neoforge.sh --apply
+# 2) 生成 Forge 1.20.1 工程
+./gradlew :1.20.1-forge:stonecutterGenerate
 
-# 3) 分别构建两个版本
-cd forge    && ./gradlew build   # 构建 1.20.1
-cd neoforge && ./gradlew build   # 构建 1.21.8
+# 3) 构建（需先在 build.forge.gradle.kts / build.neoforge.gradle.kts 接入
+#    ForgeGradle / ModDevGradle，目前为最小 plugins { java } 占位）
+./gradlew :1.20.1-forge:build
+./gradlew :1.21.8-neoforge:build
 ```
 
-脚本行为：
-- **永不删除** neoforge 任何文件；默认 dry-run，需 `--apply` 才写入。
-- 对每个 common 文件生成「仅做导入转换后的 NeoForge 版本」(expected)：
-  - neoforge 无对应文件 → 新增；neoforge == expected → 已同步跳过；
-  - neoforge ≠ expected 且含 1.21.8 专属标记 → **保护跳过**（见第 7 节）；
-  - neoforge ≠ expected 且无专属标记 → 视为共享文件被 common 改动，**安全更新**。
-- 被保护的文件若需同步 common 的改动，请**人工移植**到 neoforge 对应文件。
+工作模型：
+- `src/main/java` 是**唯一**共享源码；`//? if neoforge { … } //? }` 块按加载器展开，
+  非活跃分支被包进 `/* … */` 注释，绝不互相污染。
+- `src/main/resources` 是共享资源（lang / 贴图 / 着色器 / pack.mcmeta）。
+- `versions/1.20.1-forge/src/main/resources` 与 `versions/1.21.8-neoforge/src/main/resources`
+  仅放各加载器**独有**配置：`mods.toml` / `neoforge.mods.toml` 与 `fku.mixins.json`。
+- forge↔neo 的导入 / 简名 / API 文本替换由 `stonecutter.gradle.kts` 的 `replacements { }` 统一完成
+  （如 `MinecraftForge`→`NeoForge`、`net.minecraftforge.*`→`net.neoforged.*`），无需用 `//?` 包每个 import。
 
-> 真正的「单源多版本」长期方案是 **Stonecutter 预处理**：同一份 `common` 代码用
-> `#//if MC_1_21_8 … #//else … #//endif` 在构建时自动适配，不再需要复制式同步。
-> 见文末「路线图」。
+> 旧 `scripts/sync-neoforge.sh`（common → neoforge 复制式同步）已废弃：单源下无第二个项目可覆盖，
+> 原「专属适配被无脑覆盖」的风险已不存在。详见脚本内说明。
 
 ## 7️⃣ 专属修改 / 不可自动同步的逻辑差异
 
-> 以下都是**逻辑差异**，不是导入路径差异。`sync-neoforge.sh` 的 sed 规则**无法**处理它们，
-> 必须人工移植。这些文件已被脚本识别为「专属适配」并保护（见 `MANUAL_PROTECTED` / `EXCLUSIVE_MARKERS`）。
-> 判断原则：common 的对应改动若涉及下表任一模式，应在 neoforge 手动重写，而非依赖同步。
+> 以下都是**逻辑差异**，不是导入路径差异。`stonecutter.gradle.kts` 的 `replacements` 文本替换**无法**
+> 处理它们，必须在 `src/` 中用 `//? if neoforge { … } //? }` 条件块表达。
+> 判断原则：`src/` 的对应代码若涉及下表任一模式，应把 1.21.8 分支包进 `//? if neoforge { }`，
+> 必要时用 `//? } else { }` 提供 1.20.1 分支。
 
 | 文件 | 1.20.1（common） | 1.21.8（neoforge） | 差异类型 |
 |------|------------------|--------------------|----------|
@@ -105,20 +108,20 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
 | 通用 | `BlockState` / `Transformation` 旧 codec | `Transformation.EXTENDED_CODEC` 接受扁平 16-float 形式 | codec 变更 |
 
 **新增专属适配时的操作清单**：
-1. 在 neoforge 写好 1.21.8 专属逻辑；
-2. 把它加入 `scripts/sync-neoforge.sh` 的 `MANUAL_PROTECTED`（保险）；
-3. 把对应的 1.20.1↔1.21.8 差异补进本表第 7 节；
-4. 绝不要把专属逻辑写回 `common/`，否则会被同步脚本当作共享代码复制。
+1. 在 `src/` 对应文件内，把 1.21.8 专属逻辑包进 `//? if neoforge { … } //? }`；
+2. 若 1.20.1 分支需不同实现，用 `//? } else { … //? }` 提供 forge 分支；
+3. 纯导入 / 简名差异交给 `stonecutter.gradle.kts` 的 `replacements`，不用 `//?`；
+4. 把新的 1.20.1↔1.21.8 差异补进本表第 7 节。
 
-## 🗺️ 路线图：从「复制式同步」到「Stonecutter 单源」
+## 🗺️ 路线图：Stonecutter 单源迁移（已完成 ✅）
 
-当前 `neoforge/` 是独立模块，`sync-neoforge.sh` 用「导入归一化 + 专属标记」避免覆盖。
-下一步彻底消除维护陷阱的做法：
+`common/` 已重命名为 `src/` 成为唯一共享源；`forge/`、`neoforge/` 旧独立项目已移除；
+第 7 节的「专属修改」已全部改写为 `src/` 内 `//? if neoforge { }` 条件块；
+`stonecutterGenerate` 对两个加载器均验证通过（neo 无 `net.minecraftforge` 残留，双分支花括号平衡）。
 
-1. 引入 **Stonecutter** Gradle 插件到 `common/`；
-2. 把第 7 节的「专属修改」改写为同一文件内的 `#//if MC_1_21_8 … #//else … #//endif` 预处理块；
-3. `forge/` 与 `neoforge/` 仅保留各自的 `gradle.build` / 资源 / 真正平台独有的新特性；
-4. 构建 1.20.1 与 1.21.8 时，Stonecutter 自动裁剪出对应版本代码 —— **不再有任何复制脚本**，
-   专属逻辑也绝不会被覆盖。
+剩余收尾（Task #35，需联网拉取插件）：
+- 在 `build.forge.gradle.kts` / `build.neoforge.gradle.kts` 接入 `ForgeGradle` / `ModDevGradle`，
+  使 `./gradlew :<ver>-<loader>:build` 能真正产出 jar（当前为最小 `plugins { java }` 占位）。
+- 完成后 `versions/<ver>-<loader>/build/` 下的生成产物随构建产生，已被 `.gitignore` 忽略。
 
-> 此迁移涉及构建系统改动，建议在确认 `sync-neoforge.sh` 安全策略稳定后再实施。
+> 历史：`sync-neoforge.sh` 的「复制式同步」方案已废弃，单源模型下专属逻辑绝不会被覆盖。

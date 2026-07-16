@@ -35,16 +35,16 @@ FKU · NeoForge 1.21.8 同步 / 自检脚本
 用法
 ----
   # 只扫描（默认，不改动任何文件，安全）
-  python3 scripts/sync_neoforge_1.21.8.py --root neoforge/src
+  python3 scripts/sync_neoforge_1.21.8.py --root src/main/java
 
   # 扫描 + Mixin 注入校验（需要 rename jar；会自动探测）
-  python3 scripts/sync_neoforge_1.21.8.py --root neoforge/src --audit
+  python3 scripts/sync_neoforge_1.21.8.py --root src/main/java --audit
 
   # 自动修复「安全」的 API 写法（会先备份 .bak，谨慎使用）
-  python3 scripts/sync_neoforge_1.21.8.py --root neoforge/src --fix-api
+  python3 scripts/sync_neoforge_1.21.8.py --root src/main/java --fix-api
 
   # 指定 Minecraft 官方映射 jar（不指定则自动从 neoforge/build/neoForm 探测）
-  python3 scripts/sync_neoforge_1.21.8.py --root neoforge/src --audit \
+  python3 scripts/sync_neoforge_1.21.8.py --root src/main/java --audit \
       --jar neoforge/build/neoForm/neoFormJoined1.21.8-*/steps/rename/output.jar
 
 退出码：发现任何问题时返回 1，全绿返回 0（方便接入 CI / pre-commit）。
@@ -634,7 +634,7 @@ def detect_neoforge_jar():
 
 def main():
     ap = argparse.ArgumentParser(description="FKU NeoForge 1.21.8 同步/自检脚本")
-    ap.add_argument("--root", default="neoforge/src", help="源码根目录（默认 neoforge/src）")
+    ap.add_argument("--root", default="src/main/java", help="共享源码根目录（默认 src/main/java；Stonecutter 单源迁移后唯一事实来源）")
     ap.add_argument("--audit", action="store_true", help="启用 Mixin 运行时注入校验（需 Minecraft 官方映射 jar）")
     ap.add_argument("--jar", default=None, help="Minecraft 官方映射 jar 路径（rename/output.jar）")
     ap.add_argument("--fix-api", action="store_true", help="自动修复 safe 的 API 写法（先备份 .bak）")
