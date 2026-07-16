@@ -35,9 +35,15 @@ build-logic/.gradle/
 neoforge/runs/
 
 # Orphan / backup / debug artifacts (已从版本库移除，防止 git add -A 重新加回)
-/build.gradle            # 根级孤儿聚合器（forge/、neoforge/ 各自自含、合法）
-/build.gradle.orig       # 根级备份
-*.orig                  # 合并/编辑备份
-*.bak                   # 各种 .bak 备份
-/patches/               # 未接入当前构建的孤儿 Forge 源码 patch
-/.dbg/                  # 一次性调试产物
+# 根级孤儿聚合器（forge/、neoforge/ 各自自含、合法）
+/build.gradle
+# 根级备份
+/build.gradle.orig
+# 合并/编辑备份
+*.orig
+# 各种 .bak 备份
+*.bak
+# 未接入当前构建的孤儿 Forge 源码 patch
+/patches/
+# 一次性调试产物
+/.dbg/
