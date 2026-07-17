@@ -715,7 +715,7 @@ fku/
 1. **默认 dry-run**：不加 `--apply` 只打印将要做什么、不写磁盘；确认无误后加 `--apply` 才真正写入。
 2. **识别并保护 1.21.x 专属适配**（三种机制，自动 + 手动）：
    - **专属 API 标记（EXCLUSIVE_MARKERS）**：检测 neoforge 文件是否含「仅 1.21.8 才有、common 绝不会有」的写法（如 `DataComponents.ENTITY_DATA`、`CustomData`、`Operation.ADD_VALUE`、`ResourceLocation.parse(`、`EXTENDED_CODEC`）。若含 → 判定为专属适配，跳过、绝不覆盖。
-   - **手动保护列表（MANUAL_PROTECTED）**：对已知专属适配文件显式列出。例：`SprintHandler.java`（含全向旋转 `targetYaw -= 90.0F` 的 +90° 映射修正）、`DisplayModelManager.java`、`ArrowDmgFeature.java`、`HotkeySystem.java`。
+   - **手动保护列表（MANUAL_PROTECTED）**：对已知专属适配文件显式列出。例：`SprintHandler.java`（含全向旋转的 `moveVector` 反射强制、ClientTickEvent 拆分等 1.21.x 专属逻辑；yaw 计算与 1.20.1 共享、无 ±90° 偏移）、`DisplayModelManager.java`、`ArrowDmgFeature.java`、`HotkeySystem.java`。
    - **专属子包**：路径含 `/neoforge/` 子包的文件直接保护。
 3. **安全更新（＝自动更新）**：对「common 已改动、且 neoforge 无专属标记」的共享文件，自动用「导入转换后的 common 版本」覆盖 neoforge 对应文件——这就是 **「每次修复错误自动更新」**：在 `common/` 修共享 bug → 跑 `bash scripts/sync-neoforge.sh --apply` → 改动自动同步到 neoforge。
 4. **漂移提示**：受保护文件若相对 common 的 `expected`（导入转换后版本）发生漂移（说明共享逻辑已更新但 neo 适配未同步），脚本打印 `diff`，便于把共享改动手动并入 neo 适配。

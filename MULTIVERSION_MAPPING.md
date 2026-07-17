@@ -84,7 +84,7 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
 
 > ⚠️ **Stonecutter 单源方案已评估并放弃**（2026-07）：实测将 `common` 迁移为 Stonecutter 单源后，
 > 1.21.8 出现 200+ 编译错误（事件类拆分、渲染 API 不存在等），证明机械化的包名替换并未真正
-> 编译通过；且单源预处理会让「全向旋转 +90° 映射」这类逻辑差异混入 `//? if` 块，可读性下降。
+> 编译通过；且单源预处理会让「全向旋转的 moveVector 反射强制」这类逻辑差异混入 `//? if` 块，可读性下降。
 > **当前选定方案 = `common/` 共享源 + `sync-neoforge.sh` 安全同步**，稳定可编译，见文末说明。
 
 ## 7️⃣ 专属修改 / 不可自动同步的逻辑差异
@@ -99,7 +99,7 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
 | `features/arrowdmg/ArrowDmgFeature.java` | `Vec3.multiply(double)` | `Vec3.scale(double)`（1.21.8 无 `multiply(double)`） | API 改名 |
 | `features/arrowdmg/ArrowDmgFeature.java` | 旧微抖动疾跑包（±1e-10） | 基于视线向量的位置欺骗序列（参考 `ArrowDmg.java`） | 逻辑重写 |
 | `util/HotkeySystem.java` | `for(key=32; key<512; key++)` 读 GLFW 键盘缓冲 | 上界 `GLFW.GLFW_KEY_LAST` + `isKeyDown` 安全包装 | 崩溃修复 |
-| `features/sprint/SprintHandler.java` | 全向旋转 `targetYaw = getMovementDirection(...)` 直接用于 `setYRot` | 额外 `targetYaw -= 90.0F` 修正 1.21.8 的 yaw→世界移动映射整体 +90°（另含 `ClientTickEvent.Pre/Post` 拆分、`ClientInput` 等事件/API 重写） | 逻辑/事件重写 |
+| `features/sprint/SprintHandler.java` | 全向旋转 `targetYaw = getMovementDirection(...)`（与 1.20.1 共享，无 ±90° 偏移）直接用于 `setYRot` | 1.21.x 专属：`ClientTickEvent.Pre/Post` 拆分、`ClientInput`/`Input` API 改名；并在 `MovementInputUpdateEvent` 用反射把 `ClientInput.moveVector` 设为 `(0,1)` 强制纯向前（1.21.8 的 `moveVector` 由 `KeyboardInput.tick()` 从真实按键缓存，只改 `keyPresses` 不生效） | 逻辑/事件重写 |
 | 通用 | `AttributeModifier.Operation.ADDITION` | `Operation.ADD_VALUE` | 枚举改名 |
 | 通用 | `new ResourceLocation(x)` | `ResourceLocation.parse(x)` | API 惯用法 |
 | 通用 | `ForgeRegistries.X.getValue(new ResourceLocation(...))` | 原版注册表改用 `BuiltInRegistries.X.getValue(ResourceLocation.parse(...))` | 注册表来源 |
@@ -121,7 +121,7 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
    `TickEvent` 拆分为 `ClientTickEvent/ServerTickEvent/PlayerTickEvent`；`RenderGuiOverlayEvent`、
    `RegisterShadersEvent`、`ShaderInstance` 等在 1.21.8 根本不存在等）。机械化的 `//? if` 包名替换
    并未真正编译通过，反而引入维护陷阱。
-2. **逻辑差异难塞进预处理块**：「强制疾跑全向旋转的 yaw→世界移动 +90° 映射修正」（`targetYaw -= 90.0F`）、
+2. **逻辑差异难塞进预处理块**：「强制疾跑全向旋转的 `moveVector` 反射强制纯向前」（`MovementInputUpdateEvent` 中改 `keyPresses` + 反射设 `moveVector=(0,1)`，因 1.21.8 的 `moveVector` 由 `KeyboardInput.tick()` 缓存）、
    `ClientTickEvent.Pre/Post` 拆分、`ClientInput` 等，是整段逻辑重写而非包名差异，硬塞 `//?` 反而更乱。
 3. **安全同步已满足需求**：共享 bug 在 `common` 修 → `bash scripts/sync-neoforge.sh --apply` 自动同步；
    专属适配受保护、永不被回滚。这正是「一次开发，多版本构建」的目标，且风险可控。

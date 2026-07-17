@@ -4,6 +4,7 @@ import fku.org.example.fku.Fku;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.ClientInput;
 import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.effect.MobEffects;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -25,14 +26,14 @@ import net.neoforged.fml.common.EventBusSubscriber;
  *   v1 直接改 player.yaw → 累积偏移无限旋转
  *   v2 player.input.zza/xxa 覆盖 → 因 input.tick() 重新计算 zza/xxa，无效
  *   v3 KeyMapping.setDown() → OS 键盘事件异步覆写，不可靠
- *   v4 → 用 MovementInputUpdateEvent 在 input.tick() 完成后再覆盖 forwardImpulse/leftImpulse，
- *       彻底回避 OS 键盘事件与 setDown() 的时序竞态，zzz/xxa 100% 生效
+ *   v4 → 用 MovementInputUpdateEvent 在 KeyboardInput.tick() 后覆盖输入：1.21.8 须同时
+ *       改 keyPresses 并用反射改 moveVector 才能强制纯向前（仅 keyPresses 不生效）
  *
  * ★ 实践路线：
  *   1. START 阶段保存真实视角 + 真实键状态（用于方向计算）
  *   2. 基于真实键计算目标 yaw 和键组合 hash
  *   3. 应用平滑旋转 yaw → 修改 player.yaw（aiStep 发包用）
- *   4. MovementInputUpdateEvent 在 input.tick() 后强制 zza=1/xxa=0
+ *   4. MovementInputUpdateEvent 在 input.tick() 后强制 moveVector=(0,1)（纯向前）
  *   5. END 阶段恢复真实视角
  */
 @OnlyIn(Dist.CLIENT)
@@ -142,14 +143,32 @@ public class SprintHandler {
      * 效果：无论玩家实际按了哪些 WASD 键，强制 zza=1/xxa=0，实现纯向前移动
      * 解决：KeyMapping.setDown() 被 OS 键盘事件异步覆写的问题
      */
+    // ★ 1.21.8 中 moveVector 由 KeyboardInput.tick() 从真实按键算出并缓存在 protected 字段，
+    //   aiStep 实际用 getMoveVector()。仅改 keyPresses 不会更新 moveVector，必须同时用反射把
+    //   moveVector 设为 (0,1) 才能强制纯向前（按 A/S/D 也不会侧移/后退，始终朝旋转方向前进）。
+    private static final java.lang.reflect.Field MOVE_VECTOR_FIELD;
+    static {
+        java.lang.reflect.Field f = null;
+        try {
+            f = ClientInput.class.getDeclaredField("moveVector");
+            f.setAccessible(true);
+        } catch (NoSuchFieldException | SecurityException ignored) { }
+        MOVE_VECTOR_FIELD = f;
+    }
+
     @SubscribeEvent
     public static void onMovementInput(MovementInputUpdateEvent event) {
         if (!overrideInputThisTick) return;
 
         ClientInput input = event.getInput();
         // ★ 强制纯向前 + 无侧移
-        //    在 1.21.8 中，Input 是 record，通过 keyPresses 字段设置按键状态
+        //   keyPresses 影响 hasForwardImpulse 等语义；实际移动方向由 moveVector 决定。
         input.keyPresses = new Input(true, false, false, false, false, false, false);
+        if (MOVE_VECTOR_FIELD != null) {
+            try {
+                MOVE_VECTOR_FIELD.set(input, new Vec2(0.0F, 1.0F));
+            } catch (IllegalAccessException ignored) { }
+        }
     }
 
     // ════════════════════════════════════════════════════════
@@ -229,14 +248,11 @@ public class SprintHandler {
             if (DEBUG) System.out.println("[Sprint] hash变化: " + lastKeyHash + " → " + curHash);
         }
 
-        // ★ 6. 基于【真实键】计算目标 yaw
+        // ★ 6. 基于【真实键】计算目标 yaw（与 1.20.1 共享逻辑，无需版本偏移）
+        //   配合下方「强制纯向前输入」，玩家朝 (-sin(targetYaw), cos(targetYaw)) 前进，
+        //   等价于原版按相同 WASD 的方向。1.21.8 的 yaw→世界移动映射与 1.20.1 一致，
+        //   【不需要】任何 ±90° 修正（之前误加的 -90 已移除）。
         float targetYaw = getMovementDirection(realYaw, savedUp, savedDown, savedLeft, savedRight);
-
-        // ★ 6.5 版本约定修正（仅 NeoForge 1.21.x）：1.21.8 的 yaw→世界移动映射相对
-        //   1.20.1 Forge 整体 +90°，故假旋转目标 yaw 回退 90°，使「按 D 朝镜头右前方
-        //   走」与 1.20.1 Forge 行为对齐（而非后退）。此调整为 1.21.x 专属适配，
-        //   同步脚本不会覆盖本文件（见 MANUAL_PROTECTED / 专属标记）。
-        targetYaw -= 90.0F;
 
         // ★ 7. 平滑旋转：渐进插值
         if (cfg.smoothRotation && cfg.rotationSpeed > 0) {

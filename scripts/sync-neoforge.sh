@@ -25,9 +25,9 @@ MANUAL_PROTECTED=(
   "fku/org/example/fku/features/displaymodel/DisplayModelManager.java"
   "fku/org/example/fku/features/arrowdmg/ArrowDmgFeature.java"
   "fku/org/example/fku/util/HotkeySystem.java"
-  # 1.21.8 强制疾跑全向旋转：含「yaw→世界移动映射 +90°」专属修正（targetYaw -= 90.0F），
-  # 以及 ClientTickEvent.Pre/Post 拆分、ClientInput 等 1.21.x 适配。common 版为 1.20.1，
-  # 不含这些改动，故整体保护，绝不参与同步、永不被回滚。
+  # 1.21.8 强制疾跑全向旋转：含 moveVector 反射强制纯向前（MovementInputUpdateEvent 中反射设
+  # ClientInput.moveVector=(0,1)）、ClientTickEvent 拆分等 1.21.x 专属逻辑；yaw 计算与 1.20.1
+  # 共享、无 ±90° 偏移。common 版为 1.20.1，不含这些改动，故整体保护，绝不参与同步、永不被回滚。
   "fku/org/example/fku/features/sprint/SprintHandler.java"
 )
 
