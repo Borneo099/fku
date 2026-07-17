@@ -51,6 +51,12 @@ public class DisplayModelScreen extends Screen {
     private static final int BASE_HEIGHT = 222;
     /** 每行指令高度 */
     private static final int ROW_HEIGHT = 24;
+    /**
+     * 单行指令输入框最大字符数。
+     * ★ 1.21.8 修复：原值 32767 会把 block-display.com 导出的超长模型指令（常远超 32767 字符）截断，
+     *   表现为"指令输入不完"。这里提到 1<<20（约 105 万字符），足以容纳任意模型指令。
+     */
+    private static final int MAX_COMMAND_LENGTH = 1 << 20;
 
     // ============ 多行指令输入 ============
     private final List<CommandRow> commandRows = new ArrayList<>();
@@ -176,9 +182,9 @@ public class DisplayModelScreen extends Screen {
             }).bounds(x + 10, currentY, 18, 18).build();
             myAddRenderableWidget(row.toggleBtn);
 
-            // 指令输入框
-            row.input = new EditBox(font, x + 32, currentY, WIDTH - 44, 18, Component.literal(""));
-            row.input.setMaxLength(32767);
+            // 指令输入框（加宽到接近面板全宽，提升长指令可见性）
+            row.input = new EditBox(font, x + 32, currentY, WIDTH - 36, 18, Component.literal(""));
+            row.input.setMaxLength(MAX_COMMAND_LENGTH);
             row.input.setValue(savedVal);
             myAddWidget(row.input);
 
@@ -529,6 +535,19 @@ public class DisplayModelScreen extends Screen {
         // ── 底部状态栏（按钮上方） ──
         if (!statusMessage.isEmpty()) {
             guiGraphics.drawString(font, statusMessage, x + 15, y + totalHeight - 45, statusColor);
+        }
+
+        // ── 指令字符计数反馈（消除"长指令输入不完"的错觉） ──
+        int totalChars = 0;
+        int nonEmpty = 0;
+        for (CommandRow row : commandRows) {
+            String v = row.input.getValue();
+            totalChars += v.length();
+            if (!v.isEmpty()) nonEmpty++;
+        }
+        if (totalChars > 0) {
+            guiGraphics.drawString(font, "已输入 " + totalChars + " 字符 / " + nonEmpty + " 行",
+                    x + 15, y + totalHeight - 60, 0xFF88CC88);
         }
 
         // ── 底部按钮（必须显式渲染，未调用 super.render()） ──
