@@ -301,12 +301,16 @@ public class DisplayModelScreen extends Screen {
     //  updateFromManager
     // ====================================================================
     private void updateFromManager() {
+        // ★ 始终显示 Manager 的最新状态（含报错/完成），避免"点击无反应"因失败静默而无可感知
+        String msg = manager.getStatusMessage();
+        if (msg != null && !msg.isEmpty()) {
+            this.statusMessage = msg;
+            this.statusColor = msg.startsWith("§c") ? 0xFFFF5555
+                    : msg.startsWith("§e") ? 0xFFFFFF55
+                    : 0xFF55FF55;
+        }
+
         if (manager.isRunning()) {
-            String msg = manager.getStatusMessage();
-            if (msg != null && !msg.isEmpty()) {
-                this.statusMessage = msg;
-                this.statusColor = msg.startsWith("§c") ? 0xFFFF5555 : 0xFF55FF55;
-            }
             if (summonButton != null) {
                 summonButton.setMessage(Component.literal(
                         "放置中 " + manager.getCurrentIndex() + "/" + manager.getTotalCount()));
@@ -372,6 +376,17 @@ public class DisplayModelScreen extends Screen {
             setStatusMessage("§a开始放置，" + cmds.size() + " 行指令...", 0xFF55FF55);
             summonButton.setMessage(Component.literal("放置中..."));
             summonButton.active = false;
+        } else {
+            // ★ 启动失败（解析错误/非创造模式等）：Manager 已在 start() 内 setStatus，
+            //   立即把错误显示出来，避免"点击无反应"无可感知反馈
+            String err = manager.getStatusMessage();
+            if (err != null && !err.isEmpty()) {
+                this.statusMessage = err;
+                this.statusColor = err.startsWith("§c") ? 0xFFFF5555
+                        : err.startsWith("§e") ? 0xFFFFFF55 : 0xFF55FF55;
+            } else {
+                setStatusMessage("§c召唤失败（未知原因）", 0xFFFF5555);
+            }
         }
     }
 

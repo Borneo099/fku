@@ -7,6 +7,8 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -157,6 +159,16 @@ public class ModelParser {
     }
 
     /**
+     * 仅这些键是"浮点向量列表"，才需要做浮点后缀修补。
+     * 1.21.8 的 /summon 指令里 text_display 的 text:[{...json...}] 也是 [..] 结构，
+     * 但它里面是 JSON 组件（含 "font":"minecraft:default" 等），绝不能当浮点列表处理，
+     * 否则 fixNumberSuffixes 会把 JSON 内容误改导致解析失败。
+     */
+    private static final Set<String> FLOAT_LIST_KEYS = Set.of(
+            "transformation", "translation", "scale",
+            "left_rotation", "right_rotation", "start_interpolation");
+
+    /**
      * 清理和修复NBT字符串，处理block-display.com等工具生成的特殊格式
      */
     private static String cleanNbtString(String nbt) {
@@ -169,19 +181,27 @@ public class ModelParser {
      * 修复Float列表中的Double值问题
      * block-display.com可能生成: transformation:[0.25f,0,0,0,...0.2]
      * 这里0.2是double，需要转换为0.2f
+     *
+     * ★ 1.21.8 适配：只针对已知的浮点向量键修补，保护 text:[{json}] 等组件不被误改。
      */
     private static String fixFloatListValues(String nbt) {
         Pattern listPattern = Pattern.compile("(\\w+):\\[([^\\]]+)\\]");
         Matcher matcher = listPattern.matcher(nbt);
-        
+
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
+            String key = matcher.group(1);
+            if (!FLOAT_LIST_KEYS.contains(key.toLowerCase(Locale.ROOT))) {
+                // 非浮点列表（如 text_display 的 text:[{...}]）→ 原样保留
+                matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+                continue;
+            }
             String listContent = matcher.group(2);
             String fixedContent = fixNumberSuffixes(listContent);
-            matcher.appendReplacement(sb, matcher.group(1) + ":[" + fixedContent + "]");
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(key + ":[" + fixedContent + "]"));
         }
         matcher.appendTail(sb);
-        
+
         return sb.toString();
     }
 

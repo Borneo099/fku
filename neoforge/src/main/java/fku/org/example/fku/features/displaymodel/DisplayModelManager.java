@@ -148,11 +148,13 @@ public class DisplayModelManager {
                 entry.offset = ModelParser.extractOffset(entry.rawCommand);
                 entry.passengers = ModelParser.extractPassengers(entry.rawCommand);
             } catch (Exception e) {
-                setStatus("§c指令格式错误: " + entry.rawCommand + " - " + e.getMessage());
+                setStatus("§c指令格式错误: " + e.getMessage());
+                fireStatusUpdate();
                 return;
             }
             if (entry.passengers.isEmpty()) {
                 setStatus("§c指令中没有 Passengers: " + entry.rawCommand);
+                fireStatusUpdate();
                 return;
             }
         }
@@ -199,6 +201,7 @@ public class DisplayModelManager {
         phase = Phase.IDLE;
         commandQueue = null;
         setStatus("§c已中止");
+        fireStatusUpdate();
         Fku.LOGGER.info("[DisplayModel] 放置已中止");
     }
 
@@ -233,12 +236,14 @@ public class DisplayModelManager {
         LocalPlayer player = mc.player;
         if (player == null || mc.level == null) {
             stop();
+            fireStatusUpdate();
             return;
         }
 
         if (!player.isCreative()) {
             stop();
             setStatus("§c创造模式被取消");
+            fireStatusUpdate();
             return;
         }
 
@@ -302,11 +307,12 @@ public class DisplayModelManager {
             }
 
             case RESTORE_ITEM -> {
+                int doneRows = (commandQueue == null ? 0 : commandQueue.size());
                 doRestoreItem();
                 running = false;
                 phase = Phase.IDLE;
                 commandQueue = null;
-                setStatus("§a全部完成！共 " + (commandQueue == null ? 0 : commandQueue.size()) + " 行");
+                setStatus("§a全部完成！共 " + doneRows + " 行");
                 Fku.LOGGER.info("[DisplayModel] 放置完成");
                 fireStatusUpdate();
             }

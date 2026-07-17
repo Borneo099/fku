@@ -161,9 +161,12 @@ public class SprintHandler {
         if (!overrideInputThisTick) return;
 
         ClientInput input = event.getInput();
-        // ★ 强制纯向前 + 无侧移
+        // ★ 强制纯向前 + 无侧移，但保留真实跳跃/潜行/疾跑状态
         //   keyPresses 影响 hasForwardImpulse 等语义；实际移动方向由 moveVector 决定。
-        input.keyPresses = new Input(true, false, false, false, false, false, false);
+        //   注意 Input(forward,backward,left,right,jump,shift,sprint)：
+        //   第 5 个参数 jump 必须继承真实按键，否则旋转时按跳跃键无反应。
+        Input orig = input.keyPresses;
+        input.keyPresses = new Input(true, false, false, false, orig.jump(), orig.shift(), orig.sprint());
         if (MOVE_VECTOR_FIELD != null) {
             try {
                 MOVE_VECTOR_FIELD.set(input, new Vec2(0.0F, 1.0F));
