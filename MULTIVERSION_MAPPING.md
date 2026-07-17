@@ -96,6 +96,8 @@ cd neoforge && ./gradlew build   # 构建 1.21.8
 | 文件 | 1.20.1（common） | 1.21.8（neoforge） | 差异类型 |
 |------|------------------|--------------------|----------|
 | `features/displaymodel/DisplayModelManager.java` | 刷怪蛋用 `CUSTOM_DATA` + `EntityTag` 包装乘客 NBT | `DataComponents.ENTITY_DATA` + `CustomData` 直接作为实体完整存档 NBT | 物品组件化 |
+| `features/displaymodel/ModelParser.java` | `fixFloatListValues` 对所有 `[...]` 列表做浮点后缀修补 | 仅对已知浮点向量键（`transformation`/`translation`/`scale`/`left_rotation`/`right_rotation`）修补，保护 `text_display` 的 `text:[{json}]` 不被误改 | 1.21.8 指令结构（含 text_display JSON） |
+| `features/displaymodel/DisplayModelManager.java` + `DisplayModelScreen.java` | 报错仅 `setStatus`，屏幕仅在 `isRunning()` 时显示状态 | 报错/完成均 `fireStatusUpdate()`；屏幕 `updateFromManager` 始终显示管理器最新状态（含 `§c` 报错/`§a` 完成） | UI 反馈（避免"点击召唤无反应"因失败静默无可感知） |
 | `features/arrowdmg/ArrowDmgFeature.java` | `Vec3.multiply(double)` | `Vec3.scale(double)`（1.21.8 无 `multiply(double)`） | API 改名 |
 | `features/arrowdmg/ArrowDmgFeature.java` | 旧微抖动疾跑包（±1e-10） | 基于视线向量的位置欺骗序列（参考 `ArrowDmg.java`） | 逻辑重写 |
 | `util/HotkeySystem.java` | `for(key=32; key<512; key++)` 读 GLFW 键盘缓冲 | 上界 `GLFW.GLFW_KEY_LAST` + `isKeyDown` 安全包装 | 崩溃修复 |
