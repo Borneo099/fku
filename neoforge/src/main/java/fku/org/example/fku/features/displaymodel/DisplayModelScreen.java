@@ -185,6 +185,10 @@ public class DisplayModelScreen extends Screen {
             // 指令输入框（加宽到接近面板全宽，提升长指令可见性）
             row.input = new EditBox(font, x + 32, currentY, WIDTH - 36, 18, Component.literal(""));
             row.input.setMaxLength(MAX_COMMAND_LENGTH);
+            // ★ 关键修复：EditBox 默认 filter 会拒绝含换行/控制字符的新值（整次粘贴被丢弃），
+            //    block-display.com 导出的超长指令常在中间带换行，导致"输入到某处就输不进"。
+            //    设宽松 filter 允许任意字符，配合下方 startSummon 合并换行，确保指令完整。
+            row.input.setFilter(s -> true);
             row.input.setValue(savedVal);
             myAddWidget(row.input);
 
@@ -343,7 +347,10 @@ public class DisplayModelScreen extends Screen {
 
         List<String> cmds = new ArrayList<>();
         for (CommandRow row : commandRows) {
-            String cmd = row.input.getValue().trim();
+            // ★ 关键修复：block-display.com 导出的超长指令常在中间带换行（约 4970 字符处），
+            //   EditBox 默认 filter 会整段拒绝含换行的粘贴；已用 setFilter(s->true) 放宽输入，
+            //   此处再兜底把所有换行/回车压成空格，确保整条指令完整、可被解析。
+            String cmd = row.input.getValue().replaceAll("\\R", " ").trim();
             if (!cmd.isEmpty()) cmds.add(cmd);
         }
         if (cmds.isEmpty()) {
