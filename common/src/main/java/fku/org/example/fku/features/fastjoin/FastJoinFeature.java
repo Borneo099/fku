@@ -21,7 +21,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class FastJoinFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
 
     private static boolean recovering = false;
     private static int targetRd = 12;
@@ -69,7 +69,8 @@ public class FastJoinFeature {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (!isEnabled() || mc.player == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || !isEnabled() || mc.player == null) return;
 
         FastJoinConfig cfg = FastJoinConfig.getInstance();
         int current = mc.options.renderDistance().get();
@@ -114,6 +115,8 @@ public class FastJoinFeature {
     }
 
     private static void setRd(int rd) {
+        Minecraft mc = getMc();
+        if (mc == null) return;
         mc.options.renderDistance().set(rd);
     }
 
@@ -124,13 +127,15 @@ public class FastJoinFeature {
         cfg.setMode("EXTREME"); cfg.setEnabled(true);
         setRd(1); recovering = true; tickCounter = 0; lockedRd = -1;
         targetRd = Math.max(2, cfg.targetRenderDistance);
-        if (mc.player != null) mc.player.displayClientMessage(
+        Minecraft mc = getMc();
+        if (mc != null && mc.player != null) mc.player.displayClientMessage(
             Component.literal("§c[FastJoin] 超时回退，请重新连接"), false);
     }
 
     public static boolean isRecovering() { return recovering; }
     public static int getRecoveryProgress() {
-        if (!recovering || targetRd <= 1) return 100;
+        Minecraft mc = getMc();
+        if (mc == null || !recovering || targetRd <= 1) return 100;
         return Math.min(100, mc.options.renderDistance().get() * 100 / targetRd);
     }
 }

@@ -46,7 +46,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class KillFXFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
 
     private static final int MAX_DEATHS = 15;
     private static final int MAX_LIGHTNING = 5;
@@ -125,7 +125,8 @@ public class KillFXFeature {
 
     /** 只检测死亡，不渲染——解决遍历实体列表时修改列表导致的卡死 */
     private static void detectDeaths(KillFXConfig cfg, long now) {
-        if (mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.level == null) return;
 
         int deaths = 0;
         for (Entity entity : mc.level.entitiesForRendering()) {
@@ -171,7 +172,8 @@ public class KillFXFeature {
 
     /** END phase：安全渲染队列中的特效 */
     private static void renderQueued(KillFXConfig cfg) {
-        if (mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.level == null) return;
         int rendered = 0;
         LivingEntity entity;
         while ((entity = renderQueue.poll()) != null && rendered < 10) {
@@ -222,7 +224,8 @@ public class KillFXFeature {
     // ════════════════════════════════════════════════════════
 
     private static void renderEffects(LivingEntity entity, KillFXConfig cfg) {
-        ClientLevel level = mc.level;
+        Minecraft mc = getMc();
+        ClientLevel level = mc != null ? mc.level : null;
         if (level == null || entity == null) return;
 
         Vec3 pos = entity.position();

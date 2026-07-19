@@ -25,7 +25,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class FlightFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean active = false;
 
     /** ★ 从配置文件静默恢复开关状态 */
@@ -53,7 +53,8 @@ public class FlightFeature {
         cfg.save();
         if (!val) deactivate();
         else {
-            if (cfg.soundFeedback && mc.player != null)
+            Minecraft mc = getMc();
+            if (cfg.soundFeedback && mc != null && mc.player != null)
                 mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
             if (!NoFallFeature.isEnabled()) NoFallFeature.setEnabled(true);
             Fku.LOGGER.debug("[Flight] 已启用");
@@ -66,7 +67,8 @@ public class FlightFeature {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (mc.player == null || mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.level == null) return;
         LocalPlayer player = mc.player;
         FlightConfig cfg = FlightConfig.getInstance();
         if (!isEnabled()) return;
@@ -144,7 +146,8 @@ public class FlightFeature {
     }
 
     private static void activate() {
-        if (mc.player == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null) return;
         active = true; antiKickTicks = 0;
         savedSprintMode = SprintConfig.getInstance().mode;
         if ("OMNIROTATIONAL".equals(savedSprintMode)) {
@@ -158,7 +161,8 @@ public class FlightFeature {
     }
 
     private static void deactivate() {
-        if (mc.player == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null) return;
         active = false;
         if (savedSprintMode != null) {
             SprintConfig.getInstance().mode = savedSprintMode;

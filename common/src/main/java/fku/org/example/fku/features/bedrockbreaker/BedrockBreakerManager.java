@@ -158,8 +158,8 @@ public class BedrockBreakerManager {
     public void processNearby() {
         if (mc.player == null || mc.level == null) return;
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-        int range = cfg.autoFindRange;
-        if (range <= 0) return;
+        // ★ 如果 autoFindRange=0 但 scanMode 开启，使用默认范围 5
+        int range = cfg.autoFindRange > 0 ? cfg.autoFindRange : 5;
 
         BlockPos playerPos = mc.player.blockPosition();
         int minY = Math.max(mc.level.getMinBuildHeight(), playerPos.getY() - range);
@@ -181,17 +181,15 @@ public class BedrockBreakerManager {
             }
 
             if (layerHasTarget) {
-                // 将该层所有目标方块加入队列（按距离玩家排序，由近到远）
                 Vec3 eyePos = mc.player.getEyePosition(1.0f);
                 layerTargets.sort(java.util.Comparator.comparingDouble(
                         p -> p.distToCenterSqr(eyePos)));
                 for (BlockPos pos : layerTargets) {
-                    // 避免重复添加已在队列或正在处理的目标
                     if (!pos.equals(bedrockPos) && !queue.contains(pos)) {
                         queue.add(pos);
                     }
                 }
-                break; // 只处理最高层，下一tick继续
+                // ★ 不再 break，一次性扫描所有层
             }
         }
     }
@@ -245,8 +243,8 @@ public class BedrockBreakerManager {
         }
 
         if (state == State.INIT) {
-            // ★ 扫描模式：自动扫描周围目标方块并加入队列
-            if (cfg.scanMode && cfg.autoFindRange > 0) {
+            // ★ 扫描模式：自动扫描周围目标方块并加入队列（autoFindRange=0 时也可用，processNearby 有默认范围）
+            if (cfg.scanMode) {
                 processNearby();
             }
             if (!queue.isEmpty()) {

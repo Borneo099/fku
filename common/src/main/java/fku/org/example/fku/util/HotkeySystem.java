@@ -21,7 +21,7 @@ import java.util.Map;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class HotkeySystem {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
 
     // ── 绑定模式 ──
     private static String waitingFeature = null;
@@ -45,7 +45,8 @@ public class HotkeySystem {
         if (waitingFeature != null) finishBind();
         waitingFeature = featureName;
         waitingCallback = onComplete;
-        if (mc.player != null)
+        Minecraft mc = getMc();
+        if (mc != null && mc.player != null)
             mc.player.displayClientMessage(Component.literal("§e[热键] 按任意键绑定 " + featureName + "，Delete 删除，Esc 取消"), false);
         return true;
     }
@@ -53,7 +54,8 @@ public class HotkeySystem {
     /** ClickGuiScreen 调用：ESC 取消绑定 */
     public static void cancelBinding() {
         if (waitingFeature == null) return;
-        if (mc.player != null)
+        Minecraft mc = getMc();
+        if (mc != null && mc.player != null)
             mc.player.displayClientMessage(Component.literal("§7[热键] 已取消"), false);
         finishBind();
     }
@@ -69,7 +71,8 @@ public class HotkeySystem {
     @SubscribeEvent
     public static void onTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (mc.getWindow() == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.getWindow() == null) return;
         long window = mc.getWindow().getWindow();
 
         // ── 绑定模式：捕获下一个有效按键 ──

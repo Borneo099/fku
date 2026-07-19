@@ -54,6 +54,13 @@ public class ArrowDmgFeature {
     /** 获取当前自瞄目标（供 HealthTag 联动） */
     public static Entity getTarget() { return target; }
 
+    /** 兼容原版弓与模组弓（BowItem / ProjectileWeaponItem 子类） */
+    public static boolean isBowItem(net.minecraft.world.item.ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        net.minecraft.world.item.Item item = stack.getItem();
+        return item instanceof net.minecraft.world.item.ProjectileWeaponItem;
+    }
+
     /**
      * ★ Mixin 调用：手动释放弓时（连射关闭）执行 VClip + 瞄准 + RELEASE
      *   返回 true = 取消原包由本方法发送，false = 走原版逻辑
@@ -62,7 +69,7 @@ public class ArrowDmgFeature {
         if (!isEnabled() || Minecraft.getInstance().player == null || Minecraft.getInstance().player.connection == null) return false;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (cfg.autoShoot) return false;
-        if (Minecraft.getInstance().player.getMainHandItem().getItem() != Items.BOW) return false;
+        if (!isBowItem(Minecraft.getInstance().player.getMainHandItem())) return false;
 
         if (target != null && cfg.vClip) {
             // VClip 模式：拦截原包，发 doDMG + 瞬移 + 瞄准 + RELEASE
@@ -102,7 +109,7 @@ public class ArrowDmgFeature {
         }
 
         // ★ Y校准：蓄力时持续传送玩家Y至目标Y + 瞄准修正 + 防卡方块
-        if (cfg.yCalibrate && target != null && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW) {
+        if (cfg.yCalibrate && target != null && p.isUsingItem() && isBowItem(p.getUseItem())) {
             double targetY = target.getY();
             if (Math.abs(p.getY() - targetY) > 0.1) {
                 // 检查目标Y处是否有空间，如有方块阻挡则就近寻找空位
@@ -121,7 +128,7 @@ public class ArrowDmgFeature {
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, hd));
             p.connection.send(new ServerboundMovePlayerPacket.Rot(yaw, pitch, true, p.onGround()));
         }
-        boolean wantCrouch = cfg.autoCrouch && target != null && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW;
+        boolean wantCrouch = cfg.autoCrouch && target != null && p.isUsingItem() && isBowItem(p.getUseItem());
         if (wantCrouch) {
             double targetH = targetOriginalBox != null ? targetOriginalBox.getYsize() : target.getBoundingBox().getYsize();
             if (targetH < 2.0) {
@@ -142,16 +149,16 @@ public class ArrowDmgFeature {
 
         // 箭伤飞行
         if (cfg.arrowDmgFly) {
-            boolean ch = p.isUsingItem() && p.getUseItem().getItem() == Items.BOW;
+            boolean ch = p.isUsingItem() && isBowItem(p.getUseItem());
             if (ch) { if (!p.getAbilities().mayfly||!p.getAbilities().flying) { p.getAbilities().mayfly=true; p.getAbilities().flying=true; p.onUpdateAbilities(); } }
             else { if ((p.getAbilities().mayfly||p.getAbilities().flying)&&!p.isCreative()&&!p.isSpectator()) { p.getAbilities().mayfly=false; p.getAbilities().flying=false; p.onUpdateAbilities(); } }
         }
 
-        boolean hasBow = p.getMainHandItem().getItem() == Items.BOW || p.getOffhandItem().getItem() == Items.BOW;
+        boolean hasBow = isBowItem(p.getMainHandItem()) || isBowItem(p.getOffhandItem());
         if (!hasBow) { if (forcedPress) { Minecraft.getInstance().options.keyUse.setDown(false); forcedPress = false; } return; }
 
         // ★ 自动释放（VClip 时用 VClip 流程，否则至少发包+RELEASE）
-        if (cfg.autoShoot && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW && p.getTicksUsingItem() >= cfg.charge) {
+        if (cfg.autoShoot && p.isUsingItem() && isBowItem(p.getUseItem()) && p.getTicksUsingItem() >= cfg.charge) {
             if (target != null && cfg.vClip) {
                 doVClipShoot(p, cfg);
             } else {
@@ -298,7 +305,7 @@ public class ArrowDmgFeature {
     private static void findTarget(ArrowDmgConfig cfg) {
         target = null;
         if(Minecraft.getInstance().player==null||Minecraft.getInstance().level==null) return;
-        boolean hasBow = Minecraft.getInstance().player.getMainHandItem().getItem()==Items.BOW||Minecraft.getInstance().player.getOffhandItem().getItem()==Items.BOW;
+        boolean hasBow = isBowItem(Minecraft.getInstance().player.getMainHandItem()) || isBowItem(Minecraft.getInstance().player.getOffhandItem());
         if(!hasBow) return;
         double maxDist = cfg.aimRange;
         Entity best=null; double bestS=Double.MAX_VALUE;

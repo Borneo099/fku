@@ -57,6 +57,7 @@ public class DisplayModelScreen extends Screen {
     private static class CommandRow {
         EditBox input;
         Button toggleBtn;  // "+" 或 "-"
+        String savedValue = ""; // 用于重建时恢复内容
     }
 
     // ============ 配置输入框 ============
@@ -75,6 +76,8 @@ public class DisplayModelScreen extends Screen {
     private Button openWebsiteButton;
     private Button writePosButton;
     private Button clearPosButton;
+    private Button savePresetButton;
+    private Button loadPresetButton;
 
     // ============ 状态 ============
     private String statusMessage = "";
@@ -89,6 +92,8 @@ public class DisplayModelScreen extends Screen {
 
     /** 标记需要在下个 tick 重建布局 */
     private boolean rebuildScheduled = false;
+    /** 当前面板总高度，用于GUI位置保存 */
+    private int totalHeight = BASE_HEIGHT;
 
     public DisplayModelScreen() {
         super(Component.literal("实体模型展示"));
@@ -104,6 +109,16 @@ public class DisplayModelScreen extends Screen {
     protected void init() {
         super.init();
 
+        // ★ 从配置文件恢复指令行
+        commandRows.clear();
+        if (config.commandLines != null && !config.commandLines.isEmpty()) {
+            for (String line : config.commandLines) {
+                CommandRow row = new CommandRow();
+                row.savedValue = line; // rebuildLayout 会用 savedCmds 恢复
+                commandRows.add(row);
+            }
+        }
+        // 确保至少一行
         if (commandRows.isEmpty()) {
             commandRows.add(new CommandRow());
         }
@@ -139,7 +154,9 @@ public class DisplayModelScreen extends Screen {
         // 保存指令行内容
         List<String> savedCmds = new ArrayList<>();
         for (CommandRow row : commandRows) {
-            savedCmds.add(row.input != null ? row.input.getValue() : "");
+            // ★ 优先取 input.getValue()，如果 input 还没创建则取 savedValue（预设载入时）
+            String val = (row.input != null) ? row.input.getValue() : row.savedValue;
+            savedCmds.add(val != null ? val : "");
         }
 
         // 清除旧控件
@@ -153,8 +170,14 @@ public class DisplayModelScreen extends Screen {
         myRenderables.clear();
 
         int x = (width - WIDTH) / 2;
-        int totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
-        int y = (height - totalHeight) / 2;
+        if (config.guiX >= 0 && config.guiY >= 0) {
+            x = config.guiX;
+        }
+        this.totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
+        int y = (height - this.totalHeight) / 2;
+        if (config.guiY >= 0) {
+            y = config.guiY;
+        }
         int currentY = y + 44; // 与 render 同步：第一个指令行位置
 
         // ── 指令输入行 ──
@@ -249,33 +272,82 @@ public class DisplayModelScreen extends Screen {
         }).bounds(x + 398, btnCoordY, 55, 16).build();
         myAddRenderableWidget(clearPosButton);
 
-        // ── 底部按钮（4 按钮居中，对称排列） ──
-        int btnY = y + totalHeight - 30;
-        // 4 个按钮各 80px，间距 (480-4*80)/5 = 32px
-        int btnGap = (WIDTH - 4 * 80) / 5;
-        int btn0X = x + btnGap;
+        // ── 底部按钮（预设按钮 + 原4按钮，6按钮分2行） ──
+        int btnY1 = y + totalHeight - 54;
+        int btnY2 = y + totalHeight - 30;
+        int btnW = 72;
+        int gap6 = (WIDTH - 6 * btnW) / 7;
+        int bX = x + gap6;
 
-        openWebsiteButton = Button.builder(
-                Component.literal("打开模型网站"),
+        // 第一行：打开模型网站 / 保存预设 / 载入预设
+        openWebsiteButton = Button.builder(Component.literal("打开模型网站"),
                 btn -> Util.getPlatform().openUri(URI.create("https://block-display.com/"))
-        ).bounds(btn0X, btnY, 80, 20).build();
+        ).bounds(bX, btnY1, btnW, 20).build();
         myAddRenderableWidget(openWebsiteButton);
 
+        savePresetButton = Button.builder(Component.literal("§a保存预设"), btn -> savePreset())
+                .bounds(bX + (btnW + gap6), btnY1, btnW, 20).build();
+        myAddRenderableWidget(savePresetButton);
+
+        loadPresetButton = Button.builder(Component.literal("§b载入预设"), btn -> loadPreset())
+                .bounds(bX + 2 * (btnW + gap6), btnY1, btnW, 20).build();
+        myAddRenderableWidget(loadPresetButton);
+
+        // 第二行：保存配置 / 召唤模型 / 中止
         saveButton = Button.builder(Component.literal("保存配置"), btn -> saveInputsToConfig())
-                .bounds(btn0X + 80 + btnGap, btnY, 80, 20).build();
+                .bounds(bX, btnY2, btnW, 20).build();
         myAddRenderableWidget(saveButton);
 
         summonButton = Button.builder(Component.literal("召唤模型"), btn -> startSummon())
-                .bounds(btn0X + 2 * (80 + btnGap), btnY, 80, 20).build();
+                .bounds(bX + (btnW + gap6), btnY2, btnW, 20).build();
         myAddRenderableWidget(summonButton);
 
         cancelButton = Button.builder(Component.literal("中止"), btn -> {
                     manager.stop();
                     updateFromManager();
                 })
-                .bounds(btn0X + 3 * (80 + btnGap), btnY, 80, 20).build();
+                .bounds(bX + 2 * (btnW + gap6), btnY2, btnW, 20).build();
         cancelButton.active = false;
         myAddRenderableWidget(cancelButton);
+    }
+
+    /** 保存为预设 */
+    private void savePreset() {
+        List<String> cmds = collectCommands();
+        if (cmds.isEmpty()) { setStatusMessage("§c至少输入一行指令", 0xFF5555); return; }
+        Minecraft mc = Minecraft.getInstance();
+        mc.setScreen(new PresetSaveScreen(cmds, name -> {
+            DisplayModelConfig.savePreset(name, cmds);
+            setStatusMessage("§a预设已保存: " + name, 0x55FF55);
+            mc.setScreen(this);
+        }));
+    }
+
+    /** 载入预设 */
+    private void loadPreset() {
+        String[] presets = DisplayModelConfig.listPresets();
+        if (presets.length == 0) { setStatusMessage("§e没有已保存的预设", 0xFFFF55); return; }
+        Minecraft mc = Minecraft.getInstance();
+        mc.setScreen(new PresetLoadScreen(presets, name -> {
+            List<String> cmds = DisplayModelConfig.loadPreset(name);
+            if (!cmds.isEmpty()) {
+                // ★ 写入 config.commandLines，这样回到 DisplayModelScreen 时 init() 会从中恢复
+                config.commandLines = new ArrayList<>(cmds);
+                config.save();
+                setStatusMessage("§a已载入预设: " + name + "（" + cmds.size() + " 条指令）", 0x55FF55);
+            }
+            mc.setScreen(this);
+        }));
+    }
+
+    /** 收集当前所有指令 */
+    private List<String> collectCommands() {
+        List<String> cmds = new ArrayList<>();
+        for (CommandRow row : commandRows) {
+            String cmd = row.input != null ? row.input.getValue().trim() : "";
+            if (!cmd.isEmpty()) cmds.add(cmd);
+        }
+        return cmds;
     }
 
     /** 创建配置输入框的辅助方法 */
@@ -389,6 +461,7 @@ public class DisplayModelScreen extends Screen {
     // ====================================================================
     //  saveInputsToConfig
     // ====================================================================
+    /** 保存输入到配置（含指令行、GUI位置、所有参数） */
     private void saveInputsToConfig() {
         tryParseInt(placeDelayInput, v -> config.setPlaceDelay(v));
         tryParseInt(generationDelayInput, v -> config.setGenerationDelay(v));
@@ -398,9 +471,126 @@ public class DisplayModelScreen extends Screen {
         tryParseDouble(placeZInput, config::setPlaceZ);
         tryParseDouble(viewRangeInput, v -> config.setViewRange(Math.max(0, v)));
 
-        setStatusMessage("§a配置已保存", 0x55FF55);
+        // ★ 保存指令行
+        config.commandLines = collectCommands();
+        config.save();
+
+        // ★ 保存GUI位置
+        config.guiX = (width - WIDTH) / 2;
+        config.guiY = (height - totalHeight) / 2;
+        config.save();
+
+        setStatusMessage("§a配置已保存（含指令行）", 0x55FF55);
         Fku.LOGGER.info("[DisplayModel] 配置已保存");
     }
+
+    @Override
+    public void onClose() {
+        // 关闭时自动保存GUI位置
+        int totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
+        config.guiX = (width - WIDTH) / 2;
+        config.guiY = (height - totalHeight) / 2;
+        config.commandLines = collectCommands();
+        config.save();
+        super.onClose();
+    }
+
+    // ══════════════════════════════════════
+    //  预设选择界面（简易 Screen）
+    // ══════════════════════════════════════
+
+    /** 预设保存界面 */
+    private static class PresetSaveScreen extends Screen {
+        private final List<String> commands;
+        private final java.util.function.Consumer<String> callback;
+        private EditBox nameInput;
+
+        PresetSaveScreen(List<String> commands, java.util.function.Consumer<String> callback) {
+            super(Component.literal("保存预设"));
+            this.commands = commands;
+            this.callback = callback;
+        }
+
+        @Override
+        protected void init() {
+            int cx = width / 2, cy = height / 2;
+            addRenderableWidget(Button.builder(Component.literal("§c取消"), b -> onClose())
+                    .bounds(cx - 75, cy + 30, 70, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("§a保存"), b -> {
+                        String name = nameInput.getValue().trim();
+                        if (!name.isEmpty()) callback.accept(name);
+                    }).bounds(cx + 5, cy + 30, 70, 20).build());
+            nameInput = new EditBox(font, cx - 70, cy - 10, 140, 18, Component.literal("预设名"));
+            nameInput.setMaxLength(64);
+            addWidget(nameInput);
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            renderBackground(g);
+            g.drawString(font, "§l输入预设名称:", width / 2 - 50, height / 2 - 30, 0xFFFFFF);
+            g.drawString(font, "§7共 " + commands.size() + " 条指令", width / 2 - 40, height / 2 + 12, 0x888888);
+            nameInput.render(g, mx, my, pt);
+            super.render(g, mx, my, pt);
+        }
+        @Override public boolean keyPressed(int k, int sc, int mod) {
+            if (k == 256) { onClose(); return true; }
+            if ((k == 257 || k == 335) && nameInput.isFocused()) {
+                String name = nameInput.getValue().trim();
+                if (!name.isEmpty()) callback.accept(name);
+                return true;
+            }
+            if (nameInput.isFocused()) return nameInput.keyPressed(k, sc, mod);
+            return super.keyPressed(k, sc, mod);
+        }
+        @Override public boolean isPauseScreen() { return false; }
+    }
+
+    /** 预设加载界面 */
+    private static class PresetLoadScreen extends Screen {
+        private final String[] presets;
+        private final java.util.function.Consumer<String> callback;
+        private int scrollOffset = 0;
+
+        PresetLoadScreen(String[] presets, java.util.function.Consumer<String> callback) {
+            super(Component.literal("载入预设"));
+            this.presets = presets;
+            this.callback = callback;
+        }
+
+        @Override
+        protected void init() {
+            int cx = width / 2, cy = height / 2;
+            int btnW = 120;
+            int maxVis = Math.min(presets.length, 8);
+            int startY = cy - maxVis * 12;
+            for (int i = 0; i < maxVis; i++) {
+                int idx = i + scrollOffset;
+                if (idx >= presets.length) break;
+                final String name = presets[idx];
+                addRenderableWidget(Button.builder(Component.literal(name),
+                        b -> callback.accept(name)
+                ).bounds(cx - btnW / 2, startY + i * 22, btnW, 20).build());
+            }
+            addRenderableWidget(Button.builder(Component.literal("§c关闭"), b -> onClose())
+                    .bounds(cx - 30, startY + maxVis * 22 + 8, 60, 20).build());
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            renderBackground(g);
+            g.drawString(font, "§l选择预设:", width / 2 - 40, height / 2 - (Math.min(presets.length, 8) * 22 / 2) - 20, 0xFFFFFF);
+            super.render(g, mx, my, pt);
+        }
+        @Override public boolean isPauseScreen() { return false; }
+        @Override public boolean mouseScrolled(double mx, double my, double delta) {
+            scrollOffset = (int) Math.max(0, Math.min(presets.length - 1, scrollOffset - delta));
+            rebuildWidgets();
+            return true;
+        }
+    }
+
+    // ════════ 渲染底部按钮 ════════
 
     // ====================================================================
     //  辅助
@@ -462,9 +652,10 @@ public class DisplayModelScreen extends Screen {
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics);
 
-        int totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
         int x = (width - WIDTH) / 2;
-        int y = (height - totalHeight) / 2;
+        if (config.guiX >= 0) x = config.guiX;
+        int y = (height - this.totalHeight) / 2;
+        if (config.guiY >= 0) y = config.guiY;
 
         // ── 背景面板 ──
         guiGraphics.fill(x - 2, y - 2, x + WIDTH + 2, y + totalHeight + 2, 0xCC222222);
@@ -525,11 +716,13 @@ public class DisplayModelScreen extends Screen {
 
         // ── 底部状态栏（按钮上方） ──
         if (!statusMessage.isEmpty()) {
-            guiGraphics.drawString(font, statusMessage, x + 15, y + totalHeight - 45, statusColor);
+            guiGraphics.drawString(font, statusMessage, x + 15, y + totalHeight - 62, statusColor);
         }
 
-        // ── 底部按钮（必须显式渲染，未调用 super.render()） ──
+        // ── 底部按钮（6按钮2行） ──
         openWebsiteButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        savePresetButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        loadPresetButton.render(guiGraphics, mouseX, mouseY, partialTick);
         saveButton.render(guiGraphics, mouseX, mouseY, partialTick);
         summonButton.render(guiGraphics, mouseX, mouseY, partialTick);
         cancelButton.render(guiGraphics, mouseX, mouseY, partialTick);

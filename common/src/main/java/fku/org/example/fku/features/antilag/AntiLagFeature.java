@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class AntiLagFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean initialized = false;
 
     /** 每秒包计数（线程安全） */
@@ -66,6 +66,8 @@ public class AntiLagFeature {
     public static void onPlayerPositionPacket(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
         AntiLagConfig cfg = AntiLagConfig.getInstance();
         if (!cfg.enabled) return;
+        Minecraft mc = getMc();
+        if (mc == null) return;
 
         LocalPlayer player = mc.player;
         if (player == null || player.connection == null) return;
@@ -128,7 +130,8 @@ public class AntiLagFeature {
         if (event.phase != TickEvent.Phase.START) return;
         AntiLagConfig cfg = AntiLagConfig.getInstance();
         if (!cfg.enabled) return;
-        if (mc.player == null || mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.level == null) return;
 
         LocalPlayer player = mc.player;
 
@@ -166,6 +169,8 @@ public class AntiLagFeature {
      * 发送假位置包（带速率计数）
      */
     private static void sendMovePacket(double x, double y, double z, boolean onGround) {
+        Minecraft mc = getMc();
+        if (mc == null) return;
         LocalPlayer player = mc.player;
         if (player == null || player.connection == null) return;
 

@@ -7,8 +7,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.entity.PartEntity;
 
-import net.minecraft.world.item.BowItem;
-import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import java.util.List;
@@ -25,8 +23,8 @@ public class HealthTagManager {
         // 持弓瞄准时寻找并锁定目标
         ItemStack mainHand = mc.player.getMainHandItem();
         ItemStack offHand = mc.player.getOffhandItem();
-        boolean holdingBow = mainHand.getItem() instanceof BowItem || offHand.getItem() instanceof BowItem || 
-                             mainHand.getItem() instanceof CrossbowItem || offHand.getItem() instanceof CrossbowItem;
+        boolean holdingBow = fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isBowItem(mainHand)
+                             || fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isBowItem(offHand);
 
         if (holdingBow) {
             findAndLockBestTarget(mc);

@@ -38,7 +38,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class SprintHandler {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static final boolean DEBUG = false;
 
     /** 从持久化配置读取 */
@@ -86,7 +86,8 @@ public class SprintHandler {
         if (DEBUG) System.out.println("[Sprint] setEnabled: " + value);
         setEnabledPersist(value);
         if (!value) {
-            if (mc.player != null) {
+            Minecraft mc = getMc();
+            if (mc != null && mc.player != null) {
                 mc.player.setSprinting(false);
             }
             restoreAll();
@@ -104,7 +105,8 @@ public class SprintHandler {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (mc.player == null || mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.level == null) return;
 
         SprintConfig cfg = SprintConfig.getInstance();
 
@@ -157,6 +159,8 @@ public class SprintHandler {
 
     private static void handleLegit(SprintConfig cfg) {
         if (!canSprint(cfg)) return;
+        Minecraft mc = getMc();
+        if (mc == null) return;
 
         if (mc.options.keyUp.isDown()) {
             mc.player.setSprinting(true);
@@ -172,6 +176,8 @@ public class SprintHandler {
 
     private static void handleOmnidirectional(SprintConfig cfg) {
         if (!canSprint(cfg)) return;
+        Minecraft mc = getMc();
+        if (mc == null) return;
         mc.player.setSprinting(true);
     }
 
@@ -187,6 +193,8 @@ public class SprintHandler {
      *   6. END 阶段恢复 yaw/pitch → 玩家视角不变（SILENT 模式）
      */
     private static void handleOmnirotational(SprintConfig cfg) {
+        Minecraft mc = getMc();
+        if (mc == null) return;
         // ★ 1. 保存真实视角
         realYaw = mc.player.getYRot();
         realPitch = mc.player.getXRot();
@@ -294,7 +302,8 @@ public class SprintHandler {
     // ════════════════════════════════════════════════════════
 
     private static boolean canSprint(SprintConfig cfg) {
-        if (mc.player == null) return false;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null) return false;
 
         boolean isHungry = mc.player.getFoodData().getFoodLevel() <= 6 && !mc.player.isCreative();
         if (isHungry && !cfg.ignoreHunger) return false;
@@ -320,7 +329,8 @@ public class SprintHandler {
 
     /** 恢复所有临时修改（禁用功能时调用） */
     private static void restoreAll() {
-        if (yawModified && mc.player != null) {
+        Minecraft mc = getMc();
+        if (yawModified && mc != null && mc.player != null) {
             mc.player.setYRot(realYaw);
             mc.player.setXRot(realPitch);
             yawModified = false;

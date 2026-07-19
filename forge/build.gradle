@@ -20,10 +20,42 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+// 设置源代码编码为 UTF-8（解决 Windows 中文注释 GBK 乱码）
+allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+}
+
 minecraft {
     mappings channel: mapping_channel, version: mapping_version
     copyIdeResources = true
     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'forge.enabledGameTestNamespaces', 'fku'
+            mods {
+                fku {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'forge.enabledGameTestNamespaces', 'fku'
+            mods {
+                fku {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
 }
 
 sourceSets {

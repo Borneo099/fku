@@ -64,16 +64,17 @@ public abstract class ToggleComponent extends GuiComponent {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible) return;
+        if (!visible || currentAlpha <= 0.01f) return;
         GuiStyleConfig config = GuiStyleConfig.getInstance();
 
         if (renderHotkeyWait(g)) return;
 
         boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
+        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha);
 
         String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
-        int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
+        int textAlpha = (int)(255 * currentAlpha);
+        int textColor = enabled ? ((textAlpha << 24) | (config.getTextColor() & 0xFFFFFF)) : ((textAlpha << 24) | 0xAAAAAA);
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
     }
 

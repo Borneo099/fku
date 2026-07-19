@@ -1,6 +1,5 @@
 package fku.org.example.fku.client.gui;
 
-import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.components.GuiPanel;
 import fku.org.example.fku.client.gui.components.OtherPanel;
 import fku.org.example.fku.client.gui.components.MovementPanel;
@@ -18,15 +17,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 主GUI界面 — 顶部提示中键可绑定热键
+ * 主GUI界面 — 经 Apple Design 原则优化
+ * - 即时反馈：不阻塞输入（§1 Response）
+ * - 面板错峰弹簧进入（§3 Interruptibility + §8 空间一致性）
+ * - 组件逐个淡入，跟随面板展开节奏
+ * - 顶部提示中键可绑定热键
  */
 public class ClickGuiScreen extends Screen {
     private final List<GuiPanel> panels = new ArrayList<>();
     
-    private float openAnimationProgress = 0f;
-    private long openAnimationStartTime = 0;
-    private boolean animationComplete = false;
-
     public ClickGuiScreen() {
         super(Component.literal("Fku ClickGUI"));
         panels.add(new OtherPanel());
@@ -36,27 +35,18 @@ public class ClickGuiScreen extends Screen {
         panels.add(new EntertainmentPanel());
         panels.add(new CombatPanel());
         
-        openAnimationStartTime = System.currentTimeMillis();
-    }
-
-    private void updateOpenAnimation() {
-        GuiStyleConfig config = GuiStyleConfig.getInstance();
-        if (!config.animationEnabled) {
-            openAnimationProgress = 1f;
-            animationComplete = true;
-            return;
+        // ★ 错峰：每个面板延迟启动，形成依次弹出的效果
+        for (int i = 0; i < panels.size(); i++) {
+            panels.get(i).setPanelIndex(i);
         }
-        long currentTime = System.currentTimeMillis();
-        long elapsed = currentTime - openAnimationStartTime;
-        openAnimationProgress = Math.min(1f, elapsed / (float) config.animationSpeed);
-        if (openAnimationProgress >= 1f) animationComplete = true;
     }
 
     @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        updateOpenAnimation();
-
-        // 渲染面板
+        // 不阻塞输入 — Apple §1: 即时反馈
+        // 面板自身管理弹簧动画
+        
+        // 按添加顺序渲染（后面板在上面，但鼠标点击反向遍历）
         for (GuiPanel panel : panels) {
             panel.render(g, mx, my, pt);
         }
@@ -71,8 +61,7 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!animationComplete) return false;
-        
+        // 不检查 animationComplete — Apple §1: 即时响应
         for (int i = panels.size() - 1; i >= 0; i--) {
             if (panels.get(i).mouseClicked(mouseX, mouseY, button)) {
                 GuiPanel panel = panels.remove(i);
@@ -85,26 +74,23 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (!animationComplete) return false;
         for (GuiPanel panel : panels) panel.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (!animationComplete) return false;
         for (GuiPanel panel : panels) panel.mouseReleased(mouseX, mouseY, button);
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (!animationComplete) return false;
-        // ★ ESC: 先取消热键绑定，再关闭 GUI
+        // ESC: 先取消热键绑定，再关闭 GUI
         if (keyCode == 256) {
             if (fku.org.example.fku.util.HotkeySystem.isWaiting()) {
                 fku.org.example.fku.util.HotkeySystem.cancelBinding();
-                return true; // 消耗事件，不关闭 GUI
+                return true;
             }
             this.onClose();
             return true;

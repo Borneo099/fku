@@ -331,9 +331,9 @@ public class DisplayModelManager {
         LocalPlayer player = mc.player;
         if (player == null || currentIndex >= totalCount) return;
 
-        // 计算放置坐标
+        // 计算放置坐标 — 所有实体在相同坐标生成（不需要额外偏移）
         double targetX = fixedPos.getX() + 0.5 + offset.x;
-        double targetY = fixedPos.getY() + offset.y + currentIndex * entitySpacing;
+        double targetY = fixedPos.getY() + offset.y;
         double targetZ = fixedPos.getZ() + 0.5 + offset.z;
 
         CompoundTag passengerTag = passengers.get(currentIndex).copy();
@@ -375,9 +375,9 @@ public class DisplayModelManager {
         LocalPlayer player = mc.player;
         if (player == null) return false;
 
-        // 计算放置坐标（与 doSyncEgg 保持一致）
+        // 计算放置坐标（与 doSyncEgg 保持一致）— 所有实体相同坐标
         double targetX = fixedPos.getX() + 0.5 + offset.x;
-        double targetY = fixedPos.getY() + offset.y + currentIndex * entitySpacing;
+        double targetY = fixedPos.getY() + offset.y;
         double targetZ = fixedPos.getZ() + 0.5 + offset.z;
 
         // 确保客户端和服务端手部有刷怪蛋（含 Pos NBT）

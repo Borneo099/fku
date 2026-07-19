@@ -1,12 +1,15 @@
 package fku.org.example.fku.client.gui;
 
 import fku.org.example.fku.config.GuiStyleConfig;
-import net.minecraft.client.Minecraft;
+
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * GUI渲染辅助类
- * 提供圆角矩形、毛玻璃效果、阴影等渲染功能
+ * GUI渲染辅助类 — 经 Apple Design 原则优化
+ * - 软阴影（渐变衰减，取代多层硬边缘）
+ * - 改进的毛玻璃效果（更平滑的层叠）
+ * - 发光/高光效果
+ * - 材质感知绘制（边框高光）
  */
 public class GuiRenderHelper {
     
@@ -106,109 +109,119 @@ public class GuiRenderHelper {
     }
     
     /**
-     * 绘制毛玻璃效果背景
-     * 通过多层半透明矩形叠加实现
+     * 绘制软阴影 — Apple Design §12: translucent depth
+     * 用多层渐变半透明矩形模拟软阴影
      * @param guiGraphics 图形上下文
      * @param x 左上角X坐标
      * @param y 左上角Y坐标
      * @param width 宽度
      * @param height 高度
+     * @param alpha 整体透明度乘数 (0~1)
      */
-    public static void drawBlurBackground(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+    public static void drawSoftShadow(GuiGraphics guiGraphics, int x, int y, int width, int height, float alpha) {
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        int blurStrength = config.blurStrength;
-        int baseAlpha = config.backgroundAlpha;
-        
-        // 根据毛玻璃强度调整透明度
-        int adjustedAlpha = (int) (baseAlpha * (1 - blurStrength / 100.0 * 0.3));
-        
-        // 绘制多层半透明背景模拟毛玻璃效果
-        int layers = Math.max(1, blurStrength / 20);
-        for (int i = 0; i < layers; i++) {
-            int layerAlpha = adjustedAlpha + (i * 10);
-            layerAlpha = Math.min(255, layerAlpha);
-            int color = config.getBackgroundColorWithAlpha(layerAlpha);
-            drawRoundedRect(guiGraphics, x + i, y + i, width - i * 2, height - i * 2, color, config.cornerRadius);
-        }
-    }
-    
-    /**
-     * 绘制阴影效果
-     * @param guiGraphics 图形上下文
-     * @param x 左上角X坐标
-     * @param y 左上角Y坐标
-     * @param width 宽度
-     * @param height 高度
-     */
-    public static void drawShadow(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        GuiStyleConfig config = GuiStyleConfig.getInstance();
-        if (!config.shadowEnabled) return;
+        if (!config.shadowEnabled || alpha <= 0) return;
         
         int shadowStrength = config.shadowStrength;
-        int shadowSize = Math.max(2, shadowStrength / 10);
+        int shadowSize = Math.max(4, shadowStrength / 8);
+        int baseAlpha = (int) (shadowStrength * alpha * 0.6f);
         
-        // 绘制多层阴影
+        // 从内到外：渐变半透明层 (Apple: 更大表面 = 更深阴影)
         for (int i = 0; i < shadowSize; i++) {
-            int shadowAlpha = (int) (shadowStrength * (1 - i / (double) shadowSize) * 0.5);
-            shadowAlpha = Math.max(0, Math.min(100, shadowAlpha));
-            int shadowColor = (shadowAlpha << 24) | 0x000000;
+            int layerAlpha = (int) (baseAlpha * (1 - i / (double) shadowSize) * 0.7f);
+            if (layerAlpha <= 0) continue;
+            int sc = (layerAlpha << 24) | 0x000000;
             
-            // 底部阴影
-            guiGraphics.fill(x + i, y + height, x + width - i, y + height + shadowSize - i, shadowColor);
+            int inset = i;
+            // 底部阴影（比右侧稍大，模拟光源从左上）
+            guiGraphics.fill(x + inset - 2, y + height + inset, x + width - inset + 2, y + height + inset + 2, sc);
             // 右侧阴影
-            guiGraphics.fill(x + width, y + i, x + width + shadowSize - i, y + height - i, shadowColor);
+            guiGraphics.fill(x + width + inset, y + inset + 2, x + width + inset + 2, y + height - inset, sc);
         }
     }
     
     /**
-     * 绘制完整的面板背景（包含阴影、毛玻璃、圆角）
-     * @param guiGraphics 图形上下文
-     * @param x 左上角X坐标
-     * @param y 左上角Y坐标
-     * @param width 宽度
-     * @param height 高度
-     * @param isTitleBar 是否是标题栏
+     * 绘制发光边框 — Apple Design §12: light-catching edge
+     * 顶部精细高光，底部柔和暗边，模拟真实材质的受光效果
      */
-    public static void drawPanelBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean isTitleBar) {
+    public static void drawGlowBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, float alpha) {
+        int baseAlpha = (int)(180 * alpha);
+        if (baseAlpha <= 0) return;
+        
+        // 顶部高光（亮边 — 模拟光源）
+        int topColor = (baseAlpha << 24) | 0xFFFFFF;
+        guiGraphics.fill(x + radius, y, x + width - radius, y + 1, topColor);
+        // 底部暗边
+        int bottomColor = (baseAlpha << 24) | 0x000000;
+        guiGraphics.fill(x + radius, y + height - 1, x + width - radius, y + height, bottomColor);
+    }
+    
+    /**
+     * 绘制接受 alpha 的面板背景
+     */
+    public static void drawPanelBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean isTitleBar, float alpha) {
         GuiStyleConfig config = GuiStyleConfig.getInstance();
         
         // 绘制阴影
-        drawShadow(guiGraphics, x, y, width, height);
+        drawSoftShadow(guiGraphics, x, y, width, height, alpha);
         
         // 绘制背景
+        int adjustedAlpha = (int) (config.backgroundAlpha * alpha);
+        adjustedAlpha = Math.max(0, Math.min(255, adjustedAlpha));
         int bgColor = isTitleBar ? 
-            config.getPrimaryColorWithAlpha(config.backgroundAlpha) : 
-            config.getBackgroundColorWithAlpha(config.backgroundAlpha);
+            config.getPrimaryColorWithAlpha(adjustedAlpha) : 
+            config.getBackgroundColorWithAlpha(adjustedAlpha);
         
         drawRoundedRect(guiGraphics, x, y, width, height, bgColor, config.cornerRadius);
         
-        // 绘制边框
-        int borderColor = config.getBorderColorWithAlpha(200);
+        // 绘制材质边框（Apple §12: 光效边缘）
+        int borderColor = isTitleBar ? 
+            config.getPrimaryColorWithAlpha(Math.min(255, adjustedAlpha + 40)) :
+            config.getBorderColorWithAlpha((int)(200 * alpha));
         drawRoundedOutline(guiGraphics, x, y, width, height, borderColor, config.cornerRadius, 1);
+        
+        // 顶部高光（Apple: 模拟材质受光）
+        if (alpha > 0.5f) {
+            int glowAlpha = (int)(80 * alpha);
+            int topGlow = (glowAlpha << 24) | 0xFFFFFF;
+            if (config.cornerRadius > 0) {
+                guiGraphics.fill(x + config.cornerRadius, y, x + width - config.cornerRadius, y + 1, topGlow);
+            }
+        }
+    }
+
+    /**
+     * 绘制完整的面板背景（兼容旧调用）
+     */
+    public static void drawPanelBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean isTitleBar) {
+        drawPanelBackground(guiGraphics, x, y, width, height, isTitleBar, 1f);
     }
     
     /**
-     * 绘制组件背景
-     * @param guiGraphics 图形上下文
-     * @param x 左上角X坐标
-     * @param y 左上角Y坐标
-     * @param width 宽度
-     * @param height 高度
-     * @param enabled 是否启用状态
+     * 绘制组件背景（兼容旧调用 — 5参数）
      */
     public static void drawComponentBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean enabled) {
+        drawComponentBackground(guiGraphics, x, y, width, height, enabled, 1f);
+    }
+    
+    /**
+     * 绘制组件背景（支持 alpha） — Apple: 清洁、无装饰的交互元素
+     */
+    public static void drawComponentBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean enabled, float alpha) {
         GuiStyleConfig config = GuiStyleConfig.getInstance();
+        int adjAlpha = (int)(180 * alpha);
         
         int bgColor = enabled ? 
-            config.getEnabledColor() | (150 << 24) : 
-            config.getBackgroundColorWithAlpha(180);
+            (config.getEnabledColor() | (adjAlpha << 24)) : 
+            config.getBackgroundColorWithAlpha(adjAlpha);
         
-        drawRoundedRect(guiGraphics, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
+        int radius = Math.max(2, config.cornerRadius / 2);
+        drawRoundedRect(guiGraphics, x, y, width, height, bgColor, radius);
         
-        // 绘制边框
-        int borderColor = enabled ? 
-            config.getEnabledColor() | (255 << 24) : 
-            config.getBorderColorWithAlpha(200);
-        drawRoundedOutline(guiGraphics, x, y, width, height, borderColor, Math.max(2, config.cornerRadius / 2), 1);
+        // 启用状态下的发光内边框
+        if (enabled) {
+            int borderColor = config.getEnabledColor() | (255 << 24);
+            drawRoundedOutline(guiGraphics, x, y, width, height, borderColor, radius, 1);
+        }
     }
 }

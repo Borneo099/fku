@@ -1,5 +1,6 @@
 package fku.org.example.fku.mixin; /* water */
 
+import fku.org.example.fku.features.criticals.CriticalsFeature;
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import io.netty.channel.Channel;
@@ -61,8 +62,9 @@ public abstract class MixinConnectionAttackInterceptor {
         boolean hasRotation = FakeRotationManager.hasPending();
         // ★ 状态机：仅 IDLE 状态下才走秒切
         boolean hasQuickSwitch = QuickSwitchFeature.isIdle() && QuickSwitchFeature.isEnabled();
+        boolean hasCriticals = CriticalsFeature.isEnabled();
 
-        if (!hasRotation && !hasQuickSwitch) return;
+        if (!hasRotation && !hasQuickSwitch && !hasCriticals) return;
 
         fku$sendingPending = true;
         try {
@@ -79,6 +81,10 @@ public abstract class MixinConnectionAttackInterceptor {
                 // ★ 状态机入口：channel 传入，在内部发切换包
                 if (hasQuickSwitch) {
                     QuickSwitchFeature.onAttackPacket(ch);
+                }
+                // ★ 刀刀暴击：攻击包前发假离地移动包
+                if (hasCriticals) {
+                    CriticalsFeature.onAttackPacket(ch);
                 }
             }
         } catch (Exception ignored) {

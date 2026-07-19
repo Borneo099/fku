@@ -891,8 +891,8 @@ public class TpAuraFeature {
         for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
             if (!entityFilter(entity, cfg, allowedTypes)) continue;
             double dist = Minecraft.getInstance().player.distanceTo(entity);
-            // ★ 玩家目标使用 attackDistance（攻击距离），其他实体使用 maxRange
-            double effectiveRange = (entity instanceof Player) ? cfg.attackDistance : cfg.maxRange;
+            // ★ TpAura 瞬移攻击对所有实体统一使用 maxRange（瞬移不依赖距离）
+            double effectiveRange = cfg.maxRange;
             if (dist < bestDist && dist <= effectiveRange) {
                 bestDist = dist;
                 best = entity;
@@ -912,9 +912,6 @@ public class TpAuraFeature {
         }
 
         if (Minecraft.getInstance().player.distanceTo(entity) > cfg.maxRange) return false;
-
-        // ★ 玩家额外使用 attackDistance 限制
-        if (entity instanceof Player && Minecraft.getInstance().player.distanceTo(entity) > cfg.attackDistance) return false;
 
         // 忽略条件
         if (cfg.ignoreNamed && entity.hasCustomName()) return false;

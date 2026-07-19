@@ -22,23 +22,25 @@ public class ConfigButtonComponent extends GuiComponent {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible) return;
+        if (!visible || currentAlpha <= 0.01f) return;
         GuiStyleConfig config = GuiStyleConfig.getInstance();
 
         String fn = getFeatureName();
         boolean waiting = fn != null && HotkeySystem.isWaitingFor(fn);
 
         if (waiting) {
-            int bgColor = config.getPrimaryColorWithAlpha(180);
+            int bgColor = config.getPrimaryColorWithAlpha((int)(180 * currentAlpha));
             GuiRenderHelper.drawRoundedRect(g, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
             g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)",
                     x + 5, y + (height - 8) / 2, 0xFFFF00);
             return;
         }
 
-        int bgColor = config.getPrimaryColorWithAlpha(180);
+        int alpha = (int)(180 * currentAlpha);
+        int bgColor = config.getPrimaryColorWithAlpha(alpha);
         GuiRenderHelper.drawRoundedRect(g, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
-        int borderColor = config.getPrimaryColor() | (255 << 24);
+        int borderAlpha = (int)(255 * currentAlpha);
+        int borderColor = (borderAlpha << 24) | (config.getPrimaryColor() & 0xFFFFFF);
         GuiRenderHelper.drawRoundedOutline(g, x, y, width, height, borderColor, Math.max(2, config.cornerRadius / 2), 1);
 
         String display = label;
@@ -46,8 +48,10 @@ public class ConfigButtonComponent extends GuiComponent {
             var hk = FeatureHotkeyManager.getInstance().getHotkey(fn);
             if (hk.getHotkeyKey() >= 0) display += " §7[" + hk.getHotkeyName() + "]";
         }
-        g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, config.getTextColor());
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        int textAlpha = (int)(255 * currentAlpha);
+        int textColor = (textAlpha << 24) | (config.getTextColor() & 0xFFFFFF);
+        g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, textColor);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, (textAlpha << 24) | 0x888888);
     }
 
     @Override

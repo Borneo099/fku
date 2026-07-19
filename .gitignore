@@ -1,49 +1,43 @@
-# Gradle
+# ── 构建系统 ──
 .gradle/
 build/
 *.jar
 *.class
 bin/
 
-# IDE
+# ── IDE / AI 工具 ──
 .idea/
 *.iml
 .vscode/
 *.swp
 *.swo
+.codebuddy/
+.trae/
 
-# OS
+# ── OS ──
 .DS_Store
 Thumbs.db
 
-# Logs
+# ── 日志 ──
 *.log
 *.gz
 
-# Minecraft run dir
+# ── Minecraft 运行目录 ──
 run/
 
-# Temp
+# ── 临时文件 ──
 *.tmp
 *.cache
+*.orig
+*.bak
+/.dbg/
 
-# Misc
-.gradle/
-build-logic/.gradle/
-
-# Generated gradle run dirs
+# ── Gradle 子项目运行目录 ──
 neoforge/runs/
 
-# Orphan / backup / debug artifacts (已从版本库移除，防止 git add -A 重新加回)
-# 根级孤儿聚合器（forge/、neoforge/ 各自自含、合法）
+# ── 遗留/孤儿文件（非本项目源码，参考代码） ──
 /build.gradle
-# 根级备份
 /build.gradle.orig
-# 合并/编辑备份
-*.orig
-# 各种 .bak 备份
-*.bak
-# 未接入当前构建的孤儿 Forge 源码 patch
 /patches/
-# 一次性调试产物
-/.dbg/
+projecte/
+debug-quickswitch-no-effect.md

@@ -47,7 +47,7 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class FakePlayerFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean initialized = false;
 
     /** 当前生成的假人实例 */
@@ -69,7 +69,8 @@ public class FakePlayerFeature {
     public static void spawn() {
         remove();
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        if (mc.player == null || mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.level == null) return;
 
         fakePlayer = new FakePlayerEntity(mc.player, cfg.name, cfg.health, cfg.copyInv);
 
@@ -133,7 +134,8 @@ public class FakePlayerFeature {
         float damage = calculateAttackDamage(event.getEntity());
 
         // ★ 检查暴击
-        boolean isCrit = mc.player != null
+        Minecraft mc = getMc();
+        boolean isCrit = mc != null && mc.player != null
             && mc.player.fallDistance > 0.0F
             && !mc.player.onGround()
             && !mc.player.isInWater()
@@ -146,7 +148,7 @@ public class FakePlayerFeature {
         fakePlayer.applyDamage(damage);
 
         // ★ 视觉反馈
-        LocalPlayer player = mc.player;
+        LocalPlayer player = mc != null ? mc.player : null;
         if (player != null) {
             mc.level.playSound(player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
                 SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
@@ -168,7 +170,8 @@ public class FakePlayerFeature {
      */
     public static boolean handleTpAuraAttack(Entity target) {
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        if (!cfg.enabled || !cfg.simulateDamage) return false;
+        Minecraft mc = getMc();
+        if (mc == null || !cfg.enabled || !cfg.simulateDamage) return false;
         if (fakePlayer == null || !fakePlayer.isAlive()) return false;
         if (target != fakePlayer) return false;
 
@@ -300,7 +303,8 @@ public class FakePlayerFeature {
     }
 
     private static void displayClientMessage(String msg) {
-        if (mc.player != null) {
+        Minecraft mc = getMc();
+        if (mc != null && mc.player != null) {
             mc.player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(msg), false);
         }
@@ -325,7 +329,7 @@ public class FakePlayerFeature {
         private final boolean ground;
 
         public FakePlayerEntity(net.minecraft.world.entity.player.Player player, String name, float health, boolean copyInv) {
-            super(mc.level, new GameProfile(UUID.randomUUID(), name));
+            super(getMc().level, new GameProfile(UUID.randomUUID(), name));
             // ★ 复制玩家状态（参考 IMGFakePlayer 原始实现）
             this.copyPosition(player);
             this.setYRot(player.getYRot());
@@ -423,6 +427,7 @@ public class FakePlayerFeature {
          * @return true 如果图腾被触发
          */
         private boolean tryPopTotem() {
+            Minecraft mc = getMc();
             boolean hasTotem = getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING
                 || getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING;
 
@@ -448,7 +453,7 @@ public class FakePlayerFeature {
             this.hurtTime = 10;
 
             // ★ 粒子效果 + 音效
-            if (mc.level != null) {
+            if (mc != null && mc.level != null) {
                 for (int i = 0; i < 30; i++) {
                     double vx = (mc.level.random.nextDouble() - 0.5) * 0.5;
                     double vy = mc.level.random.nextDouble() * 0.5;
@@ -474,7 +479,8 @@ public class FakePlayerFeature {
          */
         private void die() {
             this.setHealth(0f);
-            if (mc.level != null) {
+            Minecraft mc = getMc();
+            if (mc != null && mc.level != null) {
                 mc.level.playSound(null, this.getX(), this.getY(), this.getZ(),
                     SoundEvents.PLAYER_DEATH, SoundSource.PLAYERS, 1.0F, 1.0F);
             }

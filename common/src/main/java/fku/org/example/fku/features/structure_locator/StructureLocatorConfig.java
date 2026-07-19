@@ -20,6 +20,8 @@ public class StructureLocatorConfig {
     public boolean hasSeed = false;
     public int targetIndex = 0;
     public int searchRadius = 16;
+    /** 标记自动清除距离（格），玩家进入此距离自动清除 #goal 标记 */
+    public int markClearDistance = 10;
 
     private StructureLocatorConfig() {}
 

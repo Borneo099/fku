@@ -72,9 +72,9 @@ public final class BaritoneBridge {
         exec("goal " + x + " " + y + " " + z);
     }
 
-    /** 清除 Baritone 目标 */
+    /** 清除 Baritone 目标（使用 #goal clear 而非 #cancel，只清目标不中断其他进程） */
     public static void clearGoal() {
-        exec("cancel");
+        exec("goal clear");
     }
 
     /** 暂停 */

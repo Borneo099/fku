@@ -1,7 +1,6 @@
-package fku.org.example.fku.features.quickswitch;
+package fku.org.example.fku.features.quickswitch; /* water */
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -18,6 +17,7 @@ public class QuickSwitchConfigScreen extends Screen {
     private int cx, cy;
 
     private EditBox customItemsInput;
+    private EditBox rttDelayBox;
     private Button modeBtn, visualBtn, saveBtn;
 
     public QuickSwitchConfigScreen() {
@@ -49,21 +49,16 @@ public class QuickSwitchConfigScreen extends Screen {
 
         // ── 自定义物品列表（保存只在退出时触发，避免连续 IO） ──
         customItemsInput = new EditBox(font, cx + 10, cy + 75, W - 20, 16, Component.literal("物品列表"));
-        customItemsInput.setValue(cfg.customItems);
         customItemsInput.setMaxLength(100000);
+        customItemsInput.setValue(cfg.customItems);
         addRenderableWidget(customItemsInput);
 
-        // ── RTT延迟 ──
-        addRenderableWidget(Button.builder(Component.literal("延迟: " + cfg.rttDelay + "ms"), b -> {
-            int[] opts = {40, 60, 80, 100, 120, 150, 200};
-            int next = 0;
-            for (int i = 0; i < opts.length; i++) {
-                if (opts[i] == cfg.rttDelay) { next = (i + 1) % opts.length; break; }
-            }
-            cfg.rttDelay = opts[next];
-            cfg.save();
-            b.setMessage(Component.literal("延迟: " + cfg.rttDelay + "ms"));
-        }).bounds(cx + 10, cy + 110, 100, 16).build());
+        // ── RTT延迟（输入框自定义，0-2000ms） ──
+        rttDelayBox = new EditBox(font, cx + 10, cy + 110, 100, 16, Component.literal("延迟(ms)"));
+        rttDelayBox.setMaxLength(5);
+        rttDelayBox.setValue(String.valueOf(cfg.rttDelay));
+        rttDelayBox.setFilter(s -> s.matches("\\d*"));
+        addRenderableWidget(rttDelayBox);
 
         // ── 优先级槽位（文字提示，不提供编辑） ──
         addRenderableWidget(Button.builder(Component.literal("优先级槽位: " + intArrStr(cfg.prioritySlots)), b -> {}).bounds(cx + 120, cy + 110, 160, 16).build());
@@ -78,6 +73,10 @@ public class QuickSwitchConfigScreen extends Screen {
     private void saveAndClose() {
         var cfg = QuickSwitchConfig.getInstance();
         cfg.customItems = customItemsInput.getValue();
+        try {
+            int v = Integer.parseInt(rttDelayBox.getValue().trim());
+            cfg.rttDelay = (v < 0) ? 0 : (v > 2000 ? 2000 : v);
+        } catch (NumberFormatException ignored) {}
         cfg.save();
         this.minecraft.setScreen(null);
     }
@@ -97,6 +96,7 @@ public class QuickSwitchConfigScreen extends Screen {
         };
         g.drawString(font, "§7" + modeDesc, cx + 10, cy + 54, 0x888888);
         g.drawString(font, "§7物品列表(逗号分隔):", cx + 10, cy + 98, 0xAAAAAA);
+        g.drawString(font, "§7延迟(ms, 0-2000):", cx + 10, cy + 128, 0xAAAAAA);
         g.drawString(font, "§7§o点击「保存并返回」或按 ESC 退出并保存", cx + 10, cy + H - 14, 0x666666);
 
         super.render(g, mx, my, pt);

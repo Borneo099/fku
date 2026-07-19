@@ -6,8 +6,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * 滑块组件
- * 用于调整数值参数
+ * 滑块组件 — 经 Apple Design 原则优化
+ * - 弹簧手柄（Apple §4: spring physics）
+ * - 圆润指示器
+ * - 拖拽速度感知
  */
 public class SliderComponent {
     protected int x, y, width, height;
@@ -16,6 +18,11 @@ public class SliderComponent {
     protected String label;
     protected boolean dragging = false;
     protected OnValueChangedListener listener;
+    
+    // 弹簧手柄位置（独立于数值变化）
+    protected float handlePos;       // 弹簧位置 (0~1)
+    protected float handleVel = 0f;
+    protected float handleTarget = 0f;
     
     public interface OnValueChangedListener {
         void onValueChanged(int value);
@@ -31,27 +38,58 @@ public class SliderComponent {
         this.currentValue = currentValue;
         this.label = label;
         this.listener = listener;
+        this.handleTarget = (currentValue - minValue) / (float) (maxValue - minValue);
+        this.handlePos = this.handleTarget;
+    }
+
+    /**
+     * 更新弹簧手柄
+     */
+    protected void updateHandle() {
+        handleTarget = (currentValue - minValue) / (float) (maxValue - minValue);
+        float dt = Math.min(1f / 20f, 0.05f); // ~50ms max
+        
+        // 临界阻尼弹簧
+        float stiffness = 12f;
+        float damping = 2f * (float) Math.sqrt(stiffness);
+        float disp = handlePos - handleTarget;
+        float force = -stiffness * disp;
+        float dampForce = -damping * handleVel;
+        float accel = force + dampForce;
+        handleVel += accel * dt;
+        handlePos += handleVel * dt;
+        
+        if (Math.abs(disp) < 0.005f && Math.abs(handleVel) < 0.01f) {
+            handlePos = handleTarget;
+            handleVel = 0;
+        }
     }
 
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         GuiStyleConfig config = GuiStyleConfig.getInstance();
+        updateHandle();
         
         // 绘制标签
         guiGraphics.drawString(Minecraft.getInstance().font, label + ": " + currentValue, x, y - 12, config.getTextColor());
         
-        // 绘制背景
-        GuiRenderHelper.drawRoundedRect(guiGraphics, x, y, width, height, config.getBackgroundColorWithAlpha(200), 4);
+        // 绘制轨道背景
+        GuiRenderHelper.drawRoundedRect(guiGraphics, x, y, width, 4, config.getBackgroundColorWithAlpha(200), 2);
         
-        // 计算滑块位置
-        float percentage = (currentValue - minValue) / (float) (maxValue - minValue);
-        int sliderWidth = (int) (width * percentage);
+        // 填充轨（弹簧位置）
+        int fillWidth = (int) (width * handlePos);
+        if (fillWidth > 0) {
+            GuiRenderHelper.drawRoundedRect(guiGraphics, x, y, fillWidth, 4, config.getPrimaryColorWithAlpha(200), 2);
+        }
         
-        // 绘制滑块填充
-        GuiRenderHelper.drawRoundedRect(guiGraphics, x, y, sliderWidth, height, config.getPrimaryColorWithAlpha(200), 4);
+        // 弹簧手柄 — 圆形指示器
+        int handleX = x + fillWidth - 3;
+        if (handleX < x) handleX = x;
+        int handleY = y - 3;
+        int handleSize = 10;
+        GuiRenderHelper.drawRoundedRect(guiGraphics, handleX, handleY, handleSize, handleSize, 0xFFFFFFFF, handleSize / 2);
         
-        // 绘制滑块指示器
-        int indicatorX = x + sliderWidth - 4;
-        GuiRenderHelper.drawRoundedRect(guiGraphics, indicatorX, y - 2, 8, height + 4, 0xFFFFFFFF, 2);
+        // 手柄外发光（Apple §12: light-catching）
+        GuiRenderHelper.drawRoundedOutline(guiGraphics, handleX - 1, handleY - 1, handleSize + 2, handleSize + 2, config.getPrimaryColorWithAlpha(100), handleSize / 2 + 1, 1);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

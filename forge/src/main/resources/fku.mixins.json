@@ -6,7 +6,8 @@
   "refmap": "fku.refmap.json",
   "mixins": [
     "LivingEntityMixin",
-    "ConnectionMixin"
+    "ConnectionMixin",
+    "MixinEntitySetRemoved"
   ],
   "client": [
     "ClientLevelAccessor",
@@ -15,7 +16,10 @@
     "MixinClientPacketListener",
     "ServerboundInteractPacketAccessor",
     "accessor.RenderStateShardAccessor",
-    "MixinEntityPush"
+    "MixinEntityPush",
+    "MixinCheatModDetector",
+    "MixinPacketSendModList",
+    "MixinLiquidBlockJesus"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -26,6 +26,9 @@ public abstract class MixinMultiPlayerGameMode {
             float targetYaw = KnockbackDirectionCalculator.calculateYaw(player, livingTarget, config.mode);
             FakeRotationManager.setPending(livingTarget, targetYaw);
         }
+        // ★ 击杀图标：标记是否为爆头攻击（视线在目标头部）
+        fku.org.example.fku.features.killicon.KillIconFeature.markHeadshot(
+            target instanceof LivingEntity lt && player.getEyeY() >= lt.getY() + lt.getBbHeight() * 0.85);
     }
 
     /**

@@ -14,6 +14,8 @@ import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -31,7 +33,7 @@ import org.joml.Matrix4f;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class ArrowDmgFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean forcedPress = false;
     private static Entity target = null;
     /** 存储目标原始碰撞箱（渲染用） */
@@ -49,7 +51,7 @@ public class ArrowDmgFeature {
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         cfg.enabled = v;
         cfg.save();
-        if (!v) { if (forcedPress) { mc.options.keyUse.setDown(false); forcedPress = false; } target = null; }
+        if (!v) { Minecraft mc = getMc(); if (forcedPress && mc != null) { mc.options.keyUse.setDown(false); forcedPress = false; } target = null; }
     }
     public static boolean isEnabled() { return ArrowDmgConfig.getInstance().enabled; }
     /** 获取当前自瞄目标（供 HealthTag 联动） */
@@ -60,10 +62,11 @@ public class ArrowDmgFeature {
      *   返回 true = 取消原包由本方法发送，false = 走原版逻辑
      */
     public static boolean handleManualRelease() {
-        if (!isEnabled() || mc.player == null || mc.player.connection == null) return false;
+        Minecraft mc = getMc();
+        if (mc == null || !isEnabled() || mc.player == null || mc.player.connection == null) return false;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (cfg.autoShoot) return false;
-        if (mc.player.getMainHandItem().getItem() != Items.BOW) return false;
+        if (!isBowItem(mc.player.getMainHandItem())) return false;
 
         if (target != null && cfg.vClip) {
             // VClip 模式：拦截原包，发 doDMG + 瞬移 + 瞄准 + RELEASE
@@ -79,7 +82,8 @@ public class ArrowDmgFeature {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (mc.player == null || mc.level == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.level == null) return;
         LocalPlayer p = mc.player;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!isEnabled()) return;
@@ -104,7 +108,7 @@ public class ArrowDmgFeature {
         }
 
         // ★ Y校准：蓄力时持续传送玩家Y至目标Y + 瞄准修正 + 防卡方块
-        if (cfg.yCalibrate && target != null && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW) {
+        if (cfg.yCalibrate && target != null && p.isUsingItem() && isBowItem(p.getUseItem())) {
             double targetY = target.getY();
             if (Math.abs(p.getY() - targetY) > 0.1) {
                 // 检查目标Y处是否有空间，如有方块阻挡则就近寻找空位
@@ -125,7 +129,7 @@ public class ArrowDmgFeature {
         }
 
         // ★ 自动下蹲：选中目标且蓄力时下蹲，释放后2-3Tick自动起身
-        boolean wantCrouch = cfg.autoCrouch && target != null && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW;
+        boolean wantCrouch = cfg.autoCrouch && target != null && p.isUsingItem() && isBowItem(p.getUseItem());
         if (wantCrouch) {
             double targetH = targetOriginalBox != null ? targetOriginalBox.getYsize() : target.getBoundingBox().getYsize();
             if (targetH < 2.0) {
@@ -146,16 +150,18 @@ public class ArrowDmgFeature {
 
         // 箭伤飞行
         if (cfg.arrowDmgFly) {
-            boolean ch = p.isUsingItem() && p.getUseItem().getItem() == Items.BOW;
+            boolean ch = p.isUsingItem() && isBowItem(p.getUseItem());
             if (ch) { if (!p.getAbilities().mayfly||!p.getAbilities().flying) { p.getAbilities().mayfly=true; p.getAbilities().flying=true; p.onUpdateAbilities(); } }
             else { if ((p.getAbilities().mayfly||p.getAbilities().flying)&&!p.isCreative()&&!p.isSpectator()) { p.getAbilities().mayfly=false; p.getAbilities().flying=false; p.onUpdateAbilities(); } }
         }
 
-        boolean hasBow = p.getMainHandItem().getItem() == Items.BOW || p.getOffhandItem().getItem() == Items.BOW;
-        if (!hasBow) { if (forcedPress) { mc.options.keyUse.setDown(false); forcedPress = false; } return; }
+        boolean hasBow = isBowItem(p.getMainHandItem()) || isBowItem(p.getOffhandItem());
+        Minecraft mc2 = getMc();
+        if (mc2 == null) return;
+        if (!hasBow) { if (forcedPress) { mc2.options.keyUse.setDown(false); forcedPress = false; } return; }
 
         // ★ 自动释放（VClip 时用 VClip 流程，否则至少发包+RELEASE）
-        if (cfg.autoShoot && p.isUsingItem() && p.getUseItem().getItem() == Items.BOW && p.getTicksUsingItem() >= cfg.charge) {
+        if (cfg.autoShoot && p.isUsingItem() && isBowItem(p.getUseItem()) && p.getTicksUsingItem() >= cfg.charge) {
             if (target != null && cfg.vClip) {
                 doVClipShoot(p, cfg);
             } else {
@@ -170,6 +176,8 @@ public class ArrowDmgFeature {
 
     /** ★ VClip 瞬移射击：发包 + PosRot 原子包 + 服务端/客户端双重瞄准 */
     private static void doVClipShoot(LocalPlayer p, ArrowDmgConfig cfg) {
+        Minecraft mc = getMc();
+        if (mc == null) return;
         // ★ 先发包（只在释放前发一次，不卡蓄力）
         doDMG(cfg);
         Vec3 orig = p.position();
@@ -227,7 +235,8 @@ public class ArrowDmgFeature {
     }
 
     private static void doDMG(ArrowDmgConfig cfg) {
-        if (mc.player==null||mc.player.connection==null) return;
+        Minecraft mc = getMc();
+        if (mc == null || mc.player==null||mc.player.connection==null) return;
         // ★ 无硬上限，但建议不超过10000（防踢）
         int n = Math.max(1, (int)cfg.packets);
         if (n > 10000) n = 10000;
@@ -237,13 +246,24 @@ public class ArrowDmgFeature {
         if(cfg.useOffset) mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-0.01,z,true));
     }
 
+    /** 判断物品是否为弓（支持原版弓 + 模组弓） */
+    public static boolean isBowItem(net.minecraft.world.item.ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        net.minecraft.world.item.Item item = stack.getItem();
+        // 兼容原版弓与模组弓（BowItem / ProjectileWeaponItem 子类）
+        return item instanceof net.minecraft.world.item.ProjectileWeaponItem;
+    }
+
     private static void sendPos(double x, double y, double z, boolean onGround) {
-        if (mc.player != null && mc.player.connection != null)
+        Minecraft mc = getMc();
+        if (mc != null && mc.player != null && mc.player.connection != null)
             mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
     }
 
     /** ★ Y校准：找安全的Y坐标，防止卡入方块 */
     private static double findSafeY(LocalPlayer p, double x, double targetY, double z) {
+        Minecraft mc = getMc();
+        if (mc == null) return targetY;
         AABB playerBox = p.getBoundingBox();
         double eyeH = playerBox.maxY - playerBox.minY; // 约1.8格
         // 先检查目标Y是否可站立
@@ -284,9 +304,11 @@ public class ArrowDmgFeature {
 
     // ════════ 目标 ════════
     private static void findTarget(ArrowDmgConfig cfg) {
+        Minecraft mc = getMc();
+        if (mc == null) return;
         target = null;
         if(mc.player==null||mc.level==null) return;
-        boolean hasBow = mc.player.getMainHandItem().getItem()==Items.BOW||mc.player.getOffhandItem().getItem()==Items.BOW;
+        boolean hasBow = isBowItem(mc.player.getMainHandItem()) || isBowItem(mc.player.getOffhandItem());
         if(!hasBow) return;
         double maxDist = cfg.aimRange;
         Entity best=null; double bestS=Double.MAX_VALUE;
@@ -310,7 +332,8 @@ public class ArrowDmgFeature {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
-        if (!isEnabled() || target == null || !target.isAlive() || mc.player == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || !isEnabled() || target == null || !target.isAlive() || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
 
@@ -350,7 +373,8 @@ public class ArrowDmgFeature {
     @SubscribeEvent
     public static void onRenderOverlay(net.minecraftforge.client.event.RenderGuiOverlayEvent.Pre event) {
         if (event.getOverlay() != net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.type()) return;
-        if (!isEnabled() || target == null || mc.player == null) return;
+        Minecraft mc = getMc();
+        if (mc == null || !isEnabled() || target == null || mc.player == null) return;
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         if (!cfg.renderEnabled) return;
 

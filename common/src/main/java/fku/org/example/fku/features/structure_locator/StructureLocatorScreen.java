@@ -16,7 +16,7 @@ import java.util.List;
  */
 public class StructureLocatorScreen extends Screen {
 
-    private static final int W = 260, H = 270;
+    private static final int W = 260, H = 290;
     private static final int LIST_W = 150;
     private int cx, cy;
 
@@ -24,6 +24,7 @@ public class StructureLocatorScreen extends Screen {
     private Button targetBtn, fetchSeedBtn;
     private Button locateBtn, coordBtn, nextBtn, clearBtn;
     private Button r10m, r1m, r1p, r10p;
+    private Button cd10m, cd1m, cd1p, cd10p;
 
     private final List<Button> structButtons = new ArrayList<>();
     private boolean showList = false;
@@ -65,14 +66,21 @@ public class StructureLocatorScreen extends Screen {
         r1p  = mkBtn("+1",  rbX0 + (rbw+gap)*2, rbY, rbw, 16, () -> { cfg.searchRadius = Math.min(128, cfg.searchRadius + 1);  cfg.save(); });
         r10p = mkBtn("+10", rbX0 + (rbw+gap)*3, rbY, rbw, 16, () -> { cfg.searchRadius = Math.min(128, cfg.searchRadius + 10); cfg.save(); });
 
+        // ── 清除距离 ──
+        int cdY = cy + 172, cdw = 50, cdGap = 5, cdX0 = cx + 10;
+        cd10m = mkBtn("-10", cdX0,                    cdY, cdw, 16, () -> { cfg.markClearDistance = Math.max(1, cfg.markClearDistance - 10); cfg.save(); });
+        cd1m  = mkBtn("-1",  cdX0 + cdw + cdGap,       cdY, cdw, 16, () -> { cfg.markClearDistance = Math.max(1, cfg.markClearDistance - 1);  cfg.save(); });
+        cd1p  = mkBtn("+1",  cdX0 + (cdw+cdGap)*2,     cdY, cdw, 16, () -> { cfg.markClearDistance = Math.min(128, cfg.markClearDistance + 1);  cfg.save(); });
+        cd10p = mkBtn("+10", cdX0 + (cdw+cdGap)*3,     cdY, cdw, 16, () -> { cfg.markClearDistance = Math.min(128, cfg.markClearDistance + 10); cfg.save(); });
+
         // ── 操作（3 列布局） ──
         int bw3 = (W - 40) / 3, bh = 16, gap3 = 5;
-        locateBtn = mkBtn("§a定位并前往", cx + 10,                  cy + 172, bw3, bh, () -> StructureLocatorFeature.locate(true));
-        coordBtn  = mkBtn("§7只显示坐标",  cx + 15 + bw3,            cy + 172, bw3, bh, () -> StructureLocatorFeature.locate(false));
-        mkBtn("§b标记结构",              cx + 20 + (bw3+gap3)*2, cy + 172, bw3, bh, () -> StructureLocatorFeature.markLocation());
-        nextBtn   = mkBtn("§e空点→找下一个", cx + 10,                  cy + 192, bw3, bh, () -> StructureLocatorFeature.skipAndNext());
-        clearBtn  = mkBtn("§7清空跳过记录",  cx + 15 + bw3,            cy + 192, bw3, bh, () -> StructureLocatorFeature.clearSkips());
-        mkBtn("§c清除标记",                 cx + 20 + (bw3+gap3)*2, cy + 192, bw3, bh, () -> StructureLocatorFeature.clearMark());
+        locateBtn = mkBtn("§a定位并前往", cx + 10,                  cy + 192, bw3, bh, () -> StructureLocatorFeature.locate(true));
+        coordBtn  = mkBtn("§7只显示坐标",  cx + 15 + bw3,            cy + 192, bw3, bh, () -> StructureLocatorFeature.locate(false));
+        mkBtn("§b标记结构",              cx + 20 + (bw3+gap3)*2, cy + 192, bw3, bh, () -> StructureLocatorFeature.markLocation());
+        nextBtn   = mkBtn("§e空点→找下一个", cx + 10,                  cy + 212, bw3, bh, () -> StructureLocatorFeature.skipAndNext());
+        clearBtn  = mkBtn("§7清空跳过记录",  cx + 15 + bw3,            cy + 212, bw3, bh, () -> StructureLocatorFeature.clearSkips());
+        mkBtn("§c清除标记",                 cx + 20 + (bw3+gap3)*2, cy + 212, bw3, bh, () -> StructureLocatorFeature.clearMark());
 
         rebuildStructList();
     }
@@ -125,6 +133,7 @@ public class StructureLocatorScreen extends Screen {
         g.fill(cx + 10, cy + 94, cx + W - 10, cy + 95, 0xFF444444);
         g.drawString(font, "§7目标结构:", cx + 10, cy + 100, 0xCCCCCC);
         g.drawString(font, "§7搜索范围: §f" + cfg.searchRadius + " §7区域", cx + 10, cy + 142, 0xCCCCCC);
+        g.drawString(font, "§7标记清除距离: §f" + cfg.markClearDistance + " §7格", cx + 10, cy + 162, 0xCCCCCC);
 
         super.render(g, mx, my, pt);
 

@@ -21,8 +21,11 @@ public class GuiStyleConfig {
     /** 圆角半径 - 默认8 */
     public int cornerRadius = 8;
     
-    /** 背景透明度 (0-255) - 默认180 */
+    /** 面板透明度 (0-255) - 默认180 */
     public int backgroundAlpha = 180;
+    
+    /** 面板整体不透明度 (0-255) - 默认220 */
+    public int panelOpacity = 220;
     
     /** 毛玻璃效果强度 (0-100) - 默认50 */
     public int blurStrength = 50;
@@ -30,7 +33,13 @@ public class GuiStyleConfig {
     /** 是否启用动画 - 默认true */
     public boolean animationEnabled = true;
     
-    /** 动画速度 (毫秒) - 默认200 */
+    /** 弹簧刚度 — 值越高响应越快 (默认8.0) */
+    public float springStiffness = 8.0f;
+    
+    /** 是否启用发光/高光效果 */
+    public boolean glowEnabled = true;
+    
+    /** 动画速度 (毫秒) - 默认200 (降级选项，默认动画使用弹簧) */
     public int animationSpeed = 200;
     
     /** 是否启用阴影效果 - 默认true */
@@ -195,6 +204,21 @@ public class GuiStyleConfig {
     
     public void setAnimationSpeed(int value) {
         this.animationSpeed = Math.max(50, Math.min(500, value));
+        save();
+    }
+    
+    public void setSpringStiffness(float value) {
+        this.springStiffness = Math.max(2f, Math.min(20f, value));
+        save();
+    }
+    
+    public void setGlowEnabled(boolean value) {
+        this.glowEnabled = value;
+        save();
+    }
+    
+    public void setPanelOpacity(int value) {
+        this.panelOpacity = Math.max(100, Math.min(255, value));
         save();
     }
     

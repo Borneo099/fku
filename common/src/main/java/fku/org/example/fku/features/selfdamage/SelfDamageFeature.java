@@ -17,7 +17,7 @@ import org.lwjgl.glfw.GLFW;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class SelfDamageFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static Runnable hotkeyCallback = null;
     private static boolean waitingForKey = false;
 
@@ -36,8 +36,9 @@ public class SelfDamageFeature {
 
     /** 执行自伤（临时关闭防摔和32k弓，延迟5tick后恢复） */
     public static void applyDamage() {
-        if (mc.player == null || mc.getConnection() == null) {
-            if (mc.player != null)
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.getConnection() == null) {
+            if (mc != null && mc.player != null)
                 mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 未连接服务器"), false);
             return;
         }
@@ -109,8 +110,10 @@ public class SelfDamageFeature {
                 cfg.save();
                 waitingForKey = false;
                 if (hotkeyCallback != null) hotkeyCallback.run();
-                mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("§a[自伤] 热键已绑定: " + cfg.hotkeyName), false);
+                Minecraft mc = getMc();
+                if (mc != null && mc.player != null)
+                    mc.player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§a[自伤] 热键已绑定: " + cfg.hotkeyName), false);
             }
             return;
         }
@@ -119,6 +122,8 @@ public class SelfDamageFeature {
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
+        Minecraft mc = getMc();
+        if (mc == null || mc.getConnection() == null) return;
         mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
     }
 }

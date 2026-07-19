@@ -2,9 +2,11 @@ package fku.org.example.fku.client.gui.components; /* water */
 
 import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.features.arrowdmg.ArrowDmgComponent;
+import fku.org.example.fku.features.criticals.CriticalsComponent;
 import fku.org.example.fku.features.knockback.KnockbackConfig;
 import fku.org.example.fku.features.knockback.KnockbackConfigScreen;
 import fku.org.example.fku.features.quickswitch.QuickSwitchComponent;
+import fku.org.example.fku.features.killaura.KillAuraComponent;
 import fku.org.example.fku.features.tpaura.TpAuraComponent;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import fku.org.example.fku.config.GuiStyleConfig;
@@ -19,7 +21,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public class CombatPanel extends GuiPanel {
 
     public CombatPanel() {
-        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 120, 90);
+        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 120, 120);
     }
 
     @Override
@@ -66,6 +68,12 @@ public class CombatPanel extends GuiPanel {
 
         // ★ 32k弓功能开关
         addComponent(new ArrowDmgComponent(0, 0, 110, 25));
+
+        // ★ 杀戮光环（左键开关，右键配置）
+        addComponent(new KillAuraComponent(0, 0, 110, 22));
+
+        // ★ 刀刀暴击（左键开关，右键配置；借鉴 Wurst 的 Criticals）
+        addComponent(new CriticalsComponent(0, 0, 110, 22));
     }
 
     @Override

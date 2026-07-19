@@ -83,19 +83,26 @@ public class GuiStyleScreen extends Screen {
         }).bounds(x + WIDTH - 90, y + HEIGHT - 30, 80, 20).build();
         addRenderableWidget(doneButton);
         
-        // 动画开关
-        animationToggle = Button.builder(Component.literal(config.animationEnabled ? "动画: 开" : "动画: 关"), btn -> {
+        // 动画开关（Apple: 弹簧动画开关）
+        animationToggle = Button.builder(Component.literal(config.animationEnabled ? "弹簧动画: 开" : "弹簧动画: 关"), btn -> {
             config.setAnimationEnabled(!config.animationEnabled);
-            btn.setMessage(Component.literal(config.animationEnabled ? "动画: 开" : "动画: 关"));
-        }).bounds(x + 10, y + 30, 100, 20).build();
+            btn.setMessage(Component.literal(config.animationEnabled ? "弹簧动画: 开" : "弹簧动画: 关"));
+        }).bounds(x + 10, y + 30, 130, 20).build();
         addRenderableWidget(animationToggle);
         
         // 阴影开关
         shadowToggle = Button.builder(Component.literal(config.shadowEnabled ? "阴影: 开" : "阴影: 关"), btn -> {
             config.setShadowEnabled(!config.shadowEnabled);
             btn.setMessage(Component.literal(config.shadowEnabled ? "阴影: 开" : "阴影: 关"));
-        }).bounds(x + 10, y + 55, 100, 20).build();
+        }).bounds(x + 10, y + 55, 130, 20).build();
         addRenderableWidget(shadowToggle);
+        
+        // 发光边缘开关（Apple §12）
+        Button glowToggle = Button.builder(Component.literal(config.glowEnabled ? "高光: 开" : "高光: 关"), btn -> {
+            config.setGlowEnabled(!config.glowEnabled);
+            btn.setMessage(Component.literal(config.glowEnabled ? "高光: 开" : "高光: 关"));
+        }).bounds(x + 150, y + 30, 130, 20).build();
+        addRenderableWidget(glowToggle);
     }
     
     private void openColorPicker(int colorIndex) {

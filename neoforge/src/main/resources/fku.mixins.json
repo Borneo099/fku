@@ -14,7 +14,8 @@
     "MixinConnectionAttackInterceptor",
     "MixinClientPacketListener",
     "ServerboundInteractPacketAccessor",
-    "MixinEntityPush"
+    "MixinEntityPush",
+    "MixinLiquidBlockJesus"
   ],
   "injectors": {
     "defaultRequire": 1

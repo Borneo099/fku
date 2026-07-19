@@ -94,6 +94,10 @@ public class TpAuraConfig {
     // ════════ 自动飞行 ════════
     /** 启用时自动开启创造飞行，避免地面瞬移卡顿 */
     public boolean autoFlight = false;
+    /** 自动飞行上升速度（方块/tick），默认 0.3 */
+    public double autoFlightSpeed = 0.3;
+    /** 自动飞行水平速度倍率（0~3），默认 1.0 */
+    public double autoFlightHorizontalSpeed = 1.0;
 
     /** 功能总开关（由 TpAuraComponent 控制） */
     public boolean enabled = false;
@@ -198,4 +202,6 @@ public class TpAuraConfig {
     public void setTotemAttacks(int v) { this.totemAttacks = Math.max(1, Math.min(3, v)); save(); }
     public void setTotemHeightIncrease(int v) { this.totemHeightIncrease = Math.max(1, Math.min(100, v)); save(); }
     public void setAutoFlight(boolean v) { this.autoFlight = v; save(); }
+    public void setAutoFlightSpeed(double v) { this.autoFlightSpeed = Math.max(0, Math.min(2.0, v)); save(); }
+    public void setAutoFlightHorizontalSpeed(double v) { this.autoFlightHorizontalSpeed = Math.max(0, Math.min(3.0, v)); save(); }
 }

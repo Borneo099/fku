@@ -22,6 +22,7 @@ public class TpAuraScreen extends Screen {
     private AbstractWidget cooldownInput, delayInput, rangeInput, attackDistInput, tpOffsetInput;
     private AbstractWidget packetsInput, ceilingStepInput, entityTypesInput, whitelistInput;
     private AbstractWidget totemAttacksInput, totemHeightInput;
+    private AbstractWidget autoFlightSpeedInput, autoFlightHoriInput;
 
     public TpAuraScreen() {
         super(Component.literal("TpAura 配置"));
@@ -33,6 +34,7 @@ public class TpAuraScreen extends Screen {
         cooldownInput = delayInput = rangeInput = attackDistInput = tpOffsetInput = null;
         packetsInput = ceilingStepInput = entityTypesInput = whitelistInput = null;
         totemAttacksInput = totemHeightInput = null;
+        autoFlightSpeedInput = null;
 
         var cfg = TpAuraConfig.getInstance();
         int cx = (width - W) / 2, cy = (height - H) / 2;
@@ -93,6 +95,16 @@ public class TpAuraScreen extends Screen {
                 addLabel(cx+2, ly, "天花板步长:");
                 ceilingStepInput = mkEdit(cx+80, ly, 30, String.valueOf(cfg.ceilingScanStep));
                 addToggle(cx+125, ly, "§a自动飞行", () -> cfg.autoFlight, v -> cfg.setAutoFlight(v));
+                ly += sp;
+
+                addLabel(cx+2, ly, "上升速度:");
+                autoFlightSpeedInput = mkEdit(cx+80, ly, 30, String.valueOf(cfg.autoFlightSpeed));
+                addLabel(cx+115, ly, "§7(0~2.0)");
+                ly += sp;
+                addLabel(cx+2, ly, "水平倍率:");
+                autoFlightHoriInput = mkEdit(cx+80, ly, 30, String.valueOf(cfg.autoFlightHorizontalSpeed));
+                addLabel(cx+115, ly, "§7(0~3.0)");
+                ly += sp;
             }
             case 2 -> { // 目标
                 addToggle(cx+2, ly, "全生物攻击", () -> cfg.attackAllEntities, v -> cfg.setAttackAllEntities(v));
@@ -185,6 +197,8 @@ public class TpAuraScreen extends Screen {
         if (entityTypesInput instanceof EditBox e) cfg.setEntityTypes(e.getValue());
         if (whitelistInput instanceof EditBox e) cfg.setWhitelist(e.getValue());
         try { if (totemAttacksInput instanceof EditBox e && !e.getValue().isEmpty()) cfg.setTotemAttacks(Integer.parseInt(e.getValue())); } catch (Exception ignored) {}
+        try { if (autoFlightSpeedInput instanceof EditBox e && !e.getValue().isEmpty()) cfg.setAutoFlightSpeed(Double.parseDouble(e.getValue())); } catch (Exception ignored) {}
+        try { if (autoFlightHoriInput instanceof EditBox e && !e.getValue().isEmpty()) cfg.setAutoFlightHorizontalSpeed(Double.parseDouble(e.getValue())); } catch (Exception ignored) {}
         try { if (totemHeightInput instanceof EditBox e && !e.getValue().isEmpty()) cfg.setTotemHeightIncrease(Integer.parseInt(e.getValue())); } catch (Exception ignored) {}
         cfg.save();
     }
@@ -209,7 +223,7 @@ public class TpAuraScreen extends Screen {
         // 手动渲染 EditBox
         for (var w : new AbstractWidget[]{cooldownInput, delayInput, rangeInput, attackDistInput, tpOffsetInput,
                 packetsInput, ceilingStepInput, entityTypesInput, whitelistInput,
-                totemAttacksInput, totemHeightInput}) {
+                totemAttacksInput, totemHeightInput, autoFlightSpeedInput, autoFlightHoriInput}) {
             if (w instanceof EditBox e) e.render(g, mx, my, pt);
         }
         super.render(g, mx, my, pt);
@@ -219,7 +233,7 @@ public class TpAuraScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         for (var w : new AbstractWidget[]{cooldownInput, delayInput, rangeInput, attackDistInput, tpOffsetInput,
                 packetsInput, ceilingStepInput, entityTypesInput, whitelistInput,
-                totemAttacksInput, totemHeightInput}) {
+                totemAttacksInput, totemHeightInput, autoFlightSpeedInput, autoFlightHoriInput}) {
             if (w instanceof EditBox e) e.mouseClicked(mx, my, button);
         }
         return super.mouseClicked(mx, my, button);
@@ -229,7 +243,7 @@ public class TpAuraScreen extends Screen {
     public boolean keyPressed(int k, int s, int m) {
         for (var w : new AbstractWidget[]{cooldownInput, delayInput, rangeInput, attackDistInput, tpOffsetInput,
                 packetsInput, ceilingStepInput, entityTypesInput, whitelistInput,
-                totemAttacksInput, totemHeightInput}) {
+                totemAttacksInput, totemHeightInput, autoFlightSpeedInput, autoFlightHoriInput}) {
             if (w instanceof EditBox e && e.isFocused()) return e.keyPressed(k, s, m);
         }
         if (k == 256) { saveInputs(); this.minecraft.setScreen(null); return true; }

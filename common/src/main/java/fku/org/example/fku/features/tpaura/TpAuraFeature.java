@@ -229,24 +229,44 @@ public class TpAuraFeature {
         // ── 热键绑定模式已在上方处理，触发模式由 HotkeySystem 统一管理 ──
     }
 
-    // ═══════════ 自动飞行（照搬箭伤飞行：无状态，有目标时开无目标时关） ═══════════
+    // ═══════════ 自动飞行（箭伤飞行模式：启用即飞，关闭即停） ═══════════
 
     // ══════════════════════════════════════════════
     //  ClientTickEvent — 主循环
     // ══════════════════════════════════════════════
 
-    /** 自动飞行：完全照搬箭伤飞行（无状态，无条件覆盖） */
-    private static void autoFlight(boolean hasTarget) {
+    /**
+     * 自动悬浮飞行 — 类似 FlightFeature 的飞行控制
+     *
+     * - 不设 mayfly（避免与 FlightFeature 冲突），仅设 flying
+     * - 读取 WASD 输入 + 镜头朝向 → 计算水平速度
+     * - 空格上升 / Shift 下降，速度取 autoFlightSpeed
+     * - 发送 abilities packet 尝试让服务器认可飞行
+     */
+    private static void updateAutoFlight() {
         var p = mc.player;
         if (p == null) return;
-        if (hasTarget) {
-            p.getAbilities().mayfly = true;
+        TpAuraConfig cfg = TpAuraConfig.getInstance();
+        if (cfg.autoFlight && cfg.enabled) {
             p.getAbilities().flying = true;
-            p.onUpdateAbilities();
-        } else if (!p.isCreative() && !p.isSpectator()) {
-            p.getAbilities().mayfly = false;
-            p.getAbilities().flying = false;
-            p.onUpdateAbilities();
+            p.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket(p.getAbilities()));
+
+            // ★ 水平速度（参考 FlightFeature）
+            float fwd = p.input.forwardImpulse;
+            float str = -p.input.leftImpulse;
+            float camYaw = mc.gameRenderer.getMainCamera().getYRot();
+            var h = net.minecraft.world.phys.Vec3.directionFromRotation(0, camYaw).multiply(fwd, 0, fwd)
+                    .add(net.minecraft.world.phys.Vec3.directionFromRotation(0, camYaw + 90).multiply(str, 0, str));
+            double hSpeed = cfg.autoFlightHorizontalSpeed;
+            if (h.lengthSqr() > 1e-4) h = h.normalize().scale(hSpeed);
+            else h = net.minecraft.world.phys.Vec3.ZERO;
+
+            // ★ 垂直速度
+            double vy = p.input.jumping ? cfg.autoFlightSpeed
+                      : p.input.shiftKeyDown ? -cfg.autoFlightSpeed : 0;
+
+            p.setDeltaMovement(h.x, vy, h.z);
+            p.hurtMarked = true;
         }
     }
 
@@ -257,10 +277,10 @@ public class TpAuraFeature {
 
         TpAuraConfig cfg = TpAuraConfig.getInstance();
 
-        if (!isEnabled()) {
-            autoFlight(false);
-            return;
-        }
+        // ★ 自动飞行：只要启用 TpAura 就飞（箭伤飞行模式，不依赖目标）
+        updateAutoFlight();
+
+        if (!isEnabled()) return;
 
         TpAuraFeature self = getInstance();
 
@@ -281,18 +301,9 @@ public class TpAuraFeature {
         if (target == null) {
             self.currentTarget = null;
             self.swapBackWeapon();
-            autoFlight(false);
             return;
         }
         self.currentTarget = target;
-
-        // ★ 自动飞行：搜到目标后、传送前，无条件开启（照搬箭伤飞行）
-        if (cfg.autoFlight) {
-            var a = mc.player.getAbilities();
-            a.mayfly = true;
-            a.flying = true;
-            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket(a));
-        }
 
         // 5. 执行攻击
         self.executeTrouserAttack(target, cfg);
@@ -599,11 +610,9 @@ public class TpAuraFeature {
         // （如 onClientAttack 事件），可能取消发包，因此直接发原始包。
         mc.player.connection.send(ServerboundInteractPacket.createAttackPacket(target, mc.player.isShiftKeyDown()));
 
-        // ★ TpAura 联动 KillFX：手动记录攻击记录
-        //   TpAura 直接发包攻击，绕过 AttackEntityEvent，
-        //   导致 KillFX 的 onlyTargeted 模式无法识别攻击目标。
-        //   此处手动调用 KillFX 接口写入攻击记录。
+        // ★ TpAura 联动 KillFX/KillIcon：手动记录攻击记录
         KillFXFeature.markAttackedByTpAura(target.getId());
+        fku.org.example.fku.features.killicon.KillIconFeature.markAttackedByTpAura(target.getId());
 
         // ★ TpAura 联动 HealthTag：手动锁定目标
         //   同样绕过 AttackEntityEvent，导致 HealthTag 无法锁定被攻击目标。
@@ -891,8 +900,8 @@ public class TpAuraFeature {
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (!entityFilter(entity, cfg, allowedTypes)) continue;
             double dist = mc.player.distanceTo(entity);
-            // ★ 玩家目标使用 attackDistance（攻击距离），其他实体使用 maxRange
-            double effectiveRange = (entity instanceof Player) ? cfg.attackDistance : cfg.maxRange;
+            // ★ TpAura 瞬移攻击对所有实体统一使用 maxRange（瞬移不依赖距离）
+            double effectiveRange = cfg.maxRange;
             if (dist < bestDist && dist <= effectiveRange) {
                 bestDist = dist;
                 best = entity;
@@ -912,9 +921,6 @@ public class TpAuraFeature {
         }
 
         if (mc.player.distanceTo(entity) > cfg.maxRange) return false;
-
-        // ★ 玩家额外使用 attackDistance 限制
-        if (entity instanceof Player && mc.player.distanceTo(entity) > cfg.attackDistance) return false;
 
         // 忽略条件
         if (cfg.ignoreNamed && entity.hasCustomName()) return false;

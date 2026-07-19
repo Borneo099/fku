@@ -15,6 +15,8 @@ public class GuiComponent {
     protected String text;
     protected boolean visible = true;
     public boolean listeningForKey = false;
+    protected float currentAlpha = 1.0f;
+    protected long lastInteractionTime = 0;
 
     public GuiComponent(int x, int y, int width, int height, String text) {
         this.x = x;

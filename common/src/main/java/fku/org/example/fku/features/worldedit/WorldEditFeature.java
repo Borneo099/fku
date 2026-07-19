@@ -26,7 +26,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class WorldEditFeature {
 
-    private static final Minecraft mc = Minecraft.getInstance();
+    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean initialized = false;
 
     /**
@@ -47,7 +47,8 @@ public class WorldEditFeature {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         WorldEditConfig cfg = WorldEditConfig.getInstance();
-        if (!cfg.enabled) return;
+        Minecraft mc = getMc();
+        if (mc == null || !cfg.enabled) return;
         if (mc.player == null || mc.level == null) return;
 
         // 非创造模式自动禁用
@@ -69,7 +70,8 @@ public class WorldEditFeature {
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         WorldEditConfig cfg = WorldEditConfig.getInstance();
-        if (!cfg.enabled || !cfg.renderSelection) return;
+        Minecraft mc = getMc();
+        if (mc == null || !cfg.enabled || !cfg.renderSelection) return;
         if (mc.player == null || mc.level == null) return;
 
         SelectionManager.getInstance().renderSelection(event.getPoseStack(), event.getPartialTick());
@@ -81,7 +83,8 @@ public class WorldEditFeature {
     @SubscribeEvent
     public static void onClickInput(InputEvent.InteractionKeyMappingTriggered event) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
-        if (!cfg.enabled) return;
+        Minecraft mc = getMc();
+        if (mc == null || !cfg.enabled) return;
         if (mc.player == null || mc.level == null) return;
 
         // 非创造模式安全检查
@@ -126,7 +129,8 @@ public class WorldEditFeature {
         ToolManager.getInstance().disableAll();
         TaskQueue.getInstance().cancel();
 
-        if (mc.player != null) {
+        Minecraft mc = getMc();
+        if (mc != null && mc.player != null) {
             mc.player.displayClientMessage(
                     Component.literal("§c[WorldEdit] " + reason), true);
         }

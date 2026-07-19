@@ -22,6 +22,12 @@ import fku.org.example.fku.features.worldedit.WorldEditFeature;
 import fku.org.example.fku.features.structure_locator.StructureLocatorConfig;
 import fku.org.example.fku.features.baritone.BaritoneConfig;
 import fku.org.example.fku.features.selfdamage.SelfDamageFeature;
+import fku.org.example.fku.features.killicon.KillIconConfig;
+import fku.org.example.fku.features.killaura.KillAuraConfig;
+import fku.org.example.fku.features.teleport.TeleportConfig;
+import fku.org.example.fku.features.quickcommand.QuickCommandConfig;
+import fku.org.example.fku.features.waterwalk.WaterWalkConfig;
+import fku.org.example.fku.features.crashmonitor.CrashMonitor;
 import fku.org.example.fku.util.FeatureHotkeyManager;
 import fku.org.example.fku.util.HotkeySystem;
 import com.mojang.logging.LogUtils;
@@ -30,6 +36,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -43,6 +50,10 @@ public class Fku
 
     public Fku()
     {
+        // ★ 崩溃监控必须最早初始化
+        CrashMonitor.init(new java.io.File(FMLPaths.GAMEDIR.get().toFile(), "fku"));
+        CrashMonitor.startPhase("FKU 构造器");
+
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         // 注册模组通用设置事件，在这里面加载我们的配置
         modEventBus.addListener(this::commonSetup);
@@ -55,12 +66,14 @@ public class Fku
         MinecraftForge.EVENT_BUS.register(LootFeature.class);
         MinecraftForge.EVENT_BUS.register(PearlPhaseFeature.class);
         MinecraftForge.EVENT_BUS.register(FakePlayerFeature.class);
-        // KillFXFeature 使用 @Mod.EventBusSubscriber 自动注册，无需手动 register
-        // WorldEditFeature 也使用 @Mod.EventBusSubscriber 自动注册
+
+        CrashMonitor.endPhase("FKU 构造器");
     }
 
     private void commonSetup(final FMLCommonSetupEvent event)
     {
+        CrashMonitor.startPhase("加载配置");
+
         // 初始化配置文件，确保文件在游戏启动时被加载
         FkuConfig.init();
         HealthTagConfig.load();
@@ -68,6 +81,9 @@ public class Fku
         GuiStyleConfig.load();
         DisplayModelConfig.load();
         BedrockBreakerConfig.load();
+
+        CrashMonitor.setStage("初始化功能模块");
+
         BedrockBreakerFeature.init();
         KnockbackFeature.init();
         AntiLagFeature.init();
@@ -82,6 +98,11 @@ public class Fku
         StructureLocatorConfig.load();
         BaritoneConfig.load();
         SelfDamageFeature.init();
+        KillIconConfig.load();
+        KillAuraConfig.load();
+        TeleportConfig.load();
+        QuickCommandConfig.load();
+        WaterWalkConfig.load();
 
         // ★ 热键互联：有独立 Config 的功能 ↔ 全局热键系统
         var tpa = fku.org.example.fku.features.tpaura.TpAuraConfig.getInstance();
