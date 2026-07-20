@@ -4,5 +4,8 @@
   "feature.fku.no_jump_delay": "No Jump Delay",
   "feature.fku.no_jump_delay.status": "No Jump Delay: ",
   "feature.fku.killfx": "Kill Effects",
-  "feature.fku.killfx.status": "KillFX: "
+  "feature.fku.killfx.status": "KillFX: ",
+  "key.fku.liquid_glass": "Liquid Glass Panel",
+  "feature.fku.liquid_glass": "Liquid Glass",
+  "feature.fku.liquid_glass.status": "Liquid Glass: "
 }

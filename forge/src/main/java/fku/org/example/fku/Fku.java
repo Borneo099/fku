@@ -27,6 +27,8 @@ import fku.org.example.fku.features.killaura.KillAuraConfig;
 import fku.org.example.fku.features.teleport.TeleportConfig;
 import fku.org.example.fku.features.quickcommand.QuickCommandConfig;
 import fku.org.example.fku.features.waterwalk.WaterWalkConfig;
+import fku.org.example.fku.features.liquidglass.LiquidGlassConfig;
+import fku.org.example.fku.features.liquidglass.LiquidGlassFeature;
 import fku.org.example.fku.features.crashmonitor.CrashMonitor;
 import fku.org.example.fku.util.FeatureHotkeyManager;
 import fku.org.example.fku.util.HotkeySystem;
@@ -103,6 +105,7 @@ public class Fku
         TeleportConfig.load();
         QuickCommandConfig.load();
         WaterWalkConfig.load();
+        LiquidGlassConfig.load();
 
         // ★ 热键互联：有独立 Config 的功能 ↔ 全局热键系统
         var tpa = fku.org.example.fku.features.tpaura.TpAuraConfig.getInstance();
@@ -170,5 +173,6 @@ public class Fku
         HotkeySystem.registerFeature("自伤", () -> SelfDamageFeature.applyDamage());
         HotkeySystem.registerFeature("如来神掌", () -> TpAuraFeature.setEnabled(!TpAuraFeature.isEnabled()));
         HotkeySystem.registerFeature("假人", () -> FakePlayerFeature.toggle());
+        HotkeySystem.registerFeature("液体玻璃", () -> LiquidGlassFeature.togglePanel());
     }
 }

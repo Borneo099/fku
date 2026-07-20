@@ -1,0 +1,30 @@
+{
+    "vertex": "fku:liquid_glass",
+    "fragment": "fku:liquid_glass",
+    "samplers": [
+        { "name": "DiffuseSampler" }
+    ],
+    "attributes": [ "Position", "Color" ],
+    "uniforms": [
+        { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "ColorModulator", "type": "float", "count": 4, "values": [ 1.0, 1.0, 1.0, 1.0 ] },
+        { "name": "ScreenSize", "type": "float", "count": 2, "values": [ 1.0, 1.0 ] },
+        { "name": "QuadPos", "type": "float", "count": 4, "values": [ 0.0, 0.0, 100.0, 100.0 ] },
+        { "name": "QuadRadius", "type": "float", "count": 1, "values": [ 8.0 ] },
+        { "name": "BlurRadius", "type": "float", "count": 1, "values": [ 4.0 ] },
+        { "name": "RefractionPower", "type": "float", "count": 1, "values": [ 0.75 ] },
+        { "name": "RefractionEdge", "type": "float", "count": 1, "values": [ 0.3 ] },
+        { "name": "Dispersion", "type": "float", "count": 1, "values": [ 0.002 ] },
+        { "name": "GlobalAlpha", "type": "float", "count": 1, "values": [ 0.85 ] },
+        { "name": "GlassTint", "type": "float", "count": 4, "values": [ 0.82, 0.88, 1.0, 0.12 ] },
+        { "name": "TintMode", "type": "int", "count": 1, "values": [ 0 ] },
+        { "name": "Noise", "type": "float", "count": 1, "values": [ 0.03 ] },
+        { "name": "GlowWeight", "type": "float", "count": 1, "values": [ 0.3 ] },
+        { "name": "GlowBias", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "GlowEdge0", "type": "float", "count": 1, "values": [ 0.06 ] },
+        { "name": "GlowEdge1", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "ChromaStrength", "type": "float", "count": 1, "values": [ 0.001 ] },
+        { "name": "Darkness", "type": "float", "count": 1, "values": [ 0.0 ] }
+    ]
+}

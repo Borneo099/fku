@@ -22,5 +22,8 @@
   "feature.fku.killfx.particle": "粒子",
   "feature.fku.killfx.sound": "音效",
   "feature.fku.killfx.firework": "烟花",
-  "feature.fku.killfx.explosion": "爆炸烟雾"
+  "feature.fku.killfx.explosion": "爆炸烟雾",
+  "key.fku.liquid_glass": "液体玻璃面板",
+  "feature.fku.liquid_glass": "液体玻璃",
+  "feature.fku.liquid_glass.status": "液体玻璃: "
 }

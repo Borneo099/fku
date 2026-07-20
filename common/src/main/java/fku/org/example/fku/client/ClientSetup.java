@@ -16,6 +16,7 @@ import fku.org.example.fku.features.killaura.KillAuraFeature;
 import fku.org.example.fku.features.teleport.TeleportFeature;
 import fku.org.example.fku.features.quickcommand.QuickCommandFeature;
 import fku.org.example.fku.features.waterwalk.WaterWalkFeature;
+import fku.org.example.fku.features.liquidglass.LiquidGlassFeature;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -56,6 +57,9 @@ public class ClientSetup {
         TeleportFeature.init();
         QuickCommandFeature.init();
         WaterWalkFeature.init();
+
+        // ★ 初始化液体玻璃功能
+        LiquidGlassFeature.init();
 
         // ★ 客户端设置完成 = 启动完成
         CrashMonitor.endPhase("客户端设置");
