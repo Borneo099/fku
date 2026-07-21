@@ -1,493 +1,388 @@
-package fku.org.example.fku.features.fakeplayer; /* water */
+package fku.org.example.fku.features.fakeplayer;
 
 import com.mojang.authlib.GameProfile;
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.fakeplayer.FakePlayerConfig;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.ItemLike;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.registries.ForgeRegistries;
 
-import java.util.UUID;
-
-/**
- * FakePlayerFeature — 假人核心逻辑
- *
- * ★ 职责：
- *   1. 在客户端生成一个可交互的假人（OtherClientPlayer）
- *   2. 拦截 AttackEntityEvent，对假人模拟伤害（不发送网络包）
- *   3. 自动补充图腾、触发生命恢复与粒子效果
- *   4. 显示伤害反馈与死亡/图腾触发提示
- *
- * ★ 矛盾定性：
- *   假人只存在于客户端，服务端无对应实体。
- *   攻击假人时必须取消 AttackEntityEvent 阻止发包，
- *   否则服务端收到无效实体 ID 的攻击包可能导致断线。
- *
- * ★ 参考来源：
- *   AdvancedFakePlayer.java / IMGFakePlayer.java (InvincibleMachineGun)
- */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class FakePlayerFeature {
-
-    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean initialized = false;
-
-    /** 当前生成的假人实例 */
     private static FakePlayerEntity fakePlayer;
+    private static boolean handledByUs;
 
-    /** 玩家攻击是否被本功能处理（防止重复处理） */
-    private static boolean handledByUs = false;
+    private static Minecraft getMc() {
+        return Minecraft.getInstance();
+    }
 
     public static void init() {
-        if (initialized) return;
+        if (initialized) {
+            return;
+        }
         initialized = true;
         FakePlayerConfig.getInstance();
-        Fku.LOGGER.info("[FakePlayer] 假人功能已初始化");
+        Fku.LOGGER.info("[FakePlayer] \u5047\u4eba\u529f\u80fd\u5df2\u521d\u59cb\u5316");
     }
 
-    // ===== 公开接口 =====
-
-    /** 生成假人 */
     public static void spawn() {
-        remove();
+        FakePlayerFeature.remove();
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        Minecraft mc = getMc();
-        if (mc == null || mc.player == null || mc.level == null) return;
-
-        fakePlayer = new FakePlayerEntity(mc.player, cfg.name, cfg.health, cfg.copyInv);
-
-        // ★ 使用 ClientLevel.addPlayer() 正确注册假人到世界（addFreshEntity 在 ClientLevel 上无效）
-        if (mc.level instanceof net.minecraft.client.multiplayer.ClientLevel) {
-            ((net.minecraft.client.multiplayer.ClientLevel) mc.level).addPlayer(fakePlayer.getId(), fakePlayer);
+        Minecraft mc = FakePlayerFeature.getMc();
+        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+            return;
         }
-
-        Fku.LOGGER.info("[FakePlayer] 已生成: {}", cfg.name);
+        fakePlayer = new FakePlayerEntity((Player)mc.player, cfg.name, cfg.health, cfg.copyInv);
+        if (mc.f_91073_ instanceof ClientLevel) {
+            mc.f_91073_.m_104630_(fakePlayer.m_19879_(), (AbstractClientPlayer)fakePlayer);
+        }
+        Fku.LOGGER.info("[FakePlayer] \u5df2\u751f\u6210: {}", cfg.name);
     }
 
-    /** 移除假人 */
     public static void remove() {
         if (fakePlayer != null) {
-            fakePlayer.discard();
+            fakePlayer.m_146870_();
             fakePlayer = null;
         }
     }
 
-    /** 当前是否有假人生存 */
     public static boolean hasFakePlayer() {
-        return fakePlayer != null && fakePlayer.isAlive();
+        return fakePlayer != null && fakePlayer.m_6084_();
     }
 
-    /** 获取当前假人实体 */
     public static FakePlayerEntity getFakePlayer() {
         return fakePlayer;
     }
 
-    /** 切换功能 */
     public static void toggle() {
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
         cfg.setEnabled(!cfg.enabled);
         if (!cfg.enabled) {
-            remove();
+            FakePlayerFeature.remove();
         } else {
-            spawn();
+            FakePlayerFeature.spawn();
         }
     }
 
-    // ===== 事件处理 =====
-
-    /**
-     * ★ 拦截攻击事件
-     *
-     * 当玩家攻击假人时，取消 AttackEntityEvent 阻止发包，
-     * 本地模拟伤害计算、无敌计时、图腾触发和视觉反馈。
-     */
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
+        LocalPlayer player;
+        boolean isCrit;
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        if (!cfg.enabled || !cfg.simulateDamage) return;
-        if (fakePlayer == null || !fakePlayer.isAlive()) return;
-        if (event.getTarget() != fakePlayer) return;
-        if (handledByThisTick()) return;
-
-        // ★ 取消事件 → 阻止 ServerboundInteractPacket 发往服务端
+        if (!cfg.enabled || !cfg.simulateDamage) {
+            return;
+        }
+        if (fakePlayer == null || !fakePlayer.m_6084_()) {
+            return;
+        }
+        if (event.getTarget() != fakePlayer) {
+            return;
+        }
+        if (FakePlayerFeature.handledByThisTick()) {
+            return;
+        }
         event.setCanceled(true);
-
-        // ★ 计算伤害
-        float damage = calculateAttackDamage(event.getEntity());
-
-        // ★ 检查暴击
-        Minecraft mc = getMc();
-        boolean isCrit = mc != null && mc.player != null
-            && mc.player.fallDistance > 0.0F
-            && !mc.player.onGround()
-            && !mc.player.isInWater()
-            && !mc.player.hasEffect(MobEffects.BLINDNESS)
-            && !mc.player.isPassenger();
-
-        if (isCrit) damage *= 1.5F;
-
-        // ★ 应用伤害
+        float damage = FakePlayerFeature.calculateAttackDamage((LivingEntity)event.getEntity());
+        Minecraft mc = FakePlayerFeature.getMc();
+        boolean bl = isCrit = mc != null && mc.player != null && mc.player.f_19789_ > 0.0f && !mc.player.m_20096_() && !mc.player.m_20069_() && !mc.player.m_21023_(MobEffects.f_19610_) && !mc.player.m_20159_();
+        if (isCrit) {
+            damage *= 1.5f;
+        }
         fakePlayer.applyDamage(damage);
-
-        // ★ 视觉反馈
-        LocalPlayer player = mc != null ? mc.player : null;
+        LocalPlayer localPlayer = player = mc != null ? mc.player : null;
         if (player != null) {
-            mc.level.playSound(player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
-                SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
+            mc.f_91073_.m_6263_((Player)player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(), SoundEvents.f_12323_, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
-
         if (cfg.showDamage) {
-            displayClientMessage("§c假人受到伤害: §f" + String.format("%.1f", damage)
-                + " §7(剩余: §f" + String.format("%.1f", Math.max(0, fakePlayer.getHealth())) + "§7)");
+            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u53d7\u5230\u4f24\u5bb3: \u00a7f" + String.format("%.1f", damage)) + " \u00a77(\u5269\u4f59: \u00a7f" + String.format("%.1f", Math.max(0.0f, fakePlayer.m_21223_()))) + "\u00a77)");
         }
-
-        markHandled();
+        FakePlayerFeature.markHandled();
     }
 
-    /**
-     * ★ TpAura 联动接口
-     *
-     * 当 TpAura 攻击假人时，不走服务端发包，直接在客户端模拟伤害。
-     * 返回 true 表示已处理（目标是当前假人），false 表示非假人目标。
-     */
     public static boolean handleTpAuraAttack(Entity target) {
+        boolean isCrit;
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        Minecraft mc = getMc();
-        if (mc == null || !cfg.enabled || !cfg.simulateDamage) return false;
-        if (fakePlayer == null || !fakePlayer.isAlive()) return false;
-        if (target != fakePlayer) return false;
-
-        // ★ 计算伤害（基于玩家的装备）
-        float damage = calculateAttackDamage(mc.player);
-
-        // ★ 检查暴击
-        boolean isCrit = mc.player != null
-            && mc.player.fallDistance > 0.0F
-            && !mc.player.onGround()
-            && !mc.player.isInWater()
-            && !mc.player.hasEffect(MobEffects.BLINDNESS)
-            && !mc.player.isPassenger();
-        if (isCrit) damage *= 1.5F;
-
-        // ★ 应用伤害
+        Minecraft mc = FakePlayerFeature.getMc();
+        if (mc == null || !cfg.enabled || !cfg.simulateDamage) {
+            return false;
+        }
+        if (fakePlayer == null || !fakePlayer.m_6084_()) {
+            return false;
+        }
+        if (target != fakePlayer) {
+            return false;
+        }
+        float damage = FakePlayerFeature.calculateAttackDamage((LivingEntity)mc.player);
+        boolean bl = isCrit = mc.player != null && mc.player.f_19789_ > 0.0f && !mc.player.m_20096_() && !mc.player.m_20069_() && !mc.player.m_21023_(MobEffects.f_19610_) && !mc.player.m_20159_();
+        if (isCrit) {
+            damage *= 1.5f;
+        }
         fakePlayer.applyDamage(damage);
-
-        // ★ 音效反馈（该方法由赛博教员实现）
-        if (mc.level != null) {
-            mc.level.playSound(mc.player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
-                SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0F, 1.0F);
+        if (mc.f_91073_ != null) {
+            mc.f_91073_.m_6263_((Player)mc.player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(), SoundEvents.f_12323_, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
-
         if (cfg.showDamage) {
-            displayClientMessage("§c假人受到伤害: §f" + String.format("%.1f", damage)
-                + " §7(剩余: §f" + String.format("%.1f", Math.max(0, fakePlayer.getHealth())) + "§7)");
+            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u53d7\u5230\u4f24\u5bb3: \u00a7f" + String.format("%.1f", damage)) + " \u00a77(\u5269\u4f59: \u00a7f" + String.format("%.1f", Math.max(0.0f, fakePlayer.m_21223_()))) + "\u00a77)");
         }
-
         return true;
     }
 
-    /**
-     * ★ Tick 事件：假人定时更新 + 自动图腾
-     */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        if (!cfg.enabled || fakePlayer == null || !fakePlayer.isAlive()) return;
-
-        // ★ 自动补充图腾（双持）
+        if (!cfg.enabled || fakePlayer == null || !fakePlayer.m_6084_()) {
+            return;
+        }
         if (cfg.autoTotem) {
-            if (fakePlayer.getOffhandItem().getItem() != Items.TOTEM_OF_UNDYING) {
-                fakePlayer.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.TOTEM_OF_UNDYING));
+            if (fakePlayer.m_21206_().m_41720_() != Items.f_42747_) {
+                fakePlayer.m_21008_(InteractionHand.OFF_HAND, new ItemStack((ItemLike)Items.f_42747_));
             }
-            if (fakePlayer.getMainHandItem().getItem() != Items.TOTEM_OF_UNDYING) {
-                fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.TOTEM_OF_UNDYING));
+            if (fakePlayer.m_21205_().m_41720_() != Items.f_42747_) {
+                fakePlayer.m_21008_(InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.f_42747_));
             }
         }
-
-        // ★ 更新无敌计时
         fakePlayer.tickCombat();
-
-        // ★ 自动重生
-        if (!fakePlayer.isAlive() && cfg.respawn) {
-            spawn();
+        if (!fakePlayer.m_6084_() && cfg.respawn) {
+            FakePlayerFeature.spawn();
         }
     }
 
-    // ===== 内部逻辑 =====
-
-    /**
-     * 计算玩家攻击伤害
-     *
-     * 基于玩家主手武器的基础攻击伤害属性 + 附魔加成
-     */
     private static float calculateAttackDamage(LivingEntity attacker) {
-        if (!(attacker instanceof net.minecraft.world.entity.player.Player)) return 1.0F;
-        net.minecraft.world.entity.player.Player player = (net.minecraft.world.entity.player.Player) attacker;
-
-        ItemStack weapon = player.getMainHandItem();
-        if (weapon.isEmpty()) return 1.0F;
-
-        // ★ 获取武器基础伤害属性
-        double baseDamage = weapon.getAttributeModifiers(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
-            .get(Attributes.ATTACK_DAMAGE).stream()
-            .mapToDouble(m -> m.getAmount())
-            .sum();
-        if (baseDamage == 0) baseDamage = 1.0;
-
-        // ★ 计算附魔加成（锋利、亡灵杀手、节肢杀手）
-        int sharpness = 0, smite = 0, bane = 0;
-        var enchantments = net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantments(weapon);
-        for (var entry : enchantments.entrySet()) {
-            var ench = entry.getKey();
-            int level = entry.getValue();
-            var id = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(ench);
+        MobEffectInstance effect;
+        MobEffectInstance effect2;
+        if (!(attacker instanceof Player)) {
+            return 1.0f;
+        }
+        Player player = (Player)attacker;
+        ItemStack weapon = player.m_21205_();
+        if (weapon.m_41619_()) {
+            return 1.0f;
+        }
+        double baseDamage = weapon.m_41638_(EquipmentSlot.MAINHAND).get(Attributes.f_22281_).stream().mapToDouble(m -> m.m_22218_()).sum();
+        if (baseDamage == 0.0) {
+            baseDamage = 1.0;
+        }
+        int sharpness = 0;
+        int smite = 0;
+        int bane = 0;
+        Map enchantments = EnchantmentHelper.m_44831_((ItemStack)weapon);
+        for (Map.Entry entry : enchantments.entrySet()) {
+            Enchantment ench = (Enchantment)entry.getKey();
+            int level = (Integer)entry.getValue();
+            ResourceLocation id = ForgeRegistries.ENCHANTMENTS.getKey(ench);
             if (id == null) continue;
-            String path = id.getPath();
-            if ("sharpness".equals(path)) sharpness += level;
-            else if ("smite".equals(path)) smite += level;
-            else if ("bane_of_arthropods".equals(path)) bane += level;
+            String path = id.m_135815_();
+            if ("sharpness".equals(path)) {
+                sharpness += level;
+                continue;
+            }
+            if ("smite".equals(path)) {
+                smite += level;
+                continue;
+            }
+            if (!"bane_of_arthropods".equals(path)) continue;
+            bane += level;
         }
-
-        float enchantBonus = sharpness * 1.25F + smite * 2.5F + bane * 2.5F;
-
-        // ★ 力量效果加成
-        float strengthBonus = 0;
-        if (player.hasEffect(MobEffects.DAMAGE_BOOST)) {
-            MobEffectInstance effect = player.getEffect(MobEffects.DAMAGE_BOOST);
-            if (effect != null) strengthBonus = 3.0F * (effect.getAmplifier() + 1);
+        float enchantBonus = sharpness * 1.25f + smite * 2.5f + bane * 2.5f;
+        float strengthBonus = 0.0f;
+        if (player.m_21023_(MobEffects.f_19600_) && (effect2 = player.m_21124_(MobEffects.f_19600_)) != null) {
+            strengthBonus = 3.0f * (effect2.m_19564_() + 1);
         }
-        // 虚弱效果减益
-        float weaknessPenalty = 0;
-        if (player.hasEffect(MobEffects.WEAKNESS)) {
-            MobEffectInstance effect = player.getEffect(MobEffects.WEAKNESS);
-            if (effect != null) weaknessPenalty = 4.0F * (effect.getAmplifier() + 1);
+        float weaknessPenalty = 0.0f;
+        if (player.m_21023_(MobEffects.f_19613_) && (effect = player.m_21124_(MobEffects.f_19613_)) != null) {
+            weaknessPenalty = 4.0f * (effect.m_19564_() + 1);
         }
-
-        return (float) (baseDamage + enchantBonus + strengthBonus - weaknessPenalty);
+        return (baseDamage + enchantBonus + strengthBonus - weaknessPenalty);
     }
 
-    /**
-     * 判断本 Tick 是否已处理过攻击（防重入）
-     */
     private static boolean handledByThisTick() {
-        if (handledByUs) return true;
-        return false;
+        return handledByUs;
     }
 
     private static void markHandled() {
         handledByUs = true;
-        // 下个 Tick 自动重置
         new Thread(() -> {
-            try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+            try {
+                Thread.sleep(50L);
+            }
+            catch (InterruptedException interruptedException) {
+                // ignored
+            }
             handledByUs = false;
         }).start();
     }
 
     private static void displayClientMessage(String msg) {
-        Minecraft mc = getMc();
+        Minecraft mc = FakePlayerFeature.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal(msg), false);
+            mc.player.m_5661_(Component.literal((String)msg), false);
         }
     }
 
-    // ===== 假人实体类 =====
+    static {
+        handledByUs = false;
+    }
 
-    /**
-     * 假人实体 — 客户端 Only 的 AbstractClientPlayer 子类（替代 RemotePlayer）
-     *
-     * ★ 职责：
-     *   1. 复制真实玩家的位置/旋转/背包/姿态
-     *   2. 管理受击无敌计时
-     *   3. 处理伤害应用与图腾触发
-     */
-    public static class FakePlayerEntity extends AbstractClientPlayer {
-
-        /** 受击无敌计时器（Tick） */
+    public static class FakePlayerEntity
+    extends AbstractClientPlayer {
         private int combatCooldown = 0;
-
-        /** 是否在地面（构造时固定） */
         private final boolean ground;
 
-        public FakePlayerEntity(net.minecraft.world.entity.player.Player player, String name, float health, boolean copyInv) {
-            super(getMc().level, new GameProfile(UUID.randomUUID(), name));
-            // ★ 复制玩家状态（参考 IMGFakePlayer 原始实现）
-            this.copyPosition(player);
-            this.setYRot(player.getYRot());
-            this.setXRot(player.getXRot());
-            this.yBodyRot = player.yBodyRot;
-            this.yHeadRot = player.yHeadRot;
-            this.yHeadRotO = player.yHeadRotO;
-            // 渲染插值位置（相当于 Fabric Yarn 的 lastRenderX/Y/Z）
-            this.xo = player.xo;
-            this.yo = player.yo;
-            this.zo = player.zo;
-            this.wasTouchingWater = player.isInWater();
-            this.setShiftKeyDown(player.isShiftKeyDown());
-            this.setPose(player.getPose());
-            this.ground = player.onGround();
-            this.setOnGround(this.ground);
-            this.setBoundingBox(player.getBoundingBox());
-            this.setHealth(health);
-
-            // ★ 复制背包
+        public FakePlayerEntity(Player player, String name, float health, boolean copyInv) {
+            super(FakePlayerFeature.getMc().f_91073_, new GameProfile(UUID.randomUUID(), name));
+            this.m_20359_((Entity)player);
+            this.m_146922_(player.m_146908_());
+            this.m_146926_(player.m_146909_());
+            this.f_20883_ = player.f_20883_;
+            this.f_20885_ = player.f_20885_;
+            this.f_20886_ = player.f_20886_;
+            this.xOld = player.xOld;
+            this.yOld = player.yOld;
+            this.zOld = player.zOld;
+            this.f_19798_ = player.m_20069_();
+            this.m_20260_(player.m_6144_());
+            this.m_20124_(player.m_20089_());
+            this.ground = player.m_20096_();
+            this.m_6853_(this.ground);
+            this.m_20011_(player.m_20191_());
+            this.m_21153_(health);
             if (copyInv) {
-                var playerInv = player.getInventory();
-                var fakeInv = this.getInventory();
-                for (int i = 0; i < playerInv.getContainerSize(); i++) {
-                    fakeInv.setItem(i, playerInv.getItem(i).copy());
+                Inventory playerInv = player.m_150109_();
+                Inventory fakeInv = this.m_150109_();
+                for (int i = 0; i < playerInv.m_6643_(); ++i) {
+                    fakeInv.m_6836_(i, playerInv.m_8020_(i).m_41777_());
                 }
             }
-
-            // ★ 初始图腾
             if (FakePlayerConfig.getInstance().autoTotem) {
-                this.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.TOTEM_OF_UNDYING));
+                this.m_21008_(InteractionHand.OFF_HAND, new ItemStack((ItemLike)Items.f_42747_));
             }
-
-            // ★ 吸收血量
-            float absorption = player.getAbsorptionAmount();
-            this.setAbsorptionAmount(absorption);
+            float absorption = player.m_6103_();
+            this.m_7911_(absorption);
         }
 
-        @Override
-        public boolean onGround() {
-            return ground;
+        public boolean m_20096_() {
+            return this.ground;
         }
 
-        @Override
-        public boolean isSpectator() {
+        public boolean m_5833_() {
             return false;
         }
 
-        @Override
-        public boolean isCreative() {
+        public boolean m_7500_() {
             return false;
         }
 
-        /**
-         * Tick 更新（由 ClientTickEvent 调用）
-         */
         public void tickCombat() {
-            if (combatCooldown > 0) combatCooldown--;
-            if (hurtTime > 0) hurtTime--;
+            if (this.combatCooldown > 0) {
+                --this.combatCooldown;
+            }
+            if (this.f_20916_ > 0) {
+                --this.f_20916_;
+            }
         }
 
-        /**
-         * 应用伤害
-         *
-         * ★ 检查无敌计时
-         * ★ 扣血 + 图腾触发 + 死亡处理
-         */
         public void applyDamage(float damage) {
-            if (combatCooldown > 0) return;
-
-            float oldHealth = getHealth();
+            if (this.combatCooldown > 0) {
+                return;
+            }
+            float oldHealth = this.m_21223_();
             float newHealth = oldHealth - damage;
-
-            // 设置无敌时间
             this.combatCooldown = FakePlayerConfig.getInstance().invulnerableTicks;
-            this.hurtTime = 10;
-            this.hurtDuration = 10;
-
-            if (newHealth <= 0f) {
-                // ★ 尝试触发图腾
-                boolean totemPopped = tryPopTotem();
+            this.f_20916_ = 10;
+            this.f_20917_ = 10;
+            if (newHealth <= 0.0f) {
+                boolean totemPopped = this.tryPopTotem();
                 if (!totemPopped) {
-                    die();
+                    this.die();
                 } else {
-                    this.setHealth(1.0f);
+                    this.m_21153_(1.0f);
                 }
             } else {
-                this.setHealth(newHealth);
+                this.m_21153_(newHealth);
             }
         }
 
-        /**
-         * 尝试触发不死图腾
-         *
-         * @return true 如果图腾被触发
-         */
         private boolean tryPopTotem() {
-            Minecraft mc = getMc();
-            boolean hasTotem = getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING
-                || getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING;
-
-            if (!hasTotem) return false;
-
-            // ★ 移除图腾
-            if (getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
-                setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            boolean hasTotem;
+            Minecraft mc = FakePlayerFeature.getMc();
+            boolean bl = hasTotem = this.m_21206_().m_41720_() == Items.f_42747_ || this.m_21205_().m_41720_() == Items.f_42747_;
+            if (!hasTotem) {
+                return false;
+            }
+            if (this.m_21206_().m_41720_() == Items.f_42747_) {
+                this.m_21008_(InteractionHand.OFF_HAND, ItemStack.f_41583_);
             } else {
-                setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                this.m_21008_(InteractionHand.MAIN_HAND, ItemStack.f_41583_);
             }
-
-            // ★ 触发效果
-            this.setHealth(10.0f);
-            this.setAbsorptionAmount(4.0f);
-            this.removeAllEffects();
-            this.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1));
-            this.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0));
-            this.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1));
-
-            // ★ 重设无敌时间
+            this.m_21153_(10.0f);
+            this.m_7911_(4.0f);
+            this.m_21219_();
+            this.m_7292_(new MobEffectInstance(MobEffects.f_19605_, 900, 1));
+            this.m_7292_(new MobEffectInstance(MobEffects.f_19607_, 800, 0));
+            this.m_7292_(new MobEffectInstance(MobEffects.f_19617_, 100, 1));
             this.combatCooldown = FakePlayerConfig.getInstance().invulnerableTicks;
-            this.hurtTime = 10;
-
-            // ★ 粒子效果 + 音效
-            if (mc != null && mc.level != null) {
-                for (int i = 0; i < 30; i++) {
-                    double vx = (mc.level.random.nextDouble() - 0.5) * 0.5;
-                    double vy = mc.level.random.nextDouble() * 0.5;
-                    double vz = (mc.level.random.nextDouble() - 0.5) * 0.5;
-                    mc.level.addParticle(ParticleTypes.TOTEM_OF_UNDYING,
-                        this.getX() + vx * 2, this.getY() + 1.0 + vy * 2, this.getZ() + vz * 2,
-                        vx, vy + 0.5, vz);
+            this.f_20916_ = 10;
+            if (mc != null && mc.f_91073_ != null) {
+                for (int i = 0; i < 30; ++i) {
+                    double vx = (mc.f_91073_.f_46441_.m_188500_() - 0.5) * 0.5;
+                    double vy = mc.f_91073_.f_46441_.m_188500_() * 0.5;
+                    double vz = (mc.f_91073_.f_46441_.m_188500_() - 0.5) * 0.5;
+                    mc.f_91073_.m_7106_((ParticleOptions)ParticleTypes.f_123767_, this.getX() + vx * 2.0, this.getY() + 1.0 + vy * 2.0, this.getZ() + vz * 2.0, vx, vy + 0.5, vz);
                 }
-                mc.level.playSound(null, this.getX(), this.getY(), this.getZ(),
-                    SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.0F);
+                mc.f_91073_.m_6263_(null, this.getX(), this.getY(), this.getZ(), SoundEvents.f_12513_, SoundSource.PLAYERS, 1.0f, 1.0f);
             }
-
             FakePlayerConfig cfg = FakePlayerConfig.getInstance();
             if (cfg.showDamage) {
-                FakePlayerFeature.displayClientMessage("§6假人触发了不死图腾！");
+                FakePlayerFeature.displayClientMessage("\u00a76\u5047\u4eba\u89e6\u53d1\u4e86\u4e0d\u6b7b\u56fe\u817e\uff01");
             }
-
             return true;
         }
 
-        /**
-         * 假人死亡
-         */
         private void die() {
-            this.setHealth(0f);
-            Minecraft mc = getMc();
-            if (mc != null && mc.level != null) {
-                mc.level.playSound(null, this.getX(), this.getY(), this.getZ(),
-                    SoundEvents.PLAYER_DEATH, SoundSource.PLAYERS, 1.0F, 1.0F);
+            this.m_21153_(0.0f);
+            Minecraft mc = FakePlayerFeature.getMc();
+            if (mc != null && mc.f_91073_ != null) {
+                mc.f_91073_.m_6263_(null, this.getX(), this.getY(), this.getZ(), SoundEvents.f_12322_, SoundSource.PLAYERS, 1.0f, 1.0f);
             }
-            this.remove(RemovalReason.KILLED);
+            this.m_142687_(Entity.RemovalReason.KILLED);
             fakePlayer = null;
-
-            FakePlayerFeature.displayClientMessage("§c假人已死亡。");
+            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u5df2\u6b7b\u4ea1\u3002");
         }
     }
 }
+

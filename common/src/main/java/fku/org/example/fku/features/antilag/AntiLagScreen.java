@@ -1,43 +1,22 @@
-package fku.org.example.fku.features.antilag; /* water */
+package fku.org.example.fku.features.antilag;
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.antilag.AntiLagConfig;
+import fku.org.example.fku.features.antilag.AntiLagFeature;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * AntiLag（防拉回）配置界面
- *
- * ★ 职责：
- *   提供完整的防拉回配置修改界面，遵循 ClickGUI 风格（带面板边框）。
- *   所有修改即时保存到 AntiLagConfig 并持久化到 config/fku/antilag.json。
- *
- * ★ 参考：
- *   KnockbackConfigScreen 的布局模式（标签+输入框+按钮分层 + 圆角面板背景）
- *
- * 配置项（10项）：
- *   行1: 版本模式（MC1_16 / MC1_9）
- *   行2: 触发距离 range
- *   行3: 限速 limitPerSecond
- *   行4: 路径步长 moveDistance
- *   行5: 自动脱困模式 searchVclipMode
- *   行6: 脱困步距 searchFindStep
- *   行7: back 反拉回模式开关
- *   行8: allowIntoVoid 虚空保护开关
- *   行9: printWhenTooManyPacket 超限警告开关
- *   行10: 实时包计数器（只读）+ 保存/完成按钮
- */
-public class AntiLagScreen extends Screen {
-
+public class AntiLagScreen
+extends Screen {
     private static final int WIDTH = 310;
     private static final int HEIGHT = 340;
-
-    // 行Y偏移（相对于面板顶部）
     private static final int ROW_TITLE = 10;
     private static final int ROW_SERVER_MODE = 30;
     private static final int ROW_RANGE = 56;
@@ -50,7 +29,6 @@ public class AntiLagScreen extends Screen {
     private static final int ROW_PRINT = 238;
     private static final int ROW_COUNTER = 264;
     private static final int ROW_BUTTONS = 290;
-
     private EditBox rangeInput;
     private EditBox limitInput;
     private EditBox moveDistInput;
@@ -60,237 +38,187 @@ public class AntiLagScreen extends Screen {
     private Button backButton;
     private Button voidButton;
     private Button printButton;
-
     private final AntiLagConfig cfg = AntiLagConfig.getInstance();
     private int tickCounter = 0;
 
     public AntiLagScreen() {
-        super(Component.literal("防拉回配置"));
+        super(Component.literal((String)"\u9632\u62c9\u56de\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-        int cx = (width - WIDTH) / 2;
-
-        // ── 行1：版本模式 ──
-        serverModeButton = Button.builder(
-                Component.literal("模式: " + getVersionLabel(cfg.serverVersionMode)),
-                btn -> {
-                    String next = "MC1_16".equals(cfg.serverVersionMode) ? "MC1_9" : "MC1_16";
-                    cfg.setServerVersionMode(next);
-                    btn.setMessage(Component.literal("模式: " + getVersionLabel(next)));
-                }
-        ).bounds(cx + 10, cy(ROW_SERVER_MODE), 160, 18).build();
-        addRenderableWidget(serverModeButton);
-
-        // ── 行2：触发距离 ──
-        rangeInput = new EditBox(font, cx + 80, cy(ROW_RANGE + 14), 60, 14, Component.literal(""));
-        rangeInput.setValue(String.format("%.1f", cfg.range));
-        rangeInput.setMaxLength(6);
-        rangeInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
-        addRenderableWidget(rangeInput);
-
-        // ── 行3：限速 ──
-        limitInput = new EditBox(font, cx + 80, cy(ROW_LIMIT + 14), 50, 14, Component.literal(""));
-        limitInput.setValue(String.valueOf(cfg.limitPerSecond));
-        limitInput.setMaxLength(5);
-        limitInput.setFilter(s -> s.matches("\\d*"));
-        addRenderableWidget(limitInput);
-
-        // ── 行4：路径步长 ──
-        moveDistInput = new EditBox(font, cx + 80, cy(ROW_MOVE_DIST + 14), 50, 14, Component.literal(""));
-        moveDistInput.setValue(String.format("%.2f", cfg.moveDistance));
-        moveDistInput.setMaxLength(5);
-        moveDistInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
-        addRenderableWidget(moveDistInput);
-
-        // ── 行5：脱困模式 ──
-        vclipModeButton = Button.builder(
-                Component.literal("脱困方向: " + getVclipLabel(cfg.searchVclipMode)),
-                btn -> {
-                    String next = cycleVclipMode(cfg.searchVclipMode);
-                    cfg.setSearchVclipMode(next);
-                    btn.setMessage(Component.literal("脱困方向: " + getVclipLabel(next)));
-                }
-        ).bounds(cx + 10, cy(ROW_VCLIP_MODE), 150, 18).build();
-        addRenderableWidget(vclipModeButton);
-
-        // ── 行6：脱困步距 ──
-        vclipStepInput = new EditBox(font, cx + 80, cy(ROW_VCLIP_STEP + 14), 50, 14, Component.literal(""));
-        vclipStepInput.setValue(String.format("%.1f", cfg.searchFindStep));
-        vclipStepInput.setMaxLength(5);
-        vclipStepInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
-        addRenderableWidget(vclipStepInput);
-
-        // ── 行7：back 模式 ──
-        backButton = Button.builder(
-                Component.literal("反拉回模式: " + (cfg.back ? "开" : "关")),
-                btn -> {
-                    cfg.setBack(!cfg.back);
-                    btn.setMessage(Component.literal("反拉回模式: " + (cfg.back ? "开" : "关")));
-                }
-        ).bounds(cx + 10, cy(ROW_BACK), 160, 18).build();
-        addRenderableWidget(backButton);
-
-        // ── 行8：虚空保护 ──
-        voidButton = Button.builder(
-                Component.literal("允许虚空: " + (cfg.allowIntoVoid ? "开" : "关")),
-                btn -> {
-                    cfg.setAllowIntoVoid(!cfg.allowIntoVoid);
-                    btn.setMessage(Component.literal("允许虚空: " + (cfg.allowIntoVoid ? "开" : "关")));
-                }
-        ).bounds(cx + 10, cy(ROW_VOID), 160, 18).build();
-        addRenderableWidget(voidButton);
-
-        // ── 行9：超限警告 ──
-        printButton = Button.builder(
-                Component.literal("超限警告: " + (cfg.printWhenTooManyPacket ? "开" : "关")),
-                btn -> {
-                    cfg.setPrintWhenTooManyPacket(!cfg.printWhenTooManyPacket);
-                    btn.setMessage(Component.literal("超限警告: " + (cfg.printWhenTooManyPacket ? "开" : "关")));
-                }
-        ).bounds(cx + 10, cy(ROW_PRINT), 160, 18).build();
-        addRenderableWidget(printButton);
-
-        // ── 行10：底部按钮 ──
-        addRenderableWidget(Button.builder(
-                Component.literal("保存"),
-                btn -> saveConfig()
-        ).bounds(cx + 70, cy(ROW_BUTTONS), 60, 18).build());
-
-        addRenderableWidget(Button.builder(
-                Component.literal("完成"),
-                btn -> {
-                    saveConfig();
-                    Minecraft.getInstance().setScreen(new ClickGuiScreen());
-                }
-        ).bounds(cx + 150, cy(ROW_BUTTONS), 60, 18).build());
+        int cx = (this.width - 310) / 2;
+        this.serverModeButton = Button.builder(Component.literal((String)("\u6a21\u5f0f: " + this.getVersionLabel(this.cfg.serverVersionMode))), btn -> {
+            String next = "MC1_16".equals(this.cfg.serverVersionMode) ? "MC1_9" : "MC1_16";
+            this.cfg.setServerVersionMode(next);
+            btn.setMessage(Component.literal((String)("\u6a21\u5f0f: " + this.getVersionLabel(next))));
+        }).bounds(cx + 10, this.cy(30), 160, 18).build();
+        this.addRenderableWidget(this.serverModeButton);
+        this.rangeInput = new EditBox(this.font, cx + 80, this.cy(70), 60, 14, Component.literal((String)""));
+        this.rangeInput.m_94144_(String.format("%.1f", this.cfg.range));
+        this.rangeInput.m_94199_(6);
+        this.rangeInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.addRenderableWidget(this.rangeInput);
+        this.limitInput = new EditBox(this.font, cx + 80, this.cy(96), 50, 14, Component.literal((String)""));
+        this.limitInput.m_94144_(String.valueOf(this.cfg.limitPerSecond));
+        this.limitInput.m_94199_(5);
+        this.limitInput.m_94153_(s -> s.matches("\\d*"));
+        this.addRenderableWidget(this.limitInput);
+        this.moveDistInput = new EditBox(this.font, cx + 80, this.cy(122), 50, 14, Component.literal((String)""));
+        this.moveDistInput.m_94144_(String.format("%.2f", this.cfg.moveDistance));
+        this.moveDistInput.m_94199_(5);
+        this.moveDistInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.addRenderableWidget(this.moveDistInput);
+        this.vclipModeButton = Button.builder(Component.literal((String)("\u8131\u56f0\u65b9\u5411: " + this.getVclipLabel(this.cfg.searchVclipMode))), btn -> {
+            String next = this.cycleVclipMode(this.cfg.searchVclipMode);
+            this.cfg.setSearchVclipMode(next);
+            btn.setMessage(Component.literal((String)("\u8131\u56f0\u65b9\u5411: " + this.getVclipLabel(next))));
+        }).bounds(cx + 10, this.cy(134), 150, 18).build();
+        this.addRenderableWidget(this.vclipModeButton);
+        this.vclipStepInput = new EditBox(this.font, cx + 80, this.cy(174), 50, 14, Component.literal((String)""));
+        this.vclipStepInput.m_94144_(String.format("%.1f", this.cfg.searchFindStep));
+        this.vclipStepInput.m_94199_(5);
+        this.vclipStepInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.addRenderableWidget(this.vclipStepInput);
+        this.backButton = Button.builder(Component.literal((String)("\u53cd\u62c9\u56de\u6a21\u5f0f: " + (this.cfg.back ? "\u5f00" : "\u5173"))), btn -> {
+            this.cfg.setBack(!this.cfg.back);
+            btn.setMessage(Component.literal((String)("\u53cd\u62c9\u56de\u6a21\u5f0f: " + (this.cfg.back ? "\u5f00" : "\u5173"))));
+        }).bounds(cx + 10, this.cy(186), 160, 18).build();
+        this.addRenderableWidget(this.backButton);
+        this.voidButton = Button.builder(Component.literal((String)("\u5141\u8bb8\u865a\u7a7a: " + (this.cfg.allowIntoVoid ? "\u5f00" : "\u5173"))), btn -> {
+            this.cfg.setAllowIntoVoid(!this.cfg.allowIntoVoid);
+            btn.setMessage(Component.literal((String)("\u5141\u8bb8\u865a\u7a7a: " + (this.cfg.allowIntoVoid ? "\u5f00" : "\u5173"))));
+        }).bounds(cx + 10, this.cy(212), 160, 18).build();
+        this.addRenderableWidget(this.voidButton);
+        this.printButton = Button.builder(Component.literal((String)("\u8d85\u9650\u8b66\u544a: " + (this.cfg.printWhenTooManyPacket ? "\u5f00" : "\u5173"))), btn -> {
+            this.cfg.setPrintWhenTooManyPacket(!this.cfg.printWhenTooManyPacket);
+            btn.setMessage(Component.literal((String)("\u8d85\u9650\u8b66\u544a: " + (this.cfg.printWhenTooManyPacket ? "\u5f00" : "\u5173"))));
+        }).bounds(cx + 10, this.cy(238), 160, 18).build();
+        this.addRenderableWidget(this.printButton);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 70, this.cy(290), 60, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> {
+            this.saveConfig();
+            Minecraft.getInstance().setScreen(new ClickGuiScreen());
+        }).bounds(cx + 150, this.cy(290), 60, 18).build());
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
-        int cx = (width - WIDTH) / 2;
-
-        // ── 面板背景（圆角+边框） ──
-        GuiRenderHelper.drawPanelBackground(g, cx, cy(0), WIDTH, HEIGHT, false);
-        g.drawString(font, "AntiLag 防拉回配置", cx + 10, cy(ROW_TITLE), 0xFFFFFF);
-
-        // ── 触发距离 ──
-        g.drawString(font, "触发距离:", cx + 10, cy(ROW_RANGE), 0xAAAAAA);
-        g.drawString(font, "§7(0.1~2000)", cx + 142, cy(ROW_RANGE + 14), 0x666666);
-
-        // ── 每秒限包 ──
-        g.drawString(font, "每秒限包:", cx + 10, cy(ROW_LIMIT), 0xAAAAAA);
-        g.drawString(font, "§7(1~10000)", cx + 132, cy(ROW_LIMIT + 14), 0x666666);
-
-        // ── 路径步长 ──
-        g.drawString(font, "路径步长:", cx + 10, cy(ROW_MOVE_DIST), 0xAAAAAA);
-        g.drawString(font, "§7(0.01~1.0)", cx + 132, cy(ROW_MOVE_DIST + 14), 0x666666);
-
-        // ── 脱困步距 ──
-        g.drawString(font, "脱困步距:", cx + 10, cy(ROW_VCLIP_STEP), 0xAAAAAA);
-        g.drawString(font, "§7(0.1~5.0)", cx + 132, cy(ROW_VCLIP_STEP + 14), 0x666666);
-
-        // ── 模式说明 ──
-        g.drawString(font, "§7| 版本模式：1.16=路径拆分;1.9=直接发送", cx + 175, cy(ROW_SERVER_MODE + 2), 0x666666);
-        g.drawString(font, "§7| 反拉回模式：开启后保留服务端拉回效果", cx + 175, cy(ROW_BACK + 2), 0x666666);
-
-        // ── 实时包计数器（每秒刷新） ──
-        if (++tickCounter % 20 == 0) {
+        this.fillGradient(g);
+        int cx = (this.width - 310) / 2;
+        GuiRenderHelper.drawPanelBackground(g, cx, this.cy(0), 310, 340, false);
+        g.drawString(this.font, "AntiLag \u9632\u62c9\u56de\u914d\u7f6e", cx + 10, this.cy(10), 0xFFFFFF);
+        g.drawString(this.font, "\u89e6\u53d1\u8ddd\u79bb:", cx + 10, this.cy(56), 0xAAAAAA);
+        g.drawString(this.font, "\u00a77(0.1~2000)", cx + 142, this.cy(70), 0x666666);
+        g.drawString(this.font, "\u6bcf\u79d2\u9650\u5305:", cx + 10, this.cy(82), 0xAAAAAA);
+        g.drawString(this.font, "\u00a77(1~10000)", cx + 132, this.cy(96), 0x666666);
+        g.drawString(this.font, "\u8def\u5f84\u6b65\u957f:", cx + 10, this.cy(108), 0xAAAAAA);
+        g.drawString(this.font, "\u00a77(0.01~1.0)", cx + 132, this.cy(122), 0x666666);
+        g.drawString(this.font, "\u8131\u56f0\u6b65\u8ddd:", cx + 10, this.cy(160), 0xAAAAAA);
+        g.drawString(this.font, "\u00a77(0.1~5.0)", cx + 132, this.cy(174), 0x666666);
+        g.drawString(this.font, "\u00a77| \u7248\u672c\u6a21\u5f0f\uff1a1.16=\u8def\u5f84\u62c6\u5206;1.9=\u76f4\u63a5\u53d1\u9001", cx + 175, this.cy(32), 0x666666);
+        g.drawString(this.font, "\u00a77| \u53cd\u62c9\u56de\u6a21\u5f0f\uff1a\u5f00\u542f\u540e\u4fdd\u7559\u670d\u52a1\u7aef\u62c9\u56de\u6548\u679c", cx + 175, this.cy(188), 0x666666);
+        if (++this.tickCounter % 20 == 0) {
             int cnt = AntiLagFeature.getCurrentPacketCount();
-            String rateState = cfg.rateLimited ? " §c(限速中)" : "";
-            g.drawString(font,
-                    "本秒发包: " + cnt + "/" + cfg.limitPerSecond + rateState,
-                    cx + 10, cy(ROW_COUNTER), cnt > cfg.limitPerSecond ? 0xFF5555 : 0xAAAAAA);
+            String rateState = this.cfg.rateLimited ? " \u00a7c(\u9650\u901f\u4e2d)" : "";
+            g.drawString(this.font, "\u672c\u79d2\u53d1\u5305: " + cnt + "/" + this.cfg.limitPerSecond + rateState, cx + 10, this.cy(264), cnt > this.cfg.limitPerSecond ? 0xFF5555 : 0xAAAAAA);
         } else {
             int cnt = AntiLagFeature.getCurrentPacketCount();
-            String rateState = cfg.rateLimited ? " §c(限速中)" : "";
-            g.drawString(font,
-                    "本秒发包: " + cnt + "/" + cfg.limitPerSecond + rateState,
-                    cx + 10, cy(ROW_COUNTER), cnt > cfg.limitPerSecond ? 0xFF5555 : 0xAAAAAA);
+            String rateState = this.cfg.rateLimited ? " \u00a7c(\u9650\u901f\u4e2d)" : "";
+            g.drawString(this.font, "\u672c\u79d2\u53d1\u5305: " + cnt + "/" + this.cfg.limitPerSecond + rateState, cx + 10, this.cy(264), cnt > this.cfg.limitPerSecond ? 0xFF5555 : 0xAAAAAA);
         }
-
         super.render(g, mx, my, pt);
     }
 
-    @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        // 依赖 super.mouseClicked() 默认分发，它会自动将点击事件派发给对应的 EditBox/Button
-        // 手动拦截反而会破坏 EditBox 的内部焦点状态
         return super.mouseClicked(mx, my, button);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // 只拦截 Escape 键用于关闭，其余输入全部交给父类默认分发
-        // Screen.keyPressed() 会按 children 顺序将按键事件派发给焦点控件
-        if (keyCode == 256) { // Escape
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) {
             this.onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
 
-    @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        // 字符输入直接交给父类默认分发到焦点 EditBox
-        return super.charTyped(codePoint, modifiers);
+    public boolean m_5534_(char codePoint, int modifiers) {
+        return super.m_5534_(codePoint, modifiers);
     }
-
-    // ════════════ 辅助方法 ════════════
 
     private String getVersionLabel(String mode) {
-        return "MC1_16".equals(mode) ? "1.16 (路径拆分)" : "1.9 (直接)";
+        return "MC1_16".equals(mode) ? "1.16 (\u8def\u5f84\u62c6\u5206)" : "1.9 (\u76f4\u63a5)";
     }
 
     private String getVclipLabel(String mode) {
         switch (mode) {
-            case "OnlyUp": return "↑ 仅向上";
-            case "Down": return "↓ 仅向下";
-            case "Both": return "⇅ 双向";
-            default: return mode;
+            case "OnlyUp": {
+                return "\u2191 \u4ec5\u5411\u4e0a";
+            }
+            case "Down": {
+                return "\u2193 \u4ec5\u5411\u4e0b";
+            }
+            case "Both": {
+                return "\u21c5 \u53cc\u5411";
+            }
         }
+        return mode;
     }
 
     private String cycleVclipMode(String current) {
         switch (current) {
-            case "OnlyUp": return "Down";
-            case "Down": return "Both";
-            case "Both": return "OnlyUp";
-            default: return "OnlyUp";
+            case "OnlyUp": {
+                return "Down";
+            }
+            case "Down": {
+                return "Both";
+            }
+            case "Both": {
+                return "OnlyUp";
+            }
         }
+        return "OnlyUp";
     }
 
     private void saveConfig() {
         try {
-            double r = Double.parseDouble(rangeInput.getValue());
-            cfg.setRange(Math.max(0.1, Math.min(2000, r)));
-        } catch (NumberFormatException ignored) {}
+            double r = Double.parseDouble(this.rangeInput.m_94155_());
+            this.cfg.setRange(Math.max(0.1, Math.min(2000.0, r)));
+        }
+        catch (NumberFormatException r) {
+            // ignored
+        }
         try {
-            int l = Integer.parseInt(limitInput.getValue());
-            cfg.setLimitPerSecond(Math.max(1, Math.min(10000, l)));
-        } catch (NumberFormatException ignored) {}
+            int l = Integer.parseInt(this.limitInput.m_94155_());
+            this.cfg.setLimitPerSecond(Math.max(1, Math.min(10000, l)));
+        }
+        catch (NumberFormatException l) {
+            // ignored
+        }
         try {
-            double d = Double.parseDouble(moveDistInput.getValue());
-            cfg.setMoveDistance(Math.max(0.01, Math.min(1.0, d)));
-        } catch (NumberFormatException ignored) {}
+            double d = Double.parseDouble(this.moveDistInput.m_94155_());
+            this.cfg.setMoveDistance(Math.max(0.01, Math.min(1.0, d)));
+        }
+        catch (NumberFormatException d) {
+            // ignored
+        }
         try {
-            double s = Double.parseDouble(vclipStepInput.getValue());
-            cfg.setSearchFindStep(Math.max(0.1, Math.min(5.0, s)));
-        } catch (NumberFormatException ignored) {}
-        cfg.save();
+            double s = Double.parseDouble(this.vclipStepInput.m_94155_());
+            this.cfg.setSearchFindStep(Math.max(0.1, Math.min(5.0, s)));
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
+        AntiLagScreen antiLagScreen = this;
+        antiLagScreen.cfg.save();
     }
 
-    /** 计算相对于面板顶部的 Y 坐标 */
     private int cy(int rowOffset) {
-        return (height - HEIGHT) / 2 + rowOffset;
+        return (this.height - 340) / 2 + rowOffset;
     }
 
-    @Override
     public void onClose() {
-        saveConfig();
+        this.saveConfig();
         Minecraft.getInstance().setScreen(null);
     }
 }
+

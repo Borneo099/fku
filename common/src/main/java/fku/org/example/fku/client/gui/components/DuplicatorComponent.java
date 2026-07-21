@@ -1,20 +1,18 @@
 package fku.org.example.fku.client.gui.components;
 
+import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.GuiComponent;
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.duplicator.DuplicatorConfig;
 import fku.org.example.fku.features.duplicator.DuplicatorConfigScreen;
-import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 三叉戟复制开关组件
- * 左键切换启用/禁用
- */
-public class DuplicatorComponent extends GuiComponent {
-
+public class DuplicatorComponent
+extends GuiComponent {
     public DuplicatorComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "三叉戟复制");
+        super(x, y, width, height, "\u4e09\u53c9\u621f\u590d\u5236");
     }
 
     private boolean isEnabled() {
@@ -29,28 +27,27 @@ public class DuplicatorComponent extends GuiComponent {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (!visible) return;
-
+        if (!this.visible) {
+            return;
+        }
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        boolean enabled = isEnabled();
-
-        GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
-
-        String displayStr = "三叉戟复制: " + (enabled ? "ON" : "OFF");
+        boolean enabled = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(guiGraphics, this.x, this.y, this.width, this.height, enabled);
+        String displayStr = "\u4e09\u53c9\u621f\u590d\u5236: " + (enabled ? "ON" : "OFF");
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
-        guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
-        // ★ 右键打开配置提示
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2 - 4, textColor);
+        guiGraphics.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2 - 4, 0x888888);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY)) {
+        if (this.isHovered(mouseX, mouseY)) {
             if (button == 0) {
-                toggle();
+                this.toggle();
                 return true;
-            } else if (button == 1) {
-                Minecraft.getInstance().setScreen(new DuplicatorConfigScreen());
+            }
+            if (button == 1) {
+                Minecraft.getInstance().setScreen((Screen)new DuplicatorConfigScreen());
                 return true;
             }
         }
@@ -62,3 +59,4 @@ public class DuplicatorComponent extends GuiComponent {
         return false;
     }
 }
+

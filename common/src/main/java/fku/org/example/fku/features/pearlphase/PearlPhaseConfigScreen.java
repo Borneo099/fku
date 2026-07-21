@@ -1,33 +1,20 @@
-package fku.org.example.fku.features.pearlphase; /* water */
+package fku.org.example.fku.features.pearlphase;
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
-import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.pearlphase.PearlPhaseConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 
-/**
- * 珍珠卡墙（PearlPhase）配置界面
- *
- * ★ 职责：
- *   右键「珍珠卡墙」组件后打开，提供所有参数的可视化配置。
- *   修改即时保存到 PearlPhaseConfig。
- *
- * ★ 设计思想：
- *   简单直观的开关 + 数值输入界面，所有操作即时生效。
- *   参考 AntiLagScreen / LootScreen 的布局风格。
- */
-public class PearlPhaseConfigScreen extends Screen {
-
+public class PearlPhaseConfigScreen
+extends Screen {
     private static final int WIDTH = 290;
     private static final int HEIGHT = 280;
-
-    // ════════ 行偏移常量 ════════
     private static final int ROW_AUTO_THROW = 30;
     private static final int ROW_NO_CLIP = 53;
     private static final int ROW_SPEED = 76;
@@ -38,168 +25,150 @@ public class PearlPhaseConfigScreen extends Screen {
     private static final int ROW_REMOVE_OVERLAY = 191;
     private static final int ROW_NO_FRONT = 214;
     private static final int ROW_CLOSE = 245;
-
     private final PearlPhaseConfig cfg = PearlPhaseConfig.getInstance();
     private int scrollOffset = 0;
-
-    // 输入框
     private EditBox speedField;
     private EditBox baseSpeedField;
     private EditBox aimTimeField;
     private EditBox maxWaitField;
     private EditBox edgeOffsetField;
-
-    // 开关按钮
     private Button autoThrowButton;
     private Button noClipButton;
     private Button removeOverlayButton;
     private Button noFrontButton;
 
     public PearlPhaseConfigScreen() {
-        super(Component.literal("珍珠卡墙配置"));
+        super(Component.literal((String)"\u73cd\u73e0\u5361\u5899\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
-        int cx = (this.width - WIDTH) / 2;
-        int cy = (this.height - HEIGHT) / 2 - scrollOffset;
-
-        // ★ 开关按钮（toggle 型，每次点击切换）
-        autoThrowButton = buildToggleButton(cx + 160, cy + ROW_AUTO_THROW, cfg.autoThrow, "自动投掷", (btn) -> {
-            cfg.setAutoThrow(!cfg.autoThrow);
-            btn.setMessage(Component.literal((cfg.autoThrow ? "§a✔ 开启" : "§c✘ 关闭")));
+        int cx = (this.width - 290) / 2;
+        int cy = (this.height - 280) / 2 - this.scrollOffset;
+        this.autoThrowButton = this.buildToggleButton(cx + 160, cy + 30, this.cfg.autoThrow, "\u81ea\u52a8\u6295\u63b7", btn -> {
+            this.cfg.setAutoThrow(!this.cfg.autoThrow);
+            btn.setMessage(Component.literal((String)(this.cfg.autoThrow ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed")));
         });
-        addRenderableWidget(autoThrowButton);
-
-        noClipButton = buildToggleButton(cx + 160, cy + ROW_NO_CLIP, cfg.noClipEnabled, "NoClip", (btn) -> {
-            cfg.setNoClipEnabled(!cfg.noClipEnabled);
-            btn.setMessage(Component.literal((cfg.noClipEnabled ? "§a✔ 开启" : "§c✘ 关闭")));
+        this.addRenderableWidget(this.autoThrowButton);
+        this.noClipButton = this.buildToggleButton(cx + 160, cy + 53, this.cfg.noClipEnabled, "NoClip", btn -> {
+            this.cfg.setNoClipEnabled(!this.cfg.noClipEnabled);
+            btn.setMessage(Component.literal((String)(this.cfg.noClipEnabled ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed")));
         });
-        addRenderableWidget(noClipButton);
-
-        // ★ 输入框（数值参数）
-        speedField = new EditBox(font, cx + 150, cy + ROW_SPEED, 100, 16, Component.literal("移动倍率"));
-        speedField.setValue(String.valueOf(cfg.speed));
-        speedField.setResponder(s -> {
-            try { cfg.setSpeed(Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
+        this.addRenderableWidget(this.noClipButton);
+        this.speedField = new EditBox(this.font, cx + 150, cy + 76, 100, 16, Component.literal((String)"\u79fb\u52a8\u500d\u7387"));
+        this.speedField.m_94144_(String.valueOf(this.cfg.speed));
+        this.speedField.m_94151_(s -> {
+            try {
+                this.cfg.setSpeed(Double.parseDouble(s));
+            }
+            catch (NumberFormatException numberFormatException) {
+                // ignored
+            }
         });
-        addRenderableWidget(speedField);
-
-        baseSpeedField = new EditBox(font, cx + 150, cy + ROW_BASE_SPEED, 100, 16, Component.literal("基础速度"));
-        baseSpeedField.setValue(String.valueOf(cfg.baseSpeed));
-        baseSpeedField.setResponder(s -> {
-            try { cfg.setBaseSpeed(Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
+        this.addRenderableWidget(this.speedField);
+        this.baseSpeedField = new EditBox(this.font, cx + 150, cy + 99, 100, 16, Component.literal((String)"\u57fa\u7840\u901f\u5ea6"));
+        this.baseSpeedField.m_94144_(String.valueOf(this.cfg.baseSpeed));
+        this.baseSpeedField.m_94151_(s -> {
+            try {
+                this.cfg.setBaseSpeed(Double.parseDouble(s));
+            }
+            catch (NumberFormatException numberFormatException) {
+                // ignored
+            }
         });
-        addRenderableWidget(baseSpeedField);
-
-        aimTimeField = new EditBox(font, cx + 150, cy + ROW_AIM_TIME, 100, 16, Component.literal("瞄准时间"));
-        aimTimeField.setValue(String.valueOf(cfg.aimTime));
-        aimTimeField.setResponder(s -> {
-            try { cfg.setAimTime(Integer.parseInt(s)); } catch (NumberFormatException ignored) {}
+        this.addRenderableWidget(this.baseSpeedField);
+        this.aimTimeField = new EditBox(this.font, cx + 150, cy + 122, 100, 16, Component.literal((String)"\u7784\u51c6\u65f6\u95f4"));
+        this.aimTimeField.m_94144_(String.valueOf(this.cfg.aimTime));
+        this.aimTimeField.m_94151_(s -> {
+            try {
+                this.cfg.setAimTime(Integer.parseInt(s));
+            }
+            catch (NumberFormatException numberFormatException) {
+                // ignored
+            }
         });
-        addRenderableWidget(aimTimeField);
-
-        maxWaitField = new EditBox(font, cx + 150, cy + ROW_MAX_WAIT, 100, 16, Component.literal("等待Tick"));
-        maxWaitField.setValue(String.valueOf(cfg.maxWaitTicks));
-        maxWaitField.setResponder(s -> {
-            try { cfg.setMaxWaitTicks(Integer.parseInt(s)); } catch (NumberFormatException ignored) {}
+        this.addRenderableWidget(this.aimTimeField);
+        this.maxWaitField = new EditBox(this.font, cx + 150, cy + 145, 100, 16, Component.literal((String)"\u7b49\u5f85Tick"));
+        this.maxWaitField.m_94144_(String.valueOf(this.cfg.maxWaitTicks));
+        this.maxWaitField.m_94151_(s -> {
+            try {
+                this.cfg.setMaxWaitTicks(Integer.parseInt(s));
+            }
+            catch (NumberFormatException numberFormatException) {
+                // ignored
+            }
         });
-        addRenderableWidget(maxWaitField);
-
-        edgeOffsetField = new EditBox(font, cx + 150, cy + ROW_EDGE_OFFSET, 100, 16, Component.literal("边缘偏移"));
-        edgeOffsetField.setValue(String.valueOf(cfg.edgeOffset));
-        edgeOffsetField.setResponder(s -> {
-            try { cfg.setEdgeOffset(Double.parseDouble(s)); } catch (NumberFormatException ignored) {}
+        this.addRenderableWidget(this.maxWaitField);
+        this.edgeOffsetField = new EditBox(this.font, cx + 150, cy + 168, 100, 16, Component.literal((String)"\u8fb9\u7f18\u504f\u79fb"));
+        this.edgeOffsetField.m_94144_(String.valueOf(this.cfg.edgeOffset));
+        this.edgeOffsetField.m_94151_(s -> {
+            try {
+                this.cfg.setEdgeOffset(Double.parseDouble(s));
+            }
+            catch (NumberFormatException numberFormatException) {
+                // ignored
+            }
         });
-        addRenderableWidget(edgeOffsetField);
-
-        // 开关按钮：移除窒息贴图
-        removeOverlayButton = buildToggleButton(cx + 160, cy + ROW_REMOVE_OVERLAY, cfg.removeOverlay, "移除贴图", (btn) -> {
-            cfg.setRemoveOverlay(!cfg.removeOverlay);
-            btn.setMessage(Component.literal((cfg.removeOverlay ? "§a✔ 开启" : "§c✘ 关闭")));
+        this.addRenderableWidget(this.edgeOffsetField);
+        this.removeOverlayButton = this.buildToggleButton(cx + 160, cy + 191, this.cfg.removeOverlay, "\u79fb\u9664\u8d34\u56fe", btn -> {
+            this.cfg.setRemoveOverlay(!this.cfg.removeOverlay);
+            btn.setMessage(Component.literal((String)(this.cfg.removeOverlay ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed")));
         });
-        addRenderableWidget(removeOverlayButton);
-
-        // 开关按钮：禁用前方视角
-        noFrontButton = buildToggleButton(cx + 160, cy + ROW_NO_FRONT, cfg.noFront, "禁用前视角", (btn) -> {
-            cfg.setNoFront(!cfg.noFront);
-            btn.setMessage(Component.literal((cfg.noFront ? "§a✔ 开启" : "§c✘ 关闭")));
+        this.addRenderableWidget(this.removeOverlayButton);
+        this.noFrontButton = this.buildToggleButton(cx + 160, cy + 214, this.cfg.noFront, "\u7981\u7528\u524d\u89c6\u89d2", btn -> {
+            this.cfg.setNoFront(!this.cfg.noFront);
+            btn.setMessage(Component.literal((String)(this.cfg.noFront ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed")));
         });
-        addRenderableWidget(noFrontButton);
-
-        // 关闭按钮
-        addRenderableWidget(Button.builder(
-                Component.literal("关闭"),
-                (btn) -> onClose()
-        ).bounds(cx + 100, cy + ROW_CLOSE, 80, 20).build());
+        this.addRenderableWidget(this.noFrontButton);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5173\u95ed"), btn -> this.onClose()).bounds(cx + 100, cy + 245, 80, 20).build());
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        int cx = (width - WIDTH) / 2, cy2 = (height - HEIGHT) / 2;
-        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy2 && mouseY <= cy2 + HEIGHT) {
-            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
-            init();
+    public boolean m_6050_(double mouseX, double mouseY, double delta) {
+        int cx = (this.width - 290) / 2;
+        int cy2 = (this.height - 280) / 2;
+        if (mouseX >= cx && mouseX <= (cx + 290) && mouseY >= cy2 && mouseY <= (cy2 + 280)) {
+            this.scrollOffset = Math.max(0, this.scrollOffset - (delta * 20.0));
+            this.init();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.m_6050_(mouseX, mouseY, delta);
     }
 
-    @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
+        this.fillGradient(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-
-        int cx = (this.width - WIDTH) / 2;
-        int cy = (this.height - HEIGHT) / 2 - scrollOffset;
-        guiGraphics.enableScissor(cx + 2, cy + 5, cx + WIDTH - 2, cy + HEIGHT - 5);
-
-        // ★ 绘制标题
-        guiGraphics.drawString(font, "§l珍珠卡墙配置", cx, cy + 10, 0xFFFFFF);
-
-        // ★ 绘制标签
-        drawLabel(guiGraphics, cx, cy + ROW_AUTO_THROW, "自动投掷：看向墙壁时自动投掷珍珠");
-        drawLabel(guiGraphics, cx, cy + ROW_NO_CLIP, "NoClip：卡入方块后启用穿墙");
-        drawLabel(guiGraphics, cx, cy + ROW_SPEED, "移动倍率（0~20）：方块内移动速度");
-        drawLabel(guiGraphics, cx, cy + ROW_BASE_SPEED, "基础速度（0.00001~0.1）");
-        drawLabel(guiGraphics, cx, cy + ROW_AIM_TIME, "瞄准时间(ms)（0~1000）");
-        drawLabel(guiGraphics, cx, cy + ROW_MAX_WAIT, "投掷后等待Tick（20~600）");
-        drawLabel(guiGraphics, cx, cy + ROW_EDGE_OFFSET, "边缘偏移（0.0001~0.1）");
-        drawLabel(guiGraphics, cx, cy + ROW_REMOVE_OVERLAY, "移除窒息贴图");
-        drawLabel(guiGraphics, cx, cy + ROW_NO_FRONT, "禁用前方第三人称");
-
-        guiGraphics.disableScissor();
+        int cx = (this.width - 290) / 2;
+        int cy = (this.height - 280) / 2 - this.scrollOffset;
+        guiGraphics.m_280588_(cx + 2, cy + 5, cx + 290 - 2, cy + 280 - 5);
+        guiGraphics.drawString(this.font, "\u00a7l\u73cd\u73e0\u5361\u5899\u914d\u7f6e", cx, cy + 10, 0xFFFFFF);
+        this.drawLabel(guiGraphics, cx, cy + 30, "\u81ea\u52a8\u6295\u63b7\uff1a\u770b\u5411\u5899\u58c1\u65f6\u81ea\u52a8\u6295\u63b7\u73cd\u73e0");
+        this.drawLabel(guiGraphics, cx, cy + 53, "NoClip\uff1a\u5361\u5165\u65b9\u5757\u540e\u542f\u7528\u7a7f\u5899");
+        this.drawLabel(guiGraphics, cx, cy + 76, "\u79fb\u52a8\u500d\u7387\uff080~20\uff09\uff1a\u65b9\u5757\u5185\u79fb\u52a8\u901f\u5ea6");
+        this.drawLabel(guiGraphics, cx, cy + 99, "\u57fa\u7840\u901f\u5ea6\uff080.00001~0.1\uff09");
+        this.drawLabel(guiGraphics, cx, cy + 122, "\u7784\u51c6\u65f6\u95f4(ms)\uff080~1000\uff09");
+        this.drawLabel(guiGraphics, cx, cy + 145, "\u6295\u63b7\u540e\u7b49\u5f85Tick\uff0820~600\uff09");
+        this.drawLabel(guiGraphics, cx, cy + 168, "\u8fb9\u7f18\u504f\u79fb\uff080.0001~0.1\uff09");
+        this.drawLabel(guiGraphics, cx, cy + 191, "\u79fb\u9664\u7a92\u606f\u8d34\u56fe");
+        this.drawLabel(guiGraphics, cx, cy + 214, "\u7981\u7528\u524d\u65b9\u7b2c\u4e09\u4eba\u79f0");
+        guiGraphics.m_280618_();
     }
 
     private void drawLabel(GuiGraphics gui, int cx, int y, String text) {
-        gui.drawString(font, text, cx + 10, y + 2, 0xCCCCCC);
+        gui.drawString(this.font, text, cx + 10, y + 2, 0xCCCCCC);
     }
 
-    /**
-     * ★ 构建一个开关按钮
-     * @param x X坐标
-     * @param y Y坐标
-     * @param initial 初始状态
-     * @param label 按钮文字
-     * @param onClick 点击回调
-     */
     private Button buildToggleButton(int x, int y, boolean initial, String label, Button.OnPress onClick) {
-        String text = initial ? "§a✔ 开启" : "§c✘ 关闭";
-        return Button.builder(Component.literal(text), onClick)
-                .bounds(x, y, 80, 16)
-                .build();
+        String text = initial ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed";
+        return Button.builder(Component.literal((String)text), (Button.OnPress)onClick).bounds(x, y, 80, 16).build();
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_ENTER) {
-            onClose();
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 || keyCode == 257) {
+            this.onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
 
-    @Override
     public void onClose() {
         if (Minecraft.getInstance().screen instanceof ClickGuiScreen) {
             Minecraft.getInstance().setScreen(Minecraft.getInstance().screen);
@@ -208,8 +177,8 @@ public class PearlPhaseConfigScreen extends Screen {
         }
     }
 
-    @Override
     public boolean isPauseScreen() {
         return false;
     }
 }
+

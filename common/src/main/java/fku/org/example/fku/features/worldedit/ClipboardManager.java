@@ -1,351 +1,337 @@
-package fku.org.example.fku.features.worldedit; /* water */
+package fku.org.example.fku.features.worldedit;
 
+import com.google.common.collect.ImmutableMap;
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.worldedit.SelectionManager;
+import fku.org.example.fku.features.worldedit.TaskQueue;
+import fku.org.example.fku.features.worldedit.WorldEditConfig;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraftforge.registries.ForgeRegistries;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-/**
- * 剪贴板管理器 — 复制/粘贴/NBT保存
- *
- * 使用 Sponge Schematic v2 格式保存结构文件
- * 复制时保存完整 BlockState + BlockEntity NBT
- * 粘贴时根据 BlockState 属性计算正确的放置朝向
- */
 public class ClipboardManager {
-
     private static final Minecraft mc = Minecraft.getInstance();
     private static final ClipboardManager INSTANCE = new ClipboardManager();
-
-    private List<BlockPos> copiedPositions = new ArrayList<>();
-    private List<BlockState> copiedStates = new ArrayList<>();
-    private List<CompoundTag> copiedBlockEntityData = new ArrayList<>();
+    private List<BlockPos> copiedPositions = new ArrayList<BlockPos>();
+    private List<BlockState> copiedStates = new ArrayList<BlockState>();
+    private List<CompoundTag> copiedBlockEntityData = new ArrayList<CompoundTag>();
     private BlockPos origin;
-    private int selWidth, selHeight, selLength;
+    private int selWidth;
+    private int selHeight;
+    private int selLength;
     private boolean hasClipboard = false;
 
-    public static ClipboardManager getInstance() { return INSTANCE; }
+    public static ClipboardManager getInstance() {
+        return INSTANCE;
+    }
 
-    private ClipboardManager() {}
+    private ClipboardManager() {
+    }
 
-    /**
-     * 复制选区内的方块 — 保存完整 BlockState + NBT
-     */
     public boolean copySelection() {
         SelectionManager sel = SelectionManager.getInstance();
         if (!sel.hasSelection()) {
-            sendMessage("§c请先设置选区 (//wand 左键Pos1 右键Pos2)");
+            this.sendMessage("\u00a7c\u8bf7\u5148\u8bbe\u7f6e\u9009\u533a (//wand \u5de6\u952ePos1 \u53f3\u952ePos2)");
             return false;
         }
         if (!WorldEditConfig.getInstance().enableClipboard) {
-            sendMessage("§c剪贴板功能已禁用");
+            this.sendMessage("\u00a7c\u526a\u8d34\u677f\u529f\u80fd\u5df2\u7981\u7528");
             return false;
         }
-
         BlockPos min = sel.getMin();
         BlockPos max = sel.getMax();
-        if (min == null || max == null) return false;
-
-        copiedPositions.clear();
-        copiedStates.clear();
-        copiedBlockEntityData.clear();
-        origin = min;
-        selWidth = max.getX() - min.getX() + 1;
-        selHeight = max.getY() - min.getY() + 1;
-        selLength = max.getZ() - min.getZ() + 1;
-
+        if (min == null || max == null) {
+            return false;
+        }
+        this.copiedPositions.clear();
+        this.copiedStates.clear();
+        this.copiedBlockEntityData.clear();
+        this.origin = min;
+        this.selWidth = max.m_123341_() - min.m_123341_() + 1;
+        this.selHeight = max.m_123342_() - min.m_123342_() + 1;
+        this.selLength = max.m_123343_() - min.m_123343_() + 1;
         int count = 0;
-        for (int y = min.getY(); y <= max.getY(); y++) {
-            for (int x = min.getX(); x <= max.getX(); x++) {
-                for (int z = min.getZ(); z <= max.getZ(); z++) {
-                    if (mc.level == null) continue;
-                    BlockPos pos = new BlockPos(x, y, z);
-                    BlockState state = mc.level.getBlockState(pos);
-                    if (state.isAir()) continue;
-
-                    copiedPositions.add(pos);
-                    copiedStates.add(state);
-
-                    BlockEntity be = mc.level.getBlockEntity(pos);
+        for (int y = min.m_123342_(); y <= max.m_123342_(); ++y) {
+            for (int x = min.m_123341_(); x <= max.m_123341_(); ++x) {
+                for (int z = min.m_123343_(); z <= max.m_123343_(); ++z) {
+                    BlockPos pos;
+                    BlockState state;
+                    if (ClipboardManager.mc.f_91073_ == null || (state = ClipboardManager.mc.f_91073_.m_8055_(pos = new BlockPos(x, y, z))).m_60795_()) continue;
+                    this.copiedPositions.add(pos);
+                    this.copiedStates.add(state);
+                    BlockEntity be = ClipboardManager.mc.f_91073_.m_7702_(pos);
                     if (be != null) {
-                        copiedBlockEntityData.add(be.saveWithFullMetadata());
+                        this.copiedBlockEntityData.add(be.m_187480_());
                     } else {
-                        copiedBlockEntityData.add(new CompoundTag());
+                        this.copiedBlockEntityData.add(new CompoundTag());
                     }
-                    count++;
+                    ++count;
                 }
             }
         }
-
-        hasClipboard = true;
-        sendMessage("§a已复制 §7" + count + " 个方块到剪贴板");
+        this.hasClipboard = true;
+        this.sendMessage("\u00a7a\u5df2\u590d\u5236 \u00a77" + count + " \u4e2a\u65b9\u5757\u5230\u526a\u8d34\u677f");
         return true;
     }
 
-    /**
-     * 粘贴 — 保存完整 BlockState 供 TaskQueue 按朝向放置
-     */
     public boolean paste(BlockPos targetOrigin) {
-        if (!hasClipboard || copiedPositions.isEmpty()) {
-            sendMessage("§c剪贴板为空，请先 //copy");
+        if (!this.hasClipboard || this.copiedPositions.isEmpty()) {
+            this.sendMessage("\u00a7c\u526a\u8d34\u677f\u4e3a\u7a7a\uff0c\u8bf7\u5148 //copy");
             return false;
         }
-
-        List<BlockPos> pastePositions = new ArrayList<>();
-        List<BlockState> pasteStates = new ArrayList<>();
-        List<Object> pasteData = new ArrayList<>();
-
-        int dx = targetOrigin.getX() - origin.getX();
-        int dy = targetOrigin.getY() - origin.getY();
-        int dz = targetOrigin.getZ() - origin.getZ();
-
-        for (int i = 0; i < copiedPositions.size(); i++) {
-            BlockPos originalPos = copiedPositions.get(i);
-            BlockPos newPos = originalPos.offset(dx, dy, dz);
+        ArrayList<BlockPos> pastePositions = new ArrayList<BlockPos>();
+        ArrayList<BlockState> pasteStates = new ArrayList<BlockState>();
+        ArrayList<Object> pasteData = new ArrayList<Object>();
+        int dx = targetOrigin.m_123341_() - this.origin.m_123341_();
+        int dy = targetOrigin.m_123342_() - this.origin.m_123342_();
+        int dz = targetOrigin.m_123343_() - this.origin.m_123343_();
+        for (int i = 0; i < this.copiedPositions.size(); ++i) {
+            BlockPos originalPos = this.copiedPositions.get(i);
+            BlockPos newPos = originalPos.m_7918_(dx, dy, dz);
             pastePositions.add(newPos);
-            pasteStates.add(copiedStates.get(i));
-            pasteData.add(i < copiedBlockEntityData.size() ? copiedBlockEntityData.get(i) : new CompoundTag());
+            pasteStates.add(this.copiedStates.get(i));
+            pasteData.add(i < this.copiedBlockEntityData.size() ? this.copiedBlockEntityData.get(i) : new CompoundTag());
         }
-
-        sendMessage("§a开始粘贴 (" + pastePositions.size() + " 个方块)");
-        TaskQueue.getInstance().submitPaste(pastePositions, pasteStates, pasteData, "粘贴");
+        this.sendMessage("\u00a7a\u5f00\u59cb\u7c98\u8d34 (" + pastePositions.size() + " \u4e2a\u65b9\u5757)");
+        TaskQueue.getInstance().submitPaste(pastePositions, pasteStates, pasteData, "\u7c98\u8d34");
         return true;
     }
 
-    // ═══════════════════ Sponge Schematic v2 ═══════════════════
-
-    /**
-     * 保存选区为 .schematic 文件（Sponge v2 格式）
-     */
     public boolean saveSchematic(String name) {
+        boolean bl;
+        File schematicsDir;
         SelectionManager sel = SelectionManager.getInstance();
         if (!sel.hasSelection()) {
-            sendMessage("§c请先设置选区");
+            this.sendMessage("\u00a7c\u8bf7\u5148\u8bbe\u7f6e\u9009\u533a");
             return false;
         }
         BlockPos min = sel.getMin();
         BlockPos max = sel.getMax();
-        if (min == null || max == null) return false;
-
+        if (min == null || max == null) {
+            return false;
+        }
         WorldEditConfig cfg = WorldEditConfig.getInstance();
-        File schematicsDir;
         try {
-            schematicsDir = new File(mc.gameDirectory, cfg.schematicsFolder);
-        } catch (Exception e) {
+            schematicsDir = new File(ClipboardManager.mc.gameDirectory, cfg.schematicsFolder);
+        }
+        catch (Exception e) {
             schematicsDir = new File("config/fku/schematics");
         }
-        if (!schematicsDir.exists()) schematicsDir.mkdirs();
-
-        short w = (short)(max.getX() - min.getX() + 1);
-        short h = (short)(max.getY() - min.getY() + 1);
-        short l = (short)(max.getZ() - min.getZ() + 1);
-
-        // 构建调色板：BlockState → 索引
-        Map<String, Integer> palette = new HashMap<>();
-        List<BlockState> paletteList = new ArrayList<>();
-
-        // 第一遍：收集所有 unique block state
-        for (int y = min.getY(); y <= max.getY(); y++) {
-            for (int x = min.getX(); x <= max.getX(); x++) {
-                for (int z = min.getZ(); z <= max.getZ(); z++) {
-                    if (mc.level == null) continue;
-                    BlockState state = mc.level.getBlockState(new BlockPos(x, y, z));
-                    if (state.isAir()) continue;
-                    String key = stateToString(state);
-                    if (!palette.containsKey(key)) {
-                        palette.put(key, palette.size());
-                        paletteList.add(state);
-                    }
+        if (!schematicsDir.exists()) {
+            schematicsDir.mkdirs();
+        }
+        int w = max.m_123341_() - min.m_123341_() + 1;
+        int h = max.m_123342_() - min.m_123342_() + 1;
+        int l = max.m_123343_() - min.m_123343_() + 1;
+        HashMap<String, Integer> palette = new HashMap<String, Integer>();
+        ArrayList<BlockState> paletteList = new ArrayList<BlockState>();
+        for (int y = min.m_123342_(); y <= max.m_123342_(); ++y) {
+            for (int x = min.m_123341_(); x <= max.m_123341_(); ++x) {
+                for (int z = min.m_123343_(); z <= max.m_123343_(); ++z) {
+                    String key;
+                    BlockState state;
+                    if (ClipboardManager.mc.f_91073_ == null || (state = ClipboardManager.mc.f_91073_.m_8055_(new BlockPos(x, y, z))).m_60795_() || palette.containsKey(key = this.stateToString(state))) continue;
+                    palette.put(key, palette.size());
+                    paletteList.add(state);
                 }
             }
         }
-        // 确保空气在调色板中（索引0）
         if (!palette.containsKey("minecraft:air")) {
             palette.put("minecraft:air", palette.size());
-            paletteList.add(Blocks.AIR.defaultBlockState());
+            paletteList.add(Blocks.f_50016_.m_49966_());
         }
-
-        // 第二遍：写入 BlockData（XYZ 顺序）
         int[] blockData = new int[w * h * l];
-        List<CompoundTag> tileEntitiesList = new ArrayList<>();
-
-        for (int y = 0; y < h; y++) {
-            for (int z = 0; z < l; z++) {
-                for (int x = 0; x < w; x++) {
+        ArrayList<CompoundTag> tileEntitiesList = new ArrayList<CompoundTag>();
+        for (int y = 0; y < h; ++y) {
+            for (int z = 0; z < l; ++z) {
+                for (int x = 0; x < w; ++x) {
                     int index = y * w * l + z * w + x;
-                    BlockPos pos = min.offset(x, y, z);
-                    if (mc.level == null) continue;
-                    BlockState state = mc.level.getBlockState(pos);
-                    String key = stateToString(state);
+                    BlockPos pos = min.m_7918_(x, y, z);
+                    if (ClipboardManager.mc.f_91073_ == null) continue;
+                    BlockState state = ClipboardManager.mc.f_91073_.m_8055_(pos);
+                    String key = this.stateToString(state);
                     blockData[index] = palette.getOrDefault(key, 0);
-
-                    // 保存 BlockEntity
-                    BlockEntity be = mc.level.getBlockEntity(pos);
-                    if (be != null) {
-                        CompoundTag te = be.saveWithFullMetadata();
-                        te.putInt("x", x);
-                        te.putInt("y", y);
-                        te.putInt("z", z);
-                        tileEntitiesList.add(te);
-                    }
+                    BlockEntity be = ClipboardManager.mc.f_91073_.m_7702_(pos);
+                    if (be == null) continue;
+                    CompoundTag te = be.m_187480_();
+                    te.m_128405_("x", x);
+                    te.m_128405_("y", y);
+                    te.m_128405_("z", z);
+                    tileEntitiesList.add(te);
                 }
             }
         }
-
-        // 构建 NBT
         CompoundTag root = new CompoundTag();
-        root.putInt("Version", 2);
-        root.putInt("DataVersion", net.minecraft.SharedConstants.getCurrentVersion().getDataVersion().getVersion());
-        root.putShort("Width", w);
-        root.putShort("Height", h);
-        root.putShort("Length", l);
-
-        // 调色板
+        root.m_128405_("Version", 2);
+        root.m_128405_("DataVersion", SharedConstants.m_183709_().m_183476_().m_193006_());
+        root.m_128376_("Width", w);
+        root.m_128376_("Height", h);
+        root.m_128376_("Length", l);
         CompoundTag paletteTag = new CompoundTag();
-        for (Map.Entry<String, Integer> entry : palette.entrySet()) {
-            paletteTag.putInt(entry.getKey(), entry.getValue());
+        for (Map.Entry entry : palette.entrySet()) {
+            paletteTag.m_128405_((String)entry.getKey(), ((Integer)entry.getValue()).intValue());
         }
-        root.put("Palette", paletteTag);
-        root.putIntArray("BlockData", blockData);
-
-        // BlockEntities
+        root.m_128365_("Palette", (Tag)paletteTag);
+        root.m_128385_("BlockData", blockData);
         ListTag teList = new ListTag();
         for (CompoundTag te : tileEntitiesList) {
             teList.add(te);
         }
-        root.put("BlockEntities", teList);
-
-        // 写入文件
-        File file = new File(schematicsDir, name.endsWith(".schematic") ? name : name + ".schematic");
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            NbtIo.writeCompressed(root, fos);
-            sendMessage("§a已保存: " + file.getName() + " (" + blockData.length + " 方块)");
-            return true;
-        } catch (IOException e) {
-            sendMessage("§c保存失败: " + e.getMessage());
-            Fku.LOGGER.error("[WorldEdit] 保存schematic失败", e);
-            return false;
+        root.m_128365_("BlockEntities", (Tag)teList);
+        File file = new File(schematicsDir, (String)(name.endsWith(".schematic") ? name : name + ".schematic"));
+        FileOutputStream fos = new FileOutputStream(file);
+        try {
+            NbtIo.m_128947_((CompoundTag)root, (OutputStream)fos);
+            this.sendMessage("\u00a7a\u5df2\u4fdd\u5b58: " + file.getName() + " (" + blockData.length + " \u65b9\u5757)");
+            bl = true;
         }
+        catch (Throwable throwable) {
+            try {
+                try {
+                    fos.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+            catch (IOException e) {
+                this.sendMessage("\u00a7c\u4fdd\u5b58\u5931\u8d25: " + e.getMessage());
+                Fku.LOGGER.error("[WorldEdit] \u4fdd\u5b58schematic\u5931\u8d25", (Throwable)e);
+                return false;
+            }
+        }
+        fos.close();
+        return bl;
     }
 
-    /**
-     * 加载 .schematic 文件到剪贴板
-     */
     public boolean loadSchematic(String name) {
-        WorldEditConfig cfg = WorldEditConfig.getInstance();
+        boolean bl;
         File schematicsDir;
+        WorldEditConfig cfg = WorldEditConfig.getInstance();
         try {
-            schematicsDir = new File(mc.gameDirectory, cfg.schematicsFolder);
-        } catch (Exception e) {
+            schematicsDir = new File(ClipboardManager.mc.gameDirectory, cfg.schematicsFolder);
+        }
+        catch (Exception e) {
             schematicsDir = new File("config/fku/schematics");
         }
-
-        File file = new File(schematicsDir, name.endsWith(".schematic") ? name : name + ".schematic");
+        File file = new File(schematicsDir, (String)(name.endsWith(".schematic") ? name : name + ".schematic"));
         if (!file.exists()) {
-            sendMessage("§c文件不存在: " + file.getName());
+            this.sendMessage("\u00a7c\u6587\u4ef6\u4e0d\u5b58\u5728: " + file.getName());
             return false;
         }
-
-        try (FileInputStream fis = new FileInputStream(file)) {
-            CompoundTag root = NbtIo.readCompressed(fis);
-            short w = root.getShort("Width");
-            short h = root.getShort("Height");
-            short l = root.getShort("Length");
-            int[] blockData = root.getIntArray("BlockData");
-
-            // 读取调色板
-            CompoundTag paletteTag = root.getCompound("Palette");
-            Map<Integer, String> reversePalette = new HashMap<>();
-            for (String key : paletteTag.getAllKeys()) {
-                reversePalette.put(paletteTag.getInt(key), key);
+        FileInputStream fis = new FileInputStream(file);
+        try {
+            CompoundTag root = NbtIo.m_128939_((InputStream)fis);
+            int w = root.m_128448_("Width");
+            int h = root.m_128448_("Height");
+            int l = root.m_128448_("Length");
+            int[] blockData = root.m_128465_("BlockData");
+            CompoundTag paletteTag = root.m_128469_("Palette");
+            HashMap<Integer, String> reversePalette = new HashMap<Integer, String>();
+            for (String key : paletteTag.m_128431_()) {
+                reversePalette.put(paletteTag.m_128451_(key), key);
             }
-
-            // 解析 BlockEntities
-            Map<BlockPos, CompoundTag> teMap = new HashMap<>();
-            if (root.contains("BlockEntities", 9)) {
-                ListTag teList = root.getList("BlockEntities", 10);
-                for (int i = 0; i < teList.size(); i++) {
-                    CompoundTag te = teList.getCompound(i);
-                    BlockPos tePos = new BlockPos(te.getInt("x"), te.getInt("y"), te.getInt("z"));
-                    te.remove("x"); te.remove("y"); te.remove("z");
+            HashMap<BlockPos, CompoundTag> teMap = new HashMap<BlockPos, CompoundTag>();
+            if (root.m_128425_("BlockEntities", 9)) {
+                ListTag teList = root.m_128437_("BlockEntities", 10);
+                for (int i = 0; i < teList.size(); ++i) {
+                    CompoundTag te = teList.m_128728_(i);
+                    BlockPos tePos = new BlockPos(te.m_128451_("x"), te.m_128451_("y"), te.m_128451_("z"));
+                    te.m_128473_("x");
+                    te.m_128473_("y");
+                    te.m_128473_("z");
                     teMap.put(tePos, te);
                 }
             }
-
-            copiedPositions.clear();
-            copiedStates.clear();
-            copiedBlockEntityData.clear();
-
-            for (int y = 0; y < h; y++) {
-                for (int z = 0; z < l; z++) {
-                    for (int x = 0; x < w; x++) {
+            this.copiedPositions.clear();
+            this.copiedStates.clear();
+            this.copiedBlockEntityData.clear();
+            for (int y = 0; y < h; ++y) {
+                for (int z = 0; z < l; ++z) {
+                    for (int x = 0; x < w; ++x) {
+                        int paletteIndex;
+                        String stateStr;
+                        BlockState state;
                         int index = y * w * l + z * w + x;
-                        if (index >= blockData.length) continue;
-                        int paletteIndex = blockData[index];
-                        String stateStr = reversePalette.getOrDefault(paletteIndex, "minecraft:air");
-                        BlockState state = stringToState(stateStr);
-                        if (state == null || state.isAir()) continue;
-
+                        if (index >= blockData.length || (state = this.stringToState(stateStr = reversePalette.getOrDefault(paletteIndex = blockData[index], "minecraft:air"))) == null || state.m_60795_()) continue;
                         BlockPos pos = new BlockPos(x, y, z);
-                        copiedPositions.add(pos);
-                        copiedStates.add(state);
-
+                        this.copiedPositions.add(pos);
+                        this.copiedStates.add(state);
                         BlockPos teKey = new BlockPos(x, y, z);
                         if (teMap.containsKey(teKey)) {
-                            copiedBlockEntityData.add(teMap.get(teKey).copy());
-                        } else {
-                            copiedBlockEntityData.add(new CompoundTag());
+                            this.copiedBlockEntityData.add(((CompoundTag)teMap.get(teKey)).m_6426_());
+                            continue;
                         }
+                        this.copiedBlockEntityData.add(new CompoundTag());
                     }
                 }
             }
-
-            origin = BlockPos.ZERO;
-            selWidth = w;
-            selHeight = h;
-            selLength = l;
-            hasClipboard = true;
-            sendMessage("§a已加载: " + file.getName() + " (" + copiedPositions.size() + " 方块)");
-            return true;
-        } catch (IOException e) {
-            sendMessage("§c加载失败: " + e.getMessage());
-            Fku.LOGGER.error("[WorldEdit] 加载schematic失败", e);
-            return false;
+            this.origin = BlockPos.f_121853_;
+            this.selWidth = w;
+            this.selHeight = h;
+            this.selLength = l;
+            this.hasClipboard = true;
+            this.sendMessage("\u00a7a\u5df2\u52a0\u8f7d: " + file.getName() + " (" + this.copiedPositions.size() + " \u65b9\u5757)");
+            bl = true;
         }
+        catch (Throwable throwable) {
+            try {
+                try {
+                    fis.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+            catch (IOException e) {
+                this.sendMessage("\u00a7c\u52a0\u8f7d\u5931\u8d25: " + e.getMessage());
+                Fku.LOGGER.error("[WorldEdit] \u52a0\u8f7dschematic\u5931\u8d25", (Throwable)e);
+                return false;
+            }
+        }
+        fis.close();
+        return bl;
     }
 
-    // ═══════════════════ BlockState 序列化 ═══════════════════
-
-    /**
-     * BlockState → 字符串 (如 "minecraft:oak_stairs[facing=east,half=bottom]")
-     */
     private String stateToString(BlockState state) {
         StringBuilder sb = new StringBuilder();
-        sb.append(net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(state.getBlock()));
-        var values = state.getValues();
+        sb.append(ForgeRegistries.BLOCKS.getKey(state.m_60734_()));
+        ImmutableMap values = state.m_61148_();
         if (!values.isEmpty()) {
             sb.append("[");
             boolean first = true;
-            for (var entry : values.entrySet()) {
-                if (!first) sb.append(",");
-                sb.append(entry.getKey().getName()).append("=").append(entry.getValue().toString());
+            for (Map.Entry entry : values.entrySet()) {
+                if (!first) {
+                    sb.append(",");
+                }
+                sb.append(((Property)entry.getKey()).m_61708_()).append("=").append(((Comparable)entry.getValue()).toString());
                 first = false;
             }
             sb.append("]");
@@ -353,110 +339,95 @@ public class ClipboardManager {
         return sb.toString();
     }
 
-    /**
-     * 字符串 → BlockState
-     * 使用 Minecraft 内置的 BlockState 解析
-     */
-    @SuppressWarnings({"unchecked", "rawtypes"})
     private BlockState stringToState(String str) {
         try {
+            String propertiesPart;
+            Block block;
             String blockId = str;
-            int bracket = str.indexOf('[');
+            int bracket = str.indexOf(91);
             if (bracket >= 0) {
                 blockId = str.substring(0, bracket);
             }
-            Block block = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getValue(
-                    net.minecraft.resources.ResourceLocation.tryParse(blockId));
-            if (block == null) return null;
-            
-            var state = block.defaultBlockState();
-            if (bracket >= 0) {
-                String propertiesPart = str.substring(bracket + 1, str.length() - 1);
-                if (!propertiesPart.isEmpty()) {
-                    for (String prop : propertiesPart.split(",")) {
-                        String[] kv = prop.split("=", 2);
-                        if (kv.length != 2) continue;
-                        var propDef = block.getStateDefinition().getProperty(kv[0]);
-                        if (propDef != null) {
-                            var opt = propDef.getValue(kv[1]);
-                            if (opt.isPresent()) {
-                                state = state.setValue((net.minecraft.world.level.block.state.properties.Property) propDef, 
-                                    (java.lang.Comparable) opt.get());
-                            }
-                        }
-                    }
+            if ((block = (Block)ForgeRegistries.BLOCKS.getValue(ResourceLocation.m_135820_((String)blockId))) == null) {
+                return null;
+            }
+            BlockState state = block.m_49966_();
+            if (bracket >= 0 && !(propertiesPart = str.substring(bracket + 1, str.length() - 1)).isEmpty()) {
+                for (String prop : propertiesPart.split(",")) {
+                    Optional opt;
+                    Property propDef;
+                    String[] kv = prop.split("=", 2);
+                    if (kv.length != 2 || (propDef = block.m_49965_().m_61081_(kv[0])) == null || !(opt = propDef.m_6215_(kv[1])).isPresent()) continue;
+                    state = (BlockState)state.m_61124_(propDef, (Comparable)opt.get());
                 }
             }
             return state;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             return null;
         }
     }
 
-    /**
-     * 根据 BlockState 计算放置时的朝向（yaw偏转角、点击面）
-     * 用于 TaskQueue 的粘贴操作
-     */
     public static float[] getPlacementYawPitch(BlockState state) {
-        // 优先使用 FACING 属性
         Direction facing = null;
-        if (state.hasProperty(BlockStateProperties.FACING)) {
-            facing = state.getValue(BlockStateProperties.FACING);
-        } else if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
-            facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-        } else if (state.hasProperty(BlockStateProperties.FACING_HOPPER)) {
-            facing = state.getValue(BlockStateProperties.FACING_HOPPER);
+        if (state.m_61138_((Property)BlockStateProperties.f_61372_)) {
+            facing = (Direction)state.m_61143_((Property)BlockStateProperties.f_61372_);
+        } else if (state.m_61138_((Property)BlockStateProperties.f_61374_)) {
+            facing = (Direction)state.m_61143_((Property)BlockStateProperties.f_61374_);
+        } else if (state.m_61138_((Property)BlockStateProperties.f_61373_)) {
+            facing = (Direction)state.m_61143_((Property)BlockStateProperties.f_61373_);
         }
-
         if (facing == null) {
-            return new float[]{Float.NaN, Float.NaN}; // 不需要特殊朝向
+            return new float[]{Float.NaN, Float.NaN};
         }
-
-        float yaw;
-        switch (facing) {
-            case SOUTH: yaw = 0; break;
-            case WEST:  yaw = 90; break;
-            case NORTH: yaw = 180; break;
-            case EAST:  yaw = -90; break;
-            case DOWN:  yaw = Float.NaN; break; // 竖直方向由 pitch 控制
-            case UP:    yaw = Float.NaN; break;
-            default:    yaw = Float.NaN; break;
+        float yaw = switch (facing) {
+            case Direction.SOUTH -> 0.0f;
+            case Direction.WEST -> 90.0f;
+            case Direction.NORTH -> 180.0f;
+            case Direction.EAST -> -90.0f;
+            case Direction.DOWN -> Float.NaN;
+            case Direction.UP -> Float.NaN;
+            default -> Float.NaN;
+        };
+        float pitch = 0.0f;
+        if (facing == Direction.UP) {
+            pitch = -90.0f;
+        } else if (facing == Direction.DOWN) {
+            pitch = 90.0f;
         }
-
-        float pitch = 0;
-        if (facing == Direction.UP) pitch = -90;
-        else if (facing == Direction.DOWN) pitch = 90;
-
         return new float[]{yaw, pitch};
     }
 
-    /**
-     * 获取放置时应该点击的方块面
-     */
     public static Direction getPlacementFace(BlockState state) {
-        if (state.hasProperty(BlockStateProperties.FACING)) {
-            return state.getValue(BlockStateProperties.FACING).getOpposite();
+        if (state.m_61138_((Property)BlockStateProperties.f_61372_)) {
+            return ((Direction)state.m_61143_((Property)BlockStateProperties.f_61372_)).m_122424_();
         }
-        if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
-            return state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        if (state.m_61138_((Property)BlockStateProperties.f_61374_)) {
+            return (Direction)state.m_61143_((Property)BlockStateProperties.f_61374_);
         }
         return Direction.UP;
     }
 
     private void sendMessage(String msg) {
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("§7[WorldEdit] " + msg), true);
+        if (ClipboardManager.mc.player != null) {
+            ClipboardManager.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
         }
     }
 
-    public boolean hasClipboard() { return hasClipboard; }
-    public int getClipboardSize() { return copiedPositions.size(); }
+    public boolean hasClipboard() {
+        return this.hasClipboard;
+    }
+
+    public int getClipboardSize() {
+        return this.copiedPositions.size();
+    }
+
     public void clearClipboard() {
-        hasClipboard = false;
-        copiedPositions.clear();
-        copiedStates.clear();
-        copiedBlockEntityData.clear();
-        origin = null;
+        this.hasClipboard = false;
+        this.copiedPositions.clear();
+        this.copiedStates.clear();
+        this.copiedBlockEntityData.clear();
+        this.origin = null;
     }
 }
+

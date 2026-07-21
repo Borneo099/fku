@@ -1,105 +1,111 @@
-package fku.org.example.fku.features.killaura; /* water */
+package fku.org.example.fku.features.killaura;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.killaura.KillAuraConfig;
+import java.util.function.Consumer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-public class KillAuraScreen extends Screen {
+public class KillAuraScreen
+extends Screen {
     private final KillAuraConfig cfg = KillAuraConfig.getInstance();
-    private EditBox rangeBox, delayBox, whitelistBox;
+    private EditBox rangeBox;
+    private EditBox delayBox;
+    private EditBox whitelistBox;
     private static final int W = 140;
-    private int bx, by0;
+    private int bx;
+    private int by0;
 
-    public KillAuraScreen() { super(Component.literal("杀戮光环")); }
-
-    @Override
-    protected void init() {
-        bx = width / 2 - W / 2;
-        by0 = height / 2 - 100;
-        int y = by0, sp = 20;
-
-        // 开关
-        addRenderableWidget(Button.builder(Component.literal(cfg.enabled ? "§a■ 开启" : "§c□ 关闭"), b -> {
-            cfg.setEnabled(!cfg.enabled); b.setMessage(Component.literal(cfg.enabled ? "§a■ 开启" : "§c□ 关闭"));
-        }).bounds(bx, y, W, 18).build());
-
-        // 范围
-        y += sp + 4;
-        rangeBox = new EditBox(font, bx + 46, y, 40, 16, Component.literal(""));
-        rangeBox.setValue(String.valueOf(cfg.range));
-        addWidget(rangeBox);
-
-        // 延迟
-        y += sp;
-        delayBox = new EditBox(font, bx + 71, y, 30, 16, Component.literal(""));
-        delayBox.setValue(String.valueOf(cfg.delay));
-        addWidget(delayBox);
-
-        // 目标模式
-        y += sp;
-        addRenderableWidget(Button.builder(Component.literal(cfg.targetMode == 0 ? "§b[最近]" : "§b[最低血]"), b -> {
-            cfg.setTargetMode(cfg.targetMode == 0 ? 1 : 0);
-            b.setMessage(Component.literal(cfg.targetMode == 0 ? "§b[最近]" : "§b[最低血]"));
-        }).bounds(bx + 46, y, 80, 16).build());
-
-        // 5个开关
-        y += sp + 2;
-        mkToggle(y, "自动切剑", cfg.autoSwitch, v -> cfg.setAutoSwitch(v)); y += sp - 2;
-        mkToggle(y, "自动旋转", cfg.autoRotate, v -> cfg.setAutoRotate(v)); y += sp - 2;
-        mkToggle(y, "仅玩家", cfg.playersOnly, v -> cfg.setPlayersOnly(v)); y += sp - 2;
-        mkToggle(y, "满冷却攻击", cfg.attackCooldown, v -> cfg.setAttackCooldown(v)); y += sp - 2;
-        mkToggle(y, "多目标攻击", cfg.multiTarget, v -> cfg.setMultiTarget(v)); y += sp;
-
-        // ★ 白名单 (minecraft:zombie,minecraft:skeleton 逗号分隔)
-        whitelistBox = new EditBox(font, bx, y, W, 16, Component.literal(""));
-        whitelistBox.setMaxLength(10000);
-        whitelistBox.setValue(String.join(",", cfg.whitelist));
-        addWidget(whitelistBox);
-        y += sp + 4;
-
-        // 完成
-        addRenderableWidget(Button.builder(Component.literal("§a完成"), b -> { save(); onClose(); })
-                .bounds(bx + 30, y, 80, 18).build());
+    public KillAuraScreen() {
+        super(Component.literal((String)"\u6740\u622e\u5149\u73af"));
     }
 
-    private void mkToggle(int y, String label, boolean cur, java.util.function.Consumer<Boolean> cb) {
-        final boolean[] state = {cur};
-        addRenderableWidget(Button.builder(Component.literal((state[0] ? "§a" : "§7") + label), b -> {
-            state[0] = !state[0]; cb.accept(state[0]);
-            b.setMessage(Component.literal((state[0] ? "§a" : "§7") + label));
-        }).bounds(bx, y, W, 16).build());
+    protected void init() {
+        this.bx = this.width / 2 - 70;
+        int y = this.by0 = this.height / 2 - 100;
+        int sp = 20;
+        this.addRenderableWidget(Button.builder(Component.literal((String)(this.cfg.enabled ? "\u00a7a\u25a0 \u5f00\u542f" : "\u00a7c\u25a1 \u5173\u95ed")), b -> {
+            this.cfg.setEnabled(!this.cfg.enabled);
+            b.setMessage(Component.literal((String)(this.cfg.enabled ? "\u00a7a\u25a0 \u5f00\u542f" : "\u00a7c\u25a1 \u5173\u95ed")));
+        }).bounds(this.bx, y, 140, 18).build());
+        this.rangeBox = new EditBox(this.font, this.bx + 46, y += sp + 4, 40, 16, Component.literal((String)""));
+        this.rangeBox.m_94144_(String.valueOf(this.cfg.range));
+        this.m_7787_(this.rangeBox);
+        this.delayBox = new EditBox(this.font, this.bx + 71, y += sp, 30, 16, Component.literal((String)""));
+        this.delayBox.m_94144_(String.valueOf(this.cfg.delay));
+        this.m_7787_(this.delayBox);
+        this.addRenderableWidget(Button.builder(Component.literal((String)(this.cfg.targetMode == 0 ? "\u00a7b[\u6700\u8fd1]" : "\u00a7b[\u6700\u4f4e\u8840]")), b -> {
+            this.cfg.setTargetMode(this.cfg.targetMode == 0 ? 1 : 0);
+            b.setMessage(Component.literal((String)(this.cfg.targetMode == 0 ? "\u00a7b[\u6700\u8fd1]" : "\u00a7b[\u6700\u4f4e\u8840]")));
+        }).bounds(this.bx + 46, y += sp, 80, 16).build());
+        this.mkToggle(y += sp + 2, "\u81ea\u52a8\u5207\u5251", this.cfg.autoSwitch, v -> this.cfg.setAutoSwitch((boolean)v));
+        this.mkToggle(y += sp - 2, "\u81ea\u52a8\u65cb\u8f6c", this.cfg.autoRotate, v -> this.cfg.setAutoRotate((boolean)v));
+        this.mkToggle(y += sp - 2, "\u4ec5\u73a9\u5bb6", this.cfg.playersOnly, v -> this.cfg.setPlayersOnly((boolean)v));
+        this.mkToggle(y += sp - 2, "\u6ee1\u51b7\u5374\u653b\u51fb", this.cfg.attackCooldown, v -> this.cfg.setAttackCooldown((boolean)v));
+        this.mkToggle(y += sp - 2, "\u591a\u76ee\u6807\u653b\u51fb", this.cfg.multiTarget, v -> this.cfg.setMultiTarget((boolean)v));
+        this.whitelistBox = new EditBox(this.font, this.bx, y += sp, 140, 16, Component.literal((String)""));
+        this.whitelistBox.m_94199_(10000);
+        this.whitelistBox.m_94144_(String.join((CharSequence)",", this.cfg.whitelist));
+        this.m_7787_(this.whitelistBox);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u5b8c\u6210"), b -> {
+            this.save();
+            this.onClose();
+        }).bounds(this.bx + 30, y += sp + 4, 80, 18).build());
+    }
+
+    private void mkToggle(int y, String label, boolean cur, Consumer<Boolean> cb) {
+        boolean[] state = new boolean[]{cur};
+        this.addRenderableWidget(Button.builder(Component.literal((String)((state[0] ? "\u00a7a" : "\u00a77") + label)), b -> {
+            state[0] = !state[0];
+            cb.accept(state[0]);
+            b.setMessage(Component.literal((String)((state[0] ? "\u00a7a" : "\u00a77") + label)));
+        }).bounds(this.bx, y, 140, 16).build());
     }
 
     private void save() {
-        try { cfg.setRange(Double.parseDouble(rangeBox.getValue())); } catch (Exception ignored) {}
-        try { cfg.setDelay(Integer.parseInt(delayBox.getValue())); } catch (Exception ignored) {}
-        // ★ 白名单保存
-        cfg.whitelist.clear();
-        for (String s : whitelistBox.getValue().split(",")) {
-            String t = s.trim();
-            if (!t.isEmpty()) cfg.whitelist.add(t);
+        try {
+            this.cfg.setRange(Double.parseDouble(this.rangeBox.m_94155_()));
         }
-        cfg.save();
+        catch (Exception exception) {
+            // ignored
+        }
+        try {
+            this.cfg.setDelay(Integer.parseInt(this.delayBox.m_94155_()));
+        }
+        catch (Exception exception) {
+            // ignored
+        }
+        this.cfg.whitelist.clear();
+        for (String s : this.whitelistBox.m_94155_().split(",")) {
+            String t = s.trim();
+            if (t.isEmpty()) continue;
+            this.cfg.whitelist.add(t);
+        }
+        KillAuraScreen killAuraScreen = this;
+        killAuraScreen.cfg.save();
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
-        GuiRenderHelper.drawRoundedRect(g, bx - 10, by0 - 8, W + 20, 280, 0xAA222222, 8);
-        g.drawString(font, "§l杀戮光环", bx, by0, 0xFFFFFF);
-        g.drawString(font, "范围:", bx, by0 + 24, 0xFFFFFF);
-        g.drawString(font, "延迟(刻):", bx, by0 + 44, 0xFFFFFF);
-        g.drawString(font, "目标:", bx, by0 + 64, 0xFFFFFF);
-        g.drawString(font, "§7白名单(逗号分隔):", bx, by0 + 194, 0xFFFFFF);
-        rangeBox.render(g, mx, my, pt);
-        delayBox.render(g, mx, my, pt);
-        whitelistBox.render(g, mx, my, pt);
+        this.fillGradient(g);
+        GuiRenderHelper.drawRoundedRect(g, this.bx - 10, this.by0 - 8, 160, 280, -1440603614, 8);
+        g.drawString(this.font, "\u00a7l\u6740\u622e\u5149\u73af", this.bx, this.by0, 0xFFFFFF);
+        g.drawString(this.font, "\u8303\u56f4:", this.bx, this.by0 + 24, 0xFFFFFF);
+        g.drawString(this.font, "\u5ef6\u8fdf(\u523b):", this.bx, this.by0 + 44, 0xFFFFFF);
+        g.drawString(this.font, "\u76ee\u6807:", this.bx, this.by0 + 64, 0xFFFFFF);
+        g.drawString(this.font, "\u00a77\u767d\u540d\u5355(\u9017\u53f7\u5206\u9694):", this.bx, this.by0 + 194, 0xFFFFFF);
+        this.rangeBox.render(g, mx, my, pt);
+        this.delayBox.render(g, mx, my, pt);
+        this.whitelistBox.render(g, mx, my, pt);
         super.render(g, mx, my, pt);
     }
 
-    @Override public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 }
+

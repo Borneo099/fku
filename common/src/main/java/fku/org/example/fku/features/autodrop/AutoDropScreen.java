@@ -1,25 +1,20 @@
-package fku.org.example.fku.features.autodrop; /* water */
+package fku.org.example.fku.features.autodrop;
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.autodrop.AutoDropConfig;
+import fku.org.example.fku.features.autodrop.AutoDropPanel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * 自动丢弃配置界面
- *
- * ★ 布局（3行）：
- *   行0：丢弃模式标签 + 按钮
- *   行1：扫描间隔标签 + 输入框 + 说明
- *   行2：重置黑名单按钮
- *   行3：保存按钮
- */
-public class AutoDropScreen extends Screen {
+public class AutoDropScreen
+extends Screen {
     private static final int WIDTH = 270;
     private static final int HEIGHT = 160;
     private Button resetButton;
@@ -27,86 +22,64 @@ public class AutoDropScreen extends Screen {
     private EditBox scanIntervalField;
 
     public AutoDropScreen() {
-        super(Component.literal("自动丢配置"));
+        super(Component.literal((String)"\u81ea\u52a8\u4e22\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-
-        int x = (width - WIDTH) / 2;
-        int y = (height - HEIGHT) / 2;
-
+        int x = (this.width - 270) / 2;
+        int y = (this.height - 160) / 2;
         AutoDropConfig config = AutoDropConfig.getInstance();
-
-        // ── 行0：丢弃模式按钮 ──
-        dropModeButton = Button.builder(
-                Component.literal(config.dropAsEntity ? "§a掉落物" : "§c直接消失"),
-                btn -> {
-                    AutoDropConfig cfg = AutoDropConfig.getInstance();
-                    cfg.dropAsEntity = !cfg.dropAsEntity;
-                    AutoDropConfig.save();
-                    btn.setMessage(Component.literal(cfg.dropAsEntity ? "§a掉落物" : "§c直接消失"));
-                })
-                .bounds(x + 100, y + 30, 90, 20).build();
-        addRenderableWidget(dropModeButton);
-
-        // ── 行1：扫描间隔输入框 ──
-        scanIntervalField = new EditBox(font, x + 120, y + 60, 40, 18, Component.literal("扫描间隔"));
-        scanIntervalField.setValue(String.valueOf(config.scanInterval));
-        scanIntervalField.setMaxLength(2);
-        addRenderableWidget(scanIntervalField);
-
-        // ── 行2：重置黑名单 ──
-        resetButton = Button.builder(Component.literal("重置黑名单"), btn -> {
+        this.dropModeButton = Button.builder(Component.literal((String)(config.dropAsEntity ? "\u00a7a\u6389\u843d\u7269" : "\u00a7c\u76f4\u63a5\u6d88\u5931")), btn -> {
+            AutoDropConfig cfg = AutoDropConfig.getInstance();
+            cfg.dropAsEntity = !cfg.dropAsEntity;
+            AutoDropConfig.save();
+            btn.setMessage(Component.literal((String)(cfg.dropAsEntity ? "\u00a7a\u6389\u843d\u7269" : "\u00a7c\u76f4\u63a5\u6d88\u5931")));
+        }).bounds(x + 100, y + 30, 90, 20).build();
+        this.addRenderableWidget(this.dropModeButton);
+        this.scanIntervalField = new EditBox(this.font, x + 120, y + 60, 40, 18, Component.literal((String)"\u626b\u63cf\u95f4\u9694"));
+        this.scanIntervalField.m_94144_(String.valueOf(config.scanInterval));
+        this.scanIntervalField.m_94199_(2);
+        this.addRenderableWidget(this.scanIntervalField);
+        this.resetButton = Button.builder(Component.literal((String)"\u91cd\u7f6e\u9ed1\u540d\u5355"), btn -> {
             AutoDropConfig cfg = AutoDropConfig.getInstance();
             cfg.clearBlacklist();
             AutoDropPanel.resetScroll();
-            Minecraft.getInstance().player.displayClientMessage(
-                Component.literal("§a自动丢弃黑名单已重置"), true);
+            Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7a\u81ea\u52a8\u4e22\u5f03\u9ed1\u540d\u5355\u5df2\u91cd\u7f6e"), true);
         }).bounds(x + 10, y + 95, 100, 18).build();
-        addRenderableWidget(resetButton);
-
-        // ── 行3：保存 ──
-        addRenderableWidget(Button.builder(
-                Component.literal("保存"),
-                btn -> saveConfig()
-        ).bounds(x + 95, y + 130, 80, 20).build());
+        this.addRenderableWidget(this.resetButton);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(x + 95, y + 130, 80, 20).build());
     }
 
     private void saveConfig() {
         AutoDropConfig config = AutoDropConfig.getInstance();
         try {
-            config.setScanInterval(Integer.parseInt(scanIntervalField.getValue()));
-        } catch (NumberFormatException ignored) {}
-        onClose();
+            config.setScanInterval(Integer.parseInt(this.scanIntervalField.m_94155_()));
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
+        this.onClose();
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
-
-        int x = (width - WIDTH) / 2;
-        int y = (height - HEIGHT) / 2;
-
-        GuiRenderHelper.drawPanelBackground(g, x, y, WIDTH, HEIGHT, false);
-        g.drawString(font, "自动丢配置", x + 10, y + 8, 0xFFFFFF);
-
-        // 行0：丢弃模式标签
-        g.drawString(font, "丢弃模式:", x + 10, y + 34, 0xAAAAAA);
-
-        // 行1：扫描间隔标签
-        g.drawString(font, "扫描间隔(tick):", x + 10, y + 64, 0xAAAAAA);
-        g.drawString(font, "1~20，越小越快", x + 168, y + 64, 0x888888);
-
+        this.fillGradient(g);
+        int x = (this.width - 270) / 2;
+        int y = (this.height - 160) / 2;
+        GuiRenderHelper.drawPanelBackground(g, x, y, 270, 160, false);
+        g.drawString(this.font, "\u81ea\u52a8\u4e22\u914d\u7f6e", x + 10, y + 8, 0xFFFFFF);
+        g.drawString(this.font, "\u4e22\u5f03\u6a21\u5f0f:", x + 10, y + 34, 0xAAAAAA);
+        g.drawString(this.font, "\u626b\u63cf\u95f4\u9694(tick):", x + 10, y + 64, 0xAAAAAA);
+        g.drawString(this.font, "1~20\uff0c\u8d8a\u5c0f\u8d8a\u5feb", x + 168, y + 64, 0x888888);
         super.render(g, mx, my, pt);
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
-    @Override
     public void onClose() {
         this.minecraft.setScreen(new ClickGuiScreen());
     }
 }
+

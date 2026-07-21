@@ -1,7 +1,11 @@
 package fku.org.example.fku.features.selfdamage;
 
-import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.arrowdmg.ArrowDmgFeature;
+import fku.org.example.fku.features.nofall.NoFallFeature;
+import fku.org.example.fku.features.selfdamage.SelfDamageConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -11,119 +15,116 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
-/**
- * 自伤功能 — 移植 lexis DamageHack，支持热键绑定
- */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class SelfDamageFeature {
-
-    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static Runnable hotkeyCallback = null;
     private static boolean waitingForKey = false;
-
-    // ── 延迟恢复防摔/32k弓 ──
     private static boolean pendingRestoreNoFall = false;
     private static boolean pendingRestoreArrow = false;
-    private static int restoreDelayTicks = 0; // 剩余等待 tick 数
+    private static int restoreDelayTicks = 0;
 
-    public static void init() { SelfDamageConfig.load(); }
+    private static Minecraft getMc() {
+        return Minecraft.getInstance();
+    }
 
-    /** 启动热键绑定流程 */
+    public static void init() {
+        SelfDamageConfig.load();
+    }
+
     public static void startHotkeyBind(Runnable onComplete) {
         waitingForKey = true;
         hotkeyCallback = onComplete;
     }
 
-    /** 执行自伤（临时关闭防摔和32k弓，延迟5tick后恢复） */
     public static void applyDamage() {
-        Minecraft mc = getMc();
-        if (mc == null || mc.player == null || mc.getConnection() == null) {
-            if (mc != null && mc.player != null)
-                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 未连接服务器"), false);
+        Minecraft mc = SelfDamageFeature.getMc();
+        if (mc == null || mc.player == null || mc.m_91403_() == null) {
+            if (mc != null && mc.player != null) {
+                mc.player.m_5661_(Component.literal((String)"\u00a7c[\u81ea\u4f24] \u672a\u8fde\u63a5\u670d\u52a1\u5668"), false);
+            }
             return;
         }
-
-        if (mc.player.getAbilities().instabuild) {
-            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[自伤] 创造模式无法受伤"), false);
+        if (mc.player.m_150110_().f_35937_) {
+            mc.player.m_5661_(Component.literal((String)"\u00a7c[\u81ea\u4f24] \u521b\u9020\u6a21\u5f0f\u65e0\u6cd5\u53d7\u4f24"), false);
             return;
         }
-
-        // ── 临时关闭防摔和32k弓（否则摔落伤害被拦截） ──
-        boolean nofallWasOn = fku.org.example.fku.features.nofall.NoFallFeature.isEnabled();
-        boolean arrowWasOn = fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isEnabled();
-        if (nofallWasOn) fku.org.example.fku.features.nofall.NoFallFeature.setEnabled(false);
-        if (arrowWasOn) fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(false);
-
+        boolean nofallWasOn = NoFallFeature.isEnabled();
+        boolean arrowWasOn = ArrowDmgFeature.isEnabled();
+        if (nofallWasOn) {
+            NoFallFeature.setEnabled(false);
+        }
+        if (arrowWasOn) {
+            ArrowDmgFeature.setEnabled(false);
+        }
         int amount = SelfDamageConfig.getInstance().damageAmount;
         Vec3 pos = mc.player.position();
         int loops = 100;
-
-        for (int i = 0; i < loops; i++) {
-            sendPos(pos.x, pos.y + amount + 2.1, pos.z, false);
-            sendPos(pos.x, pos.y + 0.05, pos.z, false);
+        for (int i = 0; i < loops; ++i) {
+            SelfDamageFeature.sendPos(pos.x, pos.y + amount + 2.1, pos.z, false);
+            SelfDamageFeature.sendPos(pos.x, pos.y + 0.05, pos.z, false);
         }
-        sendPos(pos.x, pos.y, pos.z, true);
-
-        // ── 安排延迟恢复（给服务端足够时间处理摔落包） ──
+        SelfDamageFeature.sendPos(pos.x, pos.y, pos.z, true);
         pendingRestoreNoFall = nofallWasOn;
         pendingRestoreArrow = arrowWasOn;
-        restoreDelayTicks = 5; // 5 tick ≈ 250ms
-
-        mc.player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("§6[自伤] §a已造成 " + amount + " 点伤害（防摔5tick后恢复）"), false);
+        restoreDelayTicks = 5;
+        mc.player.m_5661_(Component.literal((String)("\u00a76[\u81ea\u4f24] \u00a7a\u5df2\u9020\u6210 " + amount + " \u70b9\u4f24\u5bb3\uff08\u9632\u64545tick\u540e\u6062\u590d\uff09")), false);
     }
 
-    /** 延迟恢复防摔/32k弓 */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (restoreDelayTicks > 0) {
-            restoreDelayTicks--;
-            if (restoreDelayTicks == 0) {
-                if (pendingRestoreNoFall) {
-                    fku.org.example.fku.features.nofall.NoFallFeature.setEnabled(true);
-                    pendingRestoreNoFall = false;
-                }
-                if (pendingRestoreArrow) {
-                    fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(true);
-                    pendingRestoreArrow = false;
-                }
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        if (restoreDelayTicks > 0 && --restoreDelayTicks == 0) {
+            if (pendingRestoreNoFall) {
+                NoFallFeature.setEnabled(true);
+                pendingRestoreNoFall = false;
+            }
+            if (pendingRestoreArrow) {
+                ArrowDmgFeature.setEnabled(true);
+                pendingRestoreArrow = false;
             }
         }
     }
 
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {
-        // 热键绑定模式：捕获按键
         if (waitingForKey) {
             int key = event.getKey();
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (key == 256) {
                 waitingForKey = false;
-                if (hotkeyCallback != null) hotkeyCallback.run();
+                if (hotkeyCallback != null) {
+                    hotkeyCallback.run();
+                }
                 return;
             }
-            if (key != GLFW.GLFW_KEY_UNKNOWN) {
-                var cfg = SelfDamageConfig.getInstance();
+            if (key != -1) {
+                Minecraft mc;
+                SelfDamageConfig cfg = SelfDamageConfig.getInstance();
                 cfg.hotkeyKey = key;
                 cfg.hotkeyName = GLFW.glfwGetKeyName(key, 0);
-                if (cfg.hotkeyName == null) cfg.hotkeyName = "Key#" + key;
+                if (cfg.hotkeyName == null) {
+                    cfg.hotkeyName = "Key#" + key;
+                }
                 cfg.save();
                 waitingForKey = false;
-                if (hotkeyCallback != null) hotkeyCallback.run();
-                Minecraft mc = getMc();
-                if (mc != null && mc.player != null)
-                    mc.player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§a[自伤] 热键已绑定: " + cfg.hotkeyName), false);
+                if (hotkeyCallback != null) {
+                    hotkeyCallback.run();
+                }
+                if ((mc = SelfDamageFeature.getMc()) != null && mc.player != null) {
+                    mc.player.m_5661_(Component.literal((String)("\u00a7a[\u81ea\u4f24] \u70ed\u952e\u5df2\u7ed1\u5b9a: " + cfg.hotkeyName)), false);
+                }
             }
             return;
         }
-
-        // 正常模式由 HotkeySystem GLFW 轮询统一管理（避免双触发）
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
-        Minecraft mc = getMc();
-        if (mc == null || mc.getConnection() == null) return;
-        mc.getConnection().send(new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
+        Minecraft mc = SelfDamageFeature.getMc();
+        if (mc == null || mc.m_91403_() == null) {
+            return;
+        }
+        mc.m_91403_().m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
     }
 }
+

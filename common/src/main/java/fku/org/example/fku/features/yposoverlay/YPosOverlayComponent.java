@@ -1,15 +1,17 @@
-package fku.org.example.fku.features.yposoverlay; /* water */
+package fku.org.example.fku.features.yposoverlay;
 
-import fku.org.example.fku.config.MovementConfig;
 import fku.org.example.fku.client.gui.components.ToggleComponent;
+import fku.org.example.fku.config.MovementConfig;
 
-public class YPosOverlayComponent extends ToggleComponent {
-
+public class YPosOverlayComponent
+extends ToggleComponent {
     @Override
-    protected String getFeatureName() { return "Y坐标显示"; }
+    protected String getFeatureName() {
+        return "Y\u5750\u6807\u663e\u793a";
+    }
 
     public YPosOverlayComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "Y坐标显示");
+        super(x, y, width, height, "Y\u5750\u6807\u663e\u793a");
     }
 
     @Override
@@ -27,3 +29,4 @@ public class YPosOverlayComponent extends ToggleComponent {
         MovementConfig.save();
     }
 }
+

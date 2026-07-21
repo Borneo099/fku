@@ -1,62 +1,64 @@
 package fku.org.example.fku.client.gui.components;
 
-import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.GuiComponent;
+import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.util.FeatureHotkeyManager;
 import fku.org.example.fku.util.HotkeySystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
-/**
- * 开关组件基类 — 左键切换，中键绑定热键
- */
-public abstract class ToggleComponent extends GuiComponent {
-
+public abstract class ToggleComponent
+extends GuiComponent {
     protected String label;
 
-    /** 子类返回功能名称（用于热键注册），返回 null 则不启用热键 */
-    protected String getFeatureName() { return null; }
+    protected String getFeatureName() {
+        return null;
+    }
 
     public ToggleComponent(int x, int y, int width, int height, String label) {
         super(x, y, width, height, label);
         this.label = label;
-        String fn = getFeatureName();
-        if (fn != null) HotkeySystem.registerFeature(fn, () -> { toggle(); saveConfig(); });
+        String fn = this.getFeatureName();
+        if (fn != null) {
+            HotkeySystem.registerFeature(fn, () -> {
+                this.toggle();
+                this.saveConfig();
+            });
+        }
     }
 
     protected abstract boolean isEnabled();
+
     protected abstract void toggle();
+
     protected abstract void saveConfig();
 
-    // ═══════ 热键辅助方法（子类 render/mouseClicked 中调用） ═══════
-
-    /** 在 render 开头调用：如果正在等待绑定则显示提示并返回 true */
     protected boolean renderHotkeyWait(GuiGraphics g) {
-        String fn = getFeatureName();
+        String fn = this.getFeatureName();
         if (fn != null && HotkeySystem.isWaitingFor(fn)) {
-            GuiRenderHelper.drawComponentBackground(g, x, y, width, height, true);
-            g.drawString(Minecraft.getInstance().font, "绑定热键中... (Esc取消)",
-                    x + 5, y + (height - 8) / 2, 0xFFFF00);
+            GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, true);
+            g.drawString(Minecraft.getInstance().font, "\u7ed1\u5b9a\u70ed\u952e\u4e2d. (Esc\u53d6\u6d88)", this.x + 5, this.y + (this.height - 8) / 2, 0xFFFF00);
             return true;
         }
         return false;
     }
 
-    /** 追加热键名称后缀到显示文字 */
     protected String hotkeyAppend(String text) {
-        String fn = getFeatureName();
-        if (fn != null) {
-            var hk = FeatureHotkeyManager.getInstance().getHotkey(fn);
-            if (hk.getHotkeyKey() >= 0) text += " §7[" + hk.getHotkeyName() + "]";
+        FeatureHotkeyManager.IHotkeyInterface hk;
+        String fn = this.getFeatureName();
+        if (fn != null && (hk = FeatureHotkeyManager.getInstance().getHotkey(fn)).getHotkeyKey() >= 0) {
+            text = (String)text + " \u00a77[" + hk.getHotkeyName() + "]";
         }
         return text;
     }
 
-    /** mouseClicked 中处理中键绑定，子类在按钮链末尾调用 */
     protected boolean handleMiddleClick(double mx, double my, int button) {
-        if (button == 2 && isHovered(mx, my)) {
-            String fn = getFeatureName();
-            if (fn != null) HotkeySystem.startBinding(fn, () -> {});
+        if (button == 2 && this.isHovered(mx, my)) {
+            String fn = this.getFeatureName();
+            if (fn != null) {
+                HotkeySystem.startBinding(fn, () -> {});
+            }
             return true;
         }
         return false;
@@ -64,30 +66,36 @@ public abstract class ToggleComponent extends GuiComponent {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible || currentAlpha <= 0.01f) return;
+        if (!this.visible || this.currentAlpha <= 0.01f) {
+            return;
+        }
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-
-        if (renderHotkeyWait(g)) return;
-
-        boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha);
-
-        String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
-        int textAlpha = (int)(255 * currentAlpha);
-        int textColor = enabled ? ((textAlpha << 24) | (config.getTextColor() & 0xFFFFFF)) : ((textAlpha << 24) | 0xAAAAAA);
-        g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
+        if (this.renderHotkeyWait(g)) {
+            return;
+        }
+        boolean enabled = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, enabled, this.currentAlpha);
+        String displayStr = this.hotkeyAppend(this.label + ": " + (enabled ? "ON" : "OFF"));
+        int textAlpha = (255.0f * this.currentAlpha);
+        int textColor = enabled ? textAlpha << 24 | config.getTextColor() & 0xFFFFFF : textAlpha << 24 | 0xAAAAAA;
+        g.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2, textColor);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (!isHovered(mx, my)) return false;
+        if (!this.isHovered(mx, my)) {
+            return false;
+        }
         if (button == 0) {
-            if (HotkeySystem.isWaiting()) return false;
-            toggle();
-            saveConfig();
+            if (HotkeySystem.isWaiting()) {
+                return false;
+            }
+            this.toggle();
+            this.saveConfig();
             return true;
-        } else if (button == 2) {
-            return handleMiddleClick(mx, my, button);
+        }
+        if (button == 2) {
+            return this.handleMiddleClick(mx, my, button);
         }
         return false;
     }
@@ -97,3 +105,4 @@ public abstract class ToggleComponent extends GuiComponent {
         return false;
     }
 }
+

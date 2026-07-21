@@ -1,25 +1,21 @@
 package fku.org.example.fku.client.gui.components;
 
+import fku.org.example.fku.client.gui.components.ConfigButtonComponent;
+import fku.org.example.fku.client.gui.components.GuiPanel;
 import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.features.displaymodel.DisplayModelScreen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 娱乐功能面板
- * 包含实体模型展示等娱乐功能
- */
-public class EntertainmentPanel extends GuiPanel {
-
+public class EntertainmentPanel
+extends GuiPanel {
     public EntertainmentPanel() {
-        super("娱乐", FkuConfig.entertainmentPanelX.get(), FkuConfig.entertainmentPanelY.get(), 120, 80);
+        super("\u5a31\u4e50", (Integer)FkuConfig.entertainmentPanelX.get(), (Integer)FkuConfig.entertainmentPanelY.get(), 120, 80);
     }
 
     @Override
     protected void init() {
-        // 添加实体模型按钮
-        addComponent(new ConfigButtonComponent(0, 0, 110, 20, "实体模型", () -> {
-            Minecraft.getInstance().setScreen(new DisplayModelScreen());
-        }));
+        this.addComponent(new ConfigButtonComponent(0, 0, 110, 20, "\u5b9e\u4f53\u6a21\u578b", () -> Minecraft.getInstance().setScreen((Screen)new DisplayModelScreen())));
     }
 
     @Override
@@ -28,3 +24,4 @@ public class EntertainmentPanel extends GuiPanel {
         FkuConfig.entertainmentPanelY.set(this.y);
     }
 }
+

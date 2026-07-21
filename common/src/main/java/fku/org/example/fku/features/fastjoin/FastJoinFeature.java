@@ -1,9 +1,9 @@
-package fku.org.example.fku.features.fastjoin; /* water */
+package fku.org.example.fku.features.fastjoin;
 
 import fku.org.example.fku.Fku;
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.features.fastjoin.FastJoinConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -12,130 +12,158 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * FastJoinFeature — 快速加载 (修复版)
- *
- * ★ 修复：视距恢复后持续锁定目标值，防止游戏自动拉回
- */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class FastJoinFeature {
-
-    private static Minecraft getMc() { return Minecraft.getInstance(); }
-
     private static boolean recovering = false;
     private static int targetRd = 12;
     private static int tickCounter = 0;
-    /** ★ 锁定目标视距，每 Tick 强制保持，防游戏自动拉回 */
     private static int lockedRd = -1;
+
+    private static Minecraft getMc() {
+        return Minecraft.getInstance();
+    }
 
     public static void init() {
         FastJoinConfig.load();
     }
 
-    public static void toggleEnabled() { setEnabled(!isEnabled()); }
+    public static void toggleEnabled() {
+        FastJoinFeature.setEnabled(!FastJoinFeature.isEnabled());
+    }
+
     public static void setEnabled(boolean v) {
         FastJoinConfig cfg = FastJoinConfig.getInstance();
         cfg.enabled = v;
         cfg.save();
-        if (!v) { recovering = false; tickCounter = 0; lockedRd = -1; }
+        if (!v) {
+            recovering = false;
+            tickCounter = 0;
+            lockedRd = -1;
+        }
     }
-    public static boolean isEnabled() { return FastJoinConfig.getInstance().enabled; }
+
+    public static boolean isEnabled() {
+        return FastJoinConfig.getInstance().enabled;
+    }
 
     @SubscribeEvent
     public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
-        if (!isEnabled()) return;
+        if (!FastJoinFeature.isEnabled()) {
+            return;
+        }
         FastJoinConfig cfg = FastJoinConfig.getInstance();
-        if ("OFF".equals(cfg.mode)) return;
-
+        if ("OFF".equals(cfg.mode)) {
+            return;
+        }
         recovering = true;
         tickCounter = 0;
         targetRd = Math.max(2, Math.min(32, cfg.targetRenderDistance));
         lockedRd = -1;
-
         FkuConfig.disableConnectionTimeout.set(true);
         FkuConfig.disableConnectionTimeout.save();
-
-        int initialRd;
-        switch (cfg.mode) {
-            case "EXTREME" -> initialRd = 1;
-            case "SMOOTH" -> initialRd = Math.max(1, targetRd / 2);
-            default -> initialRd = targetRd;
-        }
-        setRd(initialRd);
-        Fku.LOGGER.info("[FastJoin] mode={}, target={}, initial={}", cfg.mode, targetRd, initialRd);
+        int initialRd = switch (cfg.mode) {
+            case "EXTREME" -> 1;
+            case "SMOOTH" -> Math.max(1, targetRd / 2);
+            default -> targetRd;
+        };
+        FastJoinFeature.setRd(initialRd);
+        Fku.LOGGER.info("[FastJoin] mode={}, target={}, initial={}", new Object[]{cfg.mode, targetRd, initialRd});
     }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        Minecraft mc = getMc();
-        if (mc == null || !isEnabled() || mc.player == null) return;
-
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        Minecraft mc = FastJoinFeature.getMc();
+        if (mc == null || !FastJoinFeature.isEnabled() || mc.player == null) {
+            return;
+        }
         FastJoinConfig cfg = FastJoinConfig.getInstance();
-        int current = mc.options.renderDistance().get();
-
-        // ★ 锁定阶段：每 Tick 强制保持目标值
+        int current = (Integer)mc.f_91066_.m_231984_().m_231551_();
         if (lockedRd > 0 && !recovering) {
             if (current != lockedRd) {
-                setRd(lockedRd);
+                FastJoinFeature.setRd(lockedRd);
             }
             return;
         }
-
-        if (!recovering) return;
-
-        // 恢复阶段
-        if (current >= targetRd) {
-            recovering = false;
-            lockedRd = targetRd; // ★ 进入锁定阶段
-            if (cfg.showLoadingProgress && mc.player != null)
-                mc.player.displayClientMessage(
-                    Component.literal("§a[FastJoin] §7视距已恢复至 " + targetRd + " 区块"), true);
+        if (!recovering) {
             return;
         }
-
-        tickCounter++;
+        if (current >= targetRd) {
+            recovering = false;
+            lockedRd = targetRd;
+            if (cfg.showLoadingProgress && mc.player != null) {
+                mc.player.m_5661_(Component.literal((String)("\u00a7a[FastJoin] \u00a77\u89c6\u8ddd\u5df2\u6062\u590d\u81f3 " + targetRd + " \u533a\u5757")), true);
+            }
+            return;
+        }
+        ++tickCounter;
         int speed = Math.max(1, Math.min(4, cfg.recoverSpeed));
         boolean doIncrease = false;
-
         switch (cfg.mode) {
-            case "EXTREME" -> { if (tickCounter >= 1) { doIncrease = true; tickCounter = 0; } }
-            case "SMOOTH" -> { if (tickCounter >= 40 / speed) { doIncrease = true; tickCounter = 0; } }
-            default -> {}
+            case "EXTREME": {
+                if (tickCounter < 1) break;
+                doIncrease = true;
+                tickCounter = 0;
+                break;
+            }
+            case "SMOOTH": {
+                if (tickCounter < 40 / speed) break;
+                doIncrease = true;
+                tickCounter = 0;
+                break;
+            }
         }
-
         if (doIncrease) {
             int newRd = Math.min(current + speed, targetRd);
-            setRd(newRd);
-            if (cfg.showLoadingProgress && mc.player != null)
-                mc.player.displayClientMessage(
-                    Component.literal("§6[FastJoin] §7视距: " + newRd + "/" + targetRd), true);
+            FastJoinFeature.setRd(newRd);
+            if (cfg.showLoadingProgress && mc.player != null) {
+                mc.player.m_5661_(Component.literal((String)("\u00a76[FastJoin] \u00a77\u89c6\u8ddd: " + newRd + "/" + targetRd)), true);
+            }
         }
     }
 
     private static void setRd(int rd) {
-        Minecraft mc = getMc();
-        if (mc == null) return;
-        mc.options.renderDistance().set(rd);
+        Minecraft mc = FastJoinFeature.getMc();
+        if (mc == null) {
+            return;
+        }
+        mc.f_91066_.m_231984_().m_231514_(rd);
     }
 
     public static void fallbackToExtreme() {
-        if (!isEnabled()) return;
+        if (!FastJoinFeature.isEnabled()) {
+            return;
+        }
         FastJoinConfig cfg = FastJoinConfig.getInstance();
-        if (!cfg.onTimeoutFallback) return;
-        cfg.setMode("EXTREME"); cfg.setEnabled(true);
-        setRd(1); recovering = true; tickCounter = 0; lockedRd = -1;
+        if (!cfg.onTimeoutFallback) {
+            return;
+        }
+        cfg.setMode("EXTREME");
+        cfg.setEnabled(true);
+        FastJoinFeature.setRd(1);
+        recovering = true;
+        tickCounter = 0;
+        lockedRd = -1;
         targetRd = Math.max(2, cfg.targetRenderDistance);
-        Minecraft mc = getMc();
-        if (mc != null && mc.player != null) mc.player.displayClientMessage(
-            Component.literal("§c[FastJoin] 超时回退，请重新连接"), false);
+        Minecraft mc = FastJoinFeature.getMc();
+        if (mc != null && mc.player != null) {
+            mc.player.m_5661_(Component.literal((String)"\u00a7c[FastJoin] \u8d85\u65f6\u56de\u9000\uff0c\u8bf7\u91cd\u65b0\u8fde\u63a5"), false);
+        }
     }
 
-    public static boolean isRecovering() { return recovering; }
+    public static boolean isRecovering() {
+        return recovering;
+    }
+
     public static int getRecoveryProgress() {
-        Minecraft mc = getMc();
-        if (mc == null || !recovering || targetRd <= 1) return 100;
-        return Math.min(100, mc.options.renderDistance().get() * 100 / targetRd);
+        Minecraft mc = FastJoinFeature.getMc();
+        if (mc == null || !recovering || targetRd <= 1) {
+            return 100;
+        }
+        return Math.min(100, (Integer)mc.f_91066_.m_231984_().m_231551_() * 100 / targetRd);
     }
 }
+

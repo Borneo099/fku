@@ -1,57 +1,54 @@
 package fku.org.example.fku.client.gui.components;
 
+import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.DisableTimeoutConfigScreen;
+import fku.org.example.fku.client.gui.components.GuiComponent;
 import fku.org.example.fku.config.FkuConfig;
 import fku.org.example.fku.config.GuiStyleConfig;
-import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 禁用连接超时开关组件
- * 左键切换开/关，开启后屏蔽 Connection#exceptionCaught 事件
- */
-public class DisableTimeoutComponent extends GuiComponent {
-
+public class DisableTimeoutComponent
+extends GuiComponent {
     public DisableTimeoutComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "禁连超时");
+        super(x, y, width, height, "\u7981\u8fde\u8d85\u65f6");
     }
 
     private boolean isEnabled() {
-        return FkuConfig.disableConnectionTimeout.get();
+        return (Boolean)FkuConfig.disableConnectionTimeout.get();
     }
 
     private void toggle() {
-        FkuConfig.disableConnectionTimeout.set(!FkuConfig.disableConnectionTimeout.get());
+        FkuConfig.disableConnectionTimeout.set(((Boolean)FkuConfig.disableConnectionTimeout.get() == false ? 1 : 0));
         FkuConfig.disableConnectionTimeout.save();
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (!visible) return;
-
+        if (!this.visible) {
+            return;
+        }
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        boolean enabled = isEnabled();
-
-        GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
-
-        String displayStr = "禁连超时: " + (enabled ? "ON" : "OFF");
+        boolean enabled = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(guiGraphics, this.x, this.y, this.width, this.height, enabled);
+        String displayStr = "\u7981\u8fde\u8d85\u65f6: " + (enabled ? "ON" : "OFF");
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
-        guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
-        // ★ 右键打开配置提示
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        guiGraphics.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2 - 4, textColor);
+        guiGraphics.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2 - 4, 0x888888);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY)) {
+        if (this.isHovered(mouseX, mouseY)) {
             if (button == 0) {
-                toggle();
+                this.toggle();
                 return true;
-            } else if (button == 1) {
+            }
+            if (button == 1) {
                 Screen current = Minecraft.getInstance().screen;
                 if (current != null) {
-                    Minecraft.getInstance().setScreen(new DisableTimeoutConfigScreen());
+                    Minecraft.getInstance().setScreen((Screen)new DisableTimeoutConfigScreen());
                 }
                 return true;
             }
@@ -64,3 +61,4 @@ public class DisableTimeoutComponent extends GuiComponent {
         return false;
     }
 }
+

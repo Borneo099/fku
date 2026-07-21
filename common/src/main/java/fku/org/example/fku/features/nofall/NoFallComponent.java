@@ -1,21 +1,23 @@
-package fku.org.example.fku.features.nofall; /* water */
+package fku.org.example.fku.features.nofall;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.features.nofall.NoFallConfigScreen;
+import fku.org.example.fku.features.nofall.NoFallFeature;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import fku.org.example.fku.client.gui.components.ToggleComponent;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 防摔（NoFall）开关组件
- */
-public class NoFallComponent extends ToggleComponent {
-
+public class NoFallComponent
+extends ToggleComponent {
     @Override
-    protected String getFeatureName() { return "防摔"; }
+    protected String getFeatureName() {
+        return "\u9632\u6454";
+    }
 
     public NoFallComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "防摔");
+        super(x, y, width, height, "\u9632\u6454");
     }
 
     @Override
@@ -30,36 +32,42 @@ public class NoFallComponent extends ToggleComponent {
 
     @Override
     protected void saveConfig() {
-        // NoFallFeature 内已自动保存
     }
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible) return;
-        if (renderHotkeyWait(g)) return;
+        if (!this.visible) {
+            return;
+        }
+        if (this.renderHotkeyWait(g)) {
+            return;
+        }
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String displayStr = hotkeyAppend(label + ": " + (enabled ? "开" : "关"));
+        boolean enabled = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, enabled);
+        String displayStr = this.hotkeyAppend(this.label + ": " + (enabled ? "\u5f00" : "\u5173"));
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
-        g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2, textColor);
+        g.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2, 0x888888);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY)) {
+        if (this.isHovered(mouseX, mouseY)) {
             if (button == 0) {
-                toggle();
-                saveConfig();
+                this.toggle();
+                this.saveConfig();
                 return true;
-            } else if (button == 1) {
-                Minecraft.getInstance().setScreen(new NoFallConfigScreen());
+            }
+            if (button == 1) {
+                Minecraft.getInstance().setScreen((Screen)new NoFallConfigScreen());
                 return true;
-            } else if (button == 2) {
-                return handleMiddleClick(mouseX, mouseY, button);
+            }
+            if (button == 2) {
+                return this.handleMiddleClick(mouseX, mouseY, button);
             }
         }
         return false;
     }
 }
+

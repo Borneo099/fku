@@ -1,7 +1,16 @@
 package fku.org.example.fku.features.structure_locator;
 
-import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.structure_locator.SeedBiomeSampler;
+import fku.org.example.fku.features.structure_locator.StructureLocatorConfig;
 import fku.org.example.fku.util.BaritoneBridge;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -15,77 +24,38 @@ import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-/**
- * 结构定位功能 — 根据种子+放置规则计算最近结构坐标，支持 Baritone 前往
- * <p>
- * 参考：lexis.Hack.Hacks.L_Enders_Cataclysm_C.CataclysmLocatorHack
- *       lexis.Hack.Hacks.Baritone.StructureLocatorHack
- */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class StructureLocatorFeature {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger("StructureLocator");
-    private static Minecraft getMc() { return Minecraft.getInstance(); }
+    private static final Logger LOGGER = LoggerFactory.getLogger((String)"StructureLocator");
     private static final Pattern SEED_PATTERN = Pattern.compile("\\[\\s*(-?\\d+)\\s*\\]");
     private static volatile boolean expectingSeed = false;
-
-    public static final List<Target> TARGETS = new ArrayList<>();
-    private static final Map<String, Set<Long>> skipped = new HashMap<>();
+    public static final List<Target> TARGETS = new ArrayList<Target>();
+    private static final Map<String, Set<Long>> skipped = new HashMap<String, Set<Long>>();
     private static boolean hasLastTarget = false;
     private static String lastTargetKey = "";
-    private static int lastTargetCx = 0, lastTargetCz = 0;
-    private static final String PREFIX = "§6[§b结构定位§6] §r";
+    private static int lastTargetCx = 0;
+    private static int lastTargetCz = 0;
+    private static final String PREFIX = "\u00a76[\u00a7b\u7ed3\u6784\u5b9a\u4f4d\u00a76] \u00a7r";
+    private static int markedX = -1;
+    private static int markedZ = -1;
+    private static String markName;
 
-    // ──────── 标记数据结构（通过 Baritone #goal 实现） ────────
-    /** 当前标记的坐标（-1 = 未标记） */
-    private static int markedX = -1, markedZ = -1;
-
-    // ──────── 目标结构定义 ────────
-    static {
-        // ★ 原版
-        TARGETS.add(Target.rs("villages", "村庄", Dim.OVERWORLD, 34, 8, 10387312, "linear", 64, Set.of(Biomes.PLAINS, Biomes.DESERT, Biomes.SAVANNA, Biomes.SNOWY_PLAINS, Biomes.TAIGA)));
-        TARGETS.add(Target.rs("desert_pyramids", "沙漠神殿", Dim.OVERWORLD, 32, 8, 14357617, "linear", 64, Set.of(Biomes.DESERT)));
-        TARGETS.add(Target.rs("igloos", "雪屋", Dim.OVERWORLD, 32, 8, 14357618, "linear", 64, Set.of(Biomes.SNOWY_PLAINS, Biomes.ICE_SPIKES, Biomes.SNOWY_TAIGA)));
-        TARGETS.add(Target.rs("jungle_temples", "丛林神庙", Dim.OVERWORLD, 32, 8, 14357619, "linear", 64, Set.of(Biomes.JUNGLE, Biomes.BAMBOO_JUNGLE)));
-        TARGETS.add(Target.rs("swamp_huts", "女巫小屋", Dim.OVERWORLD, 32, 8, 14357620, "linear", 64, Set.of(Biomes.SWAMP)));
-        TARGETS.add(Target.rs("pillager_outposts", "掠夺者前哨", Dim.OVERWORLD, 32, 8, 165745296, "linear", 64, null));
-        TARGETS.add(Target.rs("woodland_mansions", "林地府邸", Dim.OVERWORLD, 80, 20, 10387319, "triangular", 64, Set.of(Biomes.DARK_FOREST)));
-        TARGETS.add(Target.rs("trail_ruins", "古迹废墟", Dim.OVERWORLD, 34, 8, 83469867, "linear", 64, null));
-        TARGETS.add(Target.rs("ruined_portals", "废弃传送门(主世界)", Dim.OVERWORLD, 40, 15, 34222645, "linear", 64, null));
-        TARGETS.add(Target.rs("ocean_monuments", "海底神殿", Dim.OVERWORLD, 32, 5, 10387313, "triangular", 64, Set.of(Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.DEEP_OCEAN)));
-        TARGETS.add(Target.rs("ocean_ruins", "海底废墟", Dim.OVERWORLD, 20, 8, 14357621, "linear", 64, null));
-        TARGETS.add(Target.rs("shipwrecks", "沉船", Dim.OVERWORLD, 24, 4, 165745295, "linear", 64, null));
-        TARGETS.add(Target.rs("ancient_cities", "古城(监守者)", Dim.OVERWORLD, 24, 8, 20083232, "linear", -50, Set.of(Biomes.DEEP_DARK)));
-        TARGETS.add(Target.rs("nether_fossils", "下界化石", Dim.NETHER, 2, 1, 14357921, "linear", 64, Set.of(Biomes.SOUL_SAND_VALLEY)));
-        TARGETS.add(Target.rs("nether_complexes", "下界要塞/堡垒", Dim.NETHER, 27, 4, 30084232, "linear", 64, null));
-        TARGETS.add(Target.rs("end_cities", "末地城", Dim.END, 20, 11, 10387313, "triangular", 64, Set.of(Biomes.END_MIDLANDS, Biomes.END_HIGHLANDS)));
-        TARGETS.add(Target.rings("strongholds", "要塞(含末地传送门)", 128, 32, 3));
-
-        // ★ 灾变
-        TARGETS.add(Target.rs("acropolis", "§c卫城", Dim.OVERWORLD, 80, 50, 913530101, "linear", 64, null));
-        TARGETS.add(Target.rs("ancient_factory", "§c远古工厂", Dim.OVERWORLD, 112, 70, 319514301, "linear", 64, null));
-        TARGETS.add(Target.rs("burning_arena", "§c燃烧竞技场(火焰巨像)", Dim.NETHER, 80, 50, (int)9123456789L, "linear", 64, null));
-        TARGETS.add(Target.rs("cursed_pyramid", "§c诅咒金字塔", Dim.OVERWORLD, 80, 50, (int)9167234589L, "linear", 64, null));
-        TARGETS.add(Target.rs("frosted_prison", "§c冰封监狱", Dim.OVERWORLD, 80, 50, (int)5872139439L, "linear", 64, null));
-        TARGETS.add(Target.rs("ruined_citadel", "§c废弃城堡(末影守卫)", Dim.END, 50, 25, 367895146, "linear", 64, null));
-        TARGETS.add(Target.rs("soul_black_smith", "§c灵魂铁匠铺", Dim.NETHER, 60, 50, (int)1984567320L, "linear", 64, null));
-        TARGETS.add(Target.rs("sunken_city", "§c沉没之城(利维坦)", Dim.OVERWORLD, 100, 70, (int)1673928450L, "triangular", 64, null));
+    private static Minecraft getMc() {
+        return Minecraft.getInstance();
     }
 
-    // ──────── 聊天捕获 ────────
     @SubscribeEvent
     public static void onChat(ClientChatReceivedEvent event) {
-        if (!expectingSeed) return;
+        if (!expectingSeed) {
+            return;
+        }
         String text = event.getMessage().getString();
         Matcher m = SEED_PATTERN.matcher(text);
         if (m.find()) {
@@ -95,265 +65,423 @@ public class StructureLocatorFeature {
                 cfg.hasSeed = true;
                 expectingSeed = false;
                 cfg.save();
-            } catch (NumberFormatException ignored) {}
+            }
+            catch (NumberFormatException numberFormatException) {
+                // ignored
+            }
         }
     }
 
-    // ──────── API ────────
     public static void requestSeed() {
-        Minecraft mc = getMc();
-        if (mc == null || mc.player == null || mc.player.connection == null) { msg("§c未连接服务器"); return; }
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc == null || mc.player == null || mc.player.f_108617_ == null) {
+            StructureLocatorFeature.msg("\u00a7c\u672a\u8fde\u63a5\u670d\u52a1\u5668");
+            return;
+        }
         expectingSeed = true;
-        mc.player.connection.sendCommand("seed");
-        msg("§7已发送 /seed, 正在等待种子...");
+        mc.player.f_108617_.m_246623_("seed");
+        StructureLocatorFeature.msg("\u00a77\u5df2\u53d1\u9001 /seed, \u6b63\u5728\u7b49\u5f85\u79cd\u5b50.");
     }
 
     public static Long resolveSeed() {
         StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
         String ms = cfg.manualSeed;
         if (ms != null && !ms.trim().isEmpty()) {
-            try { return Long.parseLong(ms.trim()); }
-            catch (NumberFormatException e) { msg("§c手动种子不是有效数字"); return null; }
+            try {
+                return Long.parseLong(ms.trim());
+            }
+            catch (NumberFormatException e) {
+                StructureLocatorFeature.msg("\u00a7c\u624b\u52a8\u79cd\u5b50\u4e0d\u662f\u6709\u6548\u6570\u5b57");
+                return null;
+            }
         }
-        return cfg.hasSeed ? cfg.capturedSeed : null;
+        return cfg.hasSeed ? Long.valueOf(cfg.capturedSeed) : null;
     }
 
     public static Target selectedTarget() {
         StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
         int idx = cfg.targetIndex;
-        return (idx >= 0 && idx < TARGETS.size()) ? TARGETS.get(idx) : TARGETS.get(0);
+        return idx >= 0 && idx < TARGETS.size() ? TARGETS.get(idx) : TARGETS.get(0);
     }
 
     public static void locate(boolean travel) {
-        Minecraft mc = getMc();
-        if (mc == null || mc.player == null || mc.level == null) return;
-        Long seed = resolveSeed();
-        if (seed == null) { msg("§f还没有种子。先点[取种子]或填[手动种子]"); return; }
-        Target t = selectedTarget();
-        boolean dimOk = currentDim() == t.dim;
-        if (t.kind == Kind.CONCENTRIC_RINGS) locateStronghold(t, seed, travel, dimOk);
-        else locateRandomSpread(t, seed, travel, dimOk);
+        boolean dimOk;
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+            return;
+        }
+        Long seed = StructureLocatorFeature.resolveSeed();
+        if (seed == null) {
+            StructureLocatorFeature.msg("\u00a7f\u8fd8\u6ca1\u6709\u79cd\u5b50\u3002\u5148\u70b9[\u53d6\u79cd\u5b50]\u6216\u586b[\u624b\u52a8\u79cd\u5b50]");
+            return;
+        }
+        Target t = StructureLocatorFeature.selectedTarget();
+        boolean bl = dimOk = StructureLocatorFeature.currentDim() == t.dim;
+        if (t.kind == Kind.CONCENTRIC_RINGS) {
+            StructureLocatorFeature.locateStronghold(t, seed, travel, dimOk);
+        } else {
+            StructureLocatorFeature.locateRandomSpread(t, seed, travel, dimOk);
+        }
     }
 
     public static void skipAndNext() {
-        Long seed = resolveSeed();
-        if (seed == null) { msg("§f还没有种子"); return; }
-        if (!hasLastTarget) { msg("§e还没定位过"); return; }
-        skipped.computeIfAbsent(lastTargetKey, k -> new HashSet<>()).add(packChunk(lastTargetCx, lastTargetCz));
-        msg("§7已跳过空点(区块 " + lastTargetCx + "," + lastTargetCz + "), 找下一个...");
-        locate(true);
+        Long seed = StructureLocatorFeature.resolveSeed();
+        if (seed == null) {
+            StructureLocatorFeature.msg("\u00a7f\u8fd8\u6ca1\u6709\u79cd\u5b50");
+            return;
+        }
+        if (!hasLastTarget) {
+            StructureLocatorFeature.msg("\u00a7e\u8fd8\u6ca1\u5b9a\u4f4d\u8fc7");
+            return;
+        }
+        skipped.computeIfAbsent(lastTargetKey, k -> new HashSet()).add(StructureLocatorFeature.packChunk(lastTargetCx, lastTargetCz));
+        StructureLocatorFeature.msg("\u00a77\u5df2\u8df3\u8fc7\u7a7a\u70b9(\u533a\u5757 " + lastTargetCx + "," + lastTargetCz + "), \u627e\u4e0b\u4e00\u4e2a.");
+        StructureLocatorFeature.locate(true);
     }
 
     public static void clearSkips() {
-        Long seed = resolveSeed();
-        if (seed != null) skipped.remove(blKey(seed, selectedTarget().id));
+        Long seed = StructureLocatorFeature.resolveSeed();
+        if (seed != null) {
+            skipped.remove(StructureLocatorFeature.blKey(seed, StructureLocatorFeature.selectedTarget().id));
+        }
         hasLastTarget = false;
-        msg("§a已清空跳过记录");
+        StructureLocatorFeature.msg("\u00a7a\u5df2\u6e05\u7a7a\u8df3\u8fc7\u8bb0\u5f55");
     }
 
-    /** 使用 Baritone #goal 标记目标点（不寻路，仅在小地图/路径点显示） */
     public static void markLocation() {
-        locate(false);
-        if (!hasLastTarget) return;
-        Target t = selectedTarget();
-        boolean dimOk = currentDim() == t.dim;
-        int mx = lastTargetCx * 16 + 8, mz = lastTargetCz * 16 + 8;
-        if (!dimOk) { msg("§e当前不在[" + dimName(t.dim) + "], 无法标记"); return; }
-        if (!BaritoneBridge.isAvailable()) { msg("§e未安装 Baritone, 已显示坐标"); return; }
+        StructureLocatorFeature.locate(false);
+        if (!hasLastTarget) {
+            return;
+        }
+        Target t = StructureLocatorFeature.selectedTarget();
+        boolean dimOk = StructureLocatorFeature.currentDim() == t.dim;
+        int mx = lastTargetCx * 16 + 8;
+        int mz = lastTargetCz * 16 + 8;
+        if (!dimOk) {
+            StructureLocatorFeature.msg("\u00a7e\u5f53\u524d\u4e0d\u5728[" + StructureLocatorFeature.dimName(t.dim) + "], \u65e0\u6cd5\u6807\u8bb0");
+            return;
+        }
+        if (!BaritoneBridge.isAvailable()) {
+            StructureLocatorFeature.msg("\u00a7e\u672a\u5b89\u88c5 Baritone, \u5df2\u663e\u793a\u5750\u6807");
+            return;
+        }
         BaritoneBridge.setGoalOnly(mx, 120, mz);
-        markedX = mx; markedZ = mz;
+        markedX = mx;
+        markedZ = mz;
         markName = t.name;
         int cd = StructureLocatorConfig.getInstance().markClearDistance;
-        msg("§a已标记「" + t.name + "」到小地图 (goal " + mx + " 120 " + mz + ")，" + cd + "格内自动清除");
+        StructureLocatorFeature.msg("\u00a7a\u5df2\u6807\u8bb0\u300c" + t.name + "\u300d\u5230\u5c0f\u5730\u56fe (goal " + mx + " 120 " + mz + ")\uff0c" + cd + "\u683c\u5185\u81ea\u52a8\u6e05\u9664");
     }
 
-    /** 清除标记 — 始终发送 #goal clear，不论是否追踪了内部标记 */
     public static void clearMark() {
         BaritoneBridge.clearGoal();
         if (markedX >= 0) {
-            markedX = markedZ = -1;
+            markedZ = -1;
+            markedX = -1;
             markName = "";
-            msg("§7标记已清除");
+            StructureLocatorFeature.msg("\u00a77\u6807\u8bb0\u5df2\u6e05\u9664");
         } else {
-            msg("§7已发送 #goal clear（无内部标记）");
+            StructureLocatorFeature.msg("\u00a77\u5df2\u53d1\u9001 #goal clear\uff08\u65e0\u5185\u90e8\u6807\u8bb0\uff09");
         }
     }
 
-    /** 标记是否活跃 */
-    public static boolean hasMark() { return markedX >= 0; }
+    public static boolean hasMark() {
+        return markedX >= 0;
+    }
 
-    /** 自动清除：玩家进入配置距离时自动 #goal clear */
     @SubscribeEvent
-    public static void onClientTick(net.minecraftforge.event.TickEvent.ClientTickEvent event) {
-        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
-        Minecraft mc = getMc();
-        if (mc == null || markedX < 0 || mc.player == null || mc.level == null) return;
-
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        double dz;
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc == null || markedX < 0 || mc.player == null || mc.f_91073_ == null) {
+            return;
+        }
         int clearDist = StructureLocatorConfig.getInstance().markClearDistance;
         double dx = mc.player.getX() - markedX;
-        double dz = mc.player.getZ() - markedZ;
-        if (dx * dx + dz * dz <= clearDist * clearDist) {
+        if (dx * dx + (dz = mc.player.getZ() - markedZ) * dz <= (clearDist * clearDist)) {
             BaritoneBridge.clearGoal();
-            markedX = markedZ = -1;
+            markedZ = -1;
+            markedX = -1;
             markName = "";
-            msg("§7已到达标记位置(" + clearDist + "格内)，标记已自动清除");
+            StructureLocatorFeature.msg("\u00a77\u5df2\u5230\u8fbe\u6807\u8bb0\u4f4d\u7f6e(" + clearDist + "\u683c\u5185)\uff0c\u6807\u8bb0\u5df2\u81ea\u52a8\u6e05\u9664");
         }
     }
+
     private static void locateRandomSpread(Target t, long seed, boolean travel, boolean dimOk) {
-        if (t.biomes != null && !SeedBiomeSampler.ensureReady()) { msg("§c群系数据初始化失败"); return; }
-        Minecraft mc = getMc();
-        if (mc == null) return;
+        if (t.biomes != null && !SeedBiomeSampler.ensureReady()) {
+            StructureLocatorFeature.msg("\u00a7c\u7fa4\u7cfb\u6570\u636e\u521d\u59cb\u5316\u5931\u8d25");
+            return;
+        }
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc == null) {
+            return;
+        }
         int r = StructureLocatorConfig.getInstance().searchRadius;
-        int px = (int) mc.player.getX(), pz = (int) mc.player.getZ();
+        int px = mc.player.getX();
+        int pz = mc.player.getZ();
         int centerGx = Math.floorDiv(px, t.spacing);
         int centerGz = Math.floorDiv(pz, t.spacing);
-        String key = blKey(seed, t.id);
+        String key = StructureLocatorFeature.blKey(seed, t.id);
         Set<Long> bl = skipped.get(key);
         long bestDistSq = Long.MAX_VALUE;
-        int bestX = 0, bestZ = 0, bestCx = 0, bestCz = 0;
+        int bestX = 0;
+        int bestZ = 0;
+        int bestCx = 0;
+        int bestCz = 0;
         boolean found = false;
-
-        for (int gx = centerGx - r; gx <= centerGx + r; gx++) {
-            for (int gz = centerGz - r; gz <= centerGz + r; gz++) {
-                ChunkPos cand = calcRandomSpreadPos(seed, t.salt, t.spacing, t.separation, t.spread, gx, gz);
-                if (bl != null && bl.contains(packChunk(cand.x, cand.z))) continue;
-                int bx = cand.x * 16 + 8, bz = cand.z * 16 + 8;
-                long dx = (long) bx - px, dz = (long) bz - pz, d = dx * dx + dz * dz;
-                if (t.biomes != null) {
-                    ResourceKey<Biome> biome = SeedBiomeSampler.biomeAt(seed, toSeedDim(t.dim), bx, t.sampleY, bz);
-                    if (biome == null || !t.biomes.contains(biome)) continue;
-                }
-                if (d >= bestDistSq) continue;
-                bestDistSq = d; bestX = bx; bestZ = bz; bestCx = cand.x; bestCz = cand.z; found = true;
+        for (int gx = centerGx - r; gx <= centerGx + r; ++gx) {
+            for (int gz = centerGz - r; gz <= centerGz + r; ++gz) {
+                ResourceKey<Biome> biome;
+                ChunkPos cand = StructureLocatorFeature.calcRandomSpreadPos(seed, t.salt, t.spacing, t.separation, t.spread, gx, gz);
+                if (bl != null && bl.contains(StructureLocatorFeature.packChunk(cand.f_45578_, cand.f_45579_))) continue;
+                int bx = cand.f_45578_ * 16 + 8;
+                int bz = cand.f_45579_ * 16 + 8;
+                long dx = bx - px;
+                long dz = bz - pz;
+                long d = dx * dx + dz * dz;
+                if (t.biomes != null && ((biome = SeedBiomeSampler.biomeAt(seed, StructureLocatorFeature.toSeedDim(t.dim), bx, t.sampleY, bz)) == null || !t.biomes.contains(biome)) || d >= bestDistSq) continue;
+                bestDistSq = d;
+                bestX = bx;
+                bestZ = bz;
+                bestCx = cand.f_45578_;
+                bestCz = cand.f_45579_;
+                found = true;
             }
         }
-        if (!found) { msg(bl != null && !bl.isEmpty() ? "§c范围内没有更多匹配的结构了" : "§c范围内没找到匹配的结构, 调大搜索范围再试"); return; }
-        rememberTarget(key, bestCx, bestCz);
-        int dist = (int) Math.sqrt(bestDistSq);
-        msg("§f" + t.name + "  §7坐标: §bX=" + bestX + " Z=" + bestZ + " §7(约" + dist + "格)");
-        doTravel(travel, dimOk, t, bestX, bestZ);
+        if (!found) {
+            StructureLocatorFeature.msg(bl != null && !bl.isEmpty() ? "\u00a7c\u8303\u56f4\u5185\u6ca1\u6709\u66f4\u591a\u5339\u914d\u7684\u7ed3\u6784\u4e86" : "\u00a7c\u8303\u56f4\u5185\u6ca1\u627e\u5230\u5339\u914d\u7684\u7ed3\u6784, \u8c03\u5927\u641c\u7d22\u8303\u56f4\u518d\u8bd5");
+            return;
+        }
+        StructureLocatorFeature.rememberTarget(key, bestCx, bestCz);
+        int dist = Math.sqrt(bestDistSq);
+        StructureLocatorFeature.msg("\u00a7f" + t.name + "  \u00a77\u5750\u6807: \u00a7bX=" + bestX + " Z=" + bestZ + " \u00a77(\u7ea6" + dist + "\u683c)");
+        StructureLocatorFeature.doTravel(travel, dimOk, t, bestX, bestZ);
     }
 
     private static ChunkPos calcRandomSpreadPos(long seed, int salt, int spacing, int separation, String spread, int rx, int rz) {
-        RandomSource random = RandomSource.create();
-        long key = (long) rx * 341873128712L + (long) rz * 132897987541L + seed + salt;
-        random.setSeed(key);
-        int offX = random.nextInt(spacing - separation);
-        int offZ = random.nextInt(spacing - separation);
+        RandomSource random = RandomSource.m_216327_();
+        long key = rx * 341873128712L + rz * 132897987541L + seed + salt;
+        random.m_188584_(key);
+        int offX = random.m_188503_(spacing - separation);
+        int offZ = random.m_188503_(spacing - separation);
         return new ChunkPos(rx * spacing + offX, rz * spacing + offZ);
     }
 
     private static void locateStronghold(Target t, long seed, boolean travel, boolean dimOk) {
-        Minecraft mc = getMc();
-        if (mc == null) return;
-        List<ChunkPos> positions = strongholdPositions(seed, t.ringCount, t.ringDist, t.ringSpread);
-        int px = (int) mc.player.getX(), pz = (int) mc.player.getZ();
-        String key = blKey(seed, t.id);
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc == null) {
+            return;
+        }
+        List<ChunkPos> positions = StructureLocatorFeature.strongholdPositions(seed, t.ringCount, t.ringDist, t.ringSpread);
+        int px = mc.player.getX();
+        int pz = mc.player.getZ();
+        String key = StructureLocatorFeature.blKey(seed, t.id);
         Set<Long> bl = skipped.get(key);
         long bestDistSq = Long.MAX_VALUE;
-        int bestX = 0, bestZ = 0, bestCx = 0, bestCz = 0;
+        int bestX = 0;
+        int bestZ = 0;
+        int bestCx = 0;
+        int bestCz = 0;
         boolean found = false;
         for (ChunkPos cp : positions) {
-            if (bl != null && bl.contains(packChunk(cp.x, cp.z))) continue;
-            int bx = cp.x * 16 + 8, bz = cp.z * 16 + 8;
-            long d = (long)(bx - px) * (bx - px) + (long)(bz - pz) * (bz - pz);
-            if (d >= bestDistSq) continue;
-            bestDistSq = d; bestX = bx; bestZ = bz; bestCx = cp.x; bestCz = cp.z; found = true;
+            int bz;
+            int bx;
+            long d;
+            if (bl != null && bl.contains(StructureLocatorFeature.packChunk(cp.f_45578_, cp.f_45579_)) || (d = ((bx = cp.f_45578_ * 16 + 8) - px) * (bx - px) + ((bz = cp.f_45579_ * 16 + 8) - pz) * (bz - pz)) >= bestDistSq) continue;
+            bestDistSq = d;
+            bestX = bx;
+            bestZ = bz;
+            bestCx = cp.f_45578_;
+            bestCz = cp.f_45579_;
+            found = true;
         }
-        if (!found) { msg("§c没算出要位置"); return; }
-        rememberTarget(key, bestCx, bestCz);
-        int dist = (int) Math.sqrt(bestDistSq);
-        msg("§f" + t.name + " §7(同心环, 到点附近找传送门)  §7坐标: §bX=" + bestX + " Z=" + bestZ + " §7(约" + dist + "格)");
-        doTravel(travel, dimOk, t, bestX, bestZ);
+        if (!found) {
+            StructureLocatorFeature.msg("\u00a7c\u6ca1\u7b97\u51fa\u8981\u4f4d\u7f6e");
+            return;
+        }
+        StructureLocatorFeature.rememberTarget(key, bestCx, bestCz);
+        int dist = Math.sqrt(bestDistSq);
+        StructureLocatorFeature.msg("\u00a7f" + t.name + " \u00a77(\u540c\u5fc3\u73af, \u5230\u70b9\u9644\u8fd1\u627e\u4f20\u9001\u95e8)  \u00a77\u5750\u6807: \u00a7bX=" + bestX + " Z=" + bestZ + " \u00a77(\u7ea6" + dist + "\u683c)");
+        StructureLocatorFeature.doTravel(travel, dimOk, t, bestX, bestZ);
     }
 
     private static void doTravel(boolean travel, boolean dimOk, Target t, int x, int z) {
-        if (!travel) return;
-        if (!dimOk) { msg("§e当前不在[" + dimName(t.dim) + "], 已显示坐标"); return; }
-        if (!BaritoneBridge.isAvailable()) { msg("§e未安装 Baritone, 已显示坐标"); return; }
-        // 前往新位置时自动清除旧标记
-        if (markedX >= 0) { markedX = markedZ = -1; }
+        if (!travel) {
+            return;
+        }
+        if (!dimOk) {
+            StructureLocatorFeature.msg("\u00a7e\u5f53\u524d\u4e0d\u5728[" + StructureLocatorFeature.dimName(t.dim) + "], \u5df2\u663e\u793a\u5750\u6807");
+            return;
+        }
+        if (!BaritoneBridge.isAvailable()) {
+            StructureLocatorFeature.msg("\u00a7e\u672a\u5b89\u88c5 Baritone, \u5df2\u663e\u793a\u5750\u6807");
+            return;
+        }
+        if (markedX >= 0) {
+            markedZ = -1;
+            markedX = -1;
+        }
         BaritoneBridge.gotoCoordSilent(x, 120, z);
-        msg("§a已让 Baritone 前往 (goto " + x + " 120 " + z + ")");
+        StructureLocatorFeature.msg("\u00a7a\u5df2\u8ba9 Baritone \u524d\u5f80 (goto " + x + " 120 " + z + ")");
     }
 
     private static void rememberTarget(String key, int cx, int cz) {
-        hasLastTarget = true; lastTargetKey = key; lastTargetCx = cx; lastTargetCz = cz;
+        hasLastTarget = true;
+        lastTargetKey = key;
+        lastTargetCx = cx;
+        lastTargetCz = cz;
     }
 
     private static List<ChunkPos> strongholdPositions(long seed, int count, int distance, int spread) {
-        List<ChunkPos> list = new ArrayList<>();
-        WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(0L));
-        random.setLargeFeatureSeed(seed, 0, 0);
-        double angle = random.nextDouble() * Math.PI * 2.0;
-        int ring = 0, placed = 0, curSpread = spread;
-        for (int i = 0; i < count; i++) {
-            double d = 4.0 * distance + (distance * ring * 6) + (random.nextDouble() - 0.5) * distance * 2.5;
-            int cx = (int) Math.round(Math.cos(angle) * d);
-            int cz = (int) Math.round(Math.sin(angle) * d);
+        ArrayList<ChunkPos> list = new ArrayList<ChunkPos>();
+        WorldgenRandom random = new WorldgenRandom((RandomSource)new LegacyRandomSource(0L));
+        random.m_190068_(seed, 0, 0);
+        double angle = random.m_188500_() * Math.PI * 2.0;
+        int ring = 0;
+        int placed = 0;
+        int curSpread = spread;
+        for (int i = 0; i < count; ++i) {
+            double d = 4.0 * distance + (distance * ring * 6) + (random.m_188500_() - 0.5) * distance * 2.5;
+            int cx = Math.round(Math.cos(angle) * d);
+            int cz = Math.round(Math.sin(angle) * d);
             list.add(new ChunkPos(cx, cz));
-            angle += Math.PI * 2.0 / curSpread;
+            angle += Math.PI * 2 / curSpread;
             if (++placed != curSpread) continue;
-            placed = 0; curSpread += 2 * curSpread / (++ring + 1);
+            placed = 0;
+            curSpread += 2 * curSpread / (++ring + 1);
             curSpread = Math.min(curSpread, count - i - 1);
-            angle += random.nextDouble() * Math.PI * 2.0;
+            angle += random.m_188500_() * Math.PI * 2.0;
         }
         return list;
     }
 
-    private static String blKey(long seed, String id) { return seed + "/" + id; }
-    private static long packChunk(int cx, int cz) { return (long) cx << 32 | (long) cz & 0xFFFFFFFFL; }
+    private static String blKey(long seed, String id) {
+        return seed + "/" + id;
+    }
+
+    private static long packChunk(int cx, int cz) {
+        return cx << 32 | cz & 0xFFFFFFFFL;
+    }
 
     private static Dim currentDim() {
-        Minecraft mc = getMc();
-        if (mc == null || mc.level == null) return Dim.OVERWORLD;
-        ResourceKey<Level> d = mc.level.dimension();
-        if (d == Level.NETHER) return Dim.NETHER;
-        if (d == Level.END) return Dim.END;
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc == null || mc.f_91073_ == null) {
+            return Dim.OVERWORLD;
+        }
+        ResourceKey d = mc.f_91073_.m_46472_();
+        if (d == Level.f_46429_) {
+            return Dim.NETHER;
+        }
+        if (d == Level.f_46430_) {
+            return Dim.END;
+        }
         return Dim.OVERWORLD;
     }
 
     private static SeedBiomeSampler.Dim toSeedDim(Dim d) {
-        return d == Dim.NETHER ? SeedBiomeSampler.Dim.NETHER : d == Dim.END ? SeedBiomeSampler.Dim.END : SeedBiomeSampler.Dim.OVERWORLD;
+        return d == Dim.NETHER ? SeedBiomeSampler.Dim.NETHER : (d == Dim.END ? SeedBiomeSampler.Dim.END : SeedBiomeSampler.Dim.OVERWORLD);
     }
 
     public static String dimName(Dim d) {
-        if (d == Dim.NETHER) return "下界";
-        if (d == Dim.END) return "末地";
-        return "主世界";
+        if (d == Dim.NETHER) {
+            return "\u4e0b\u754c";
+        }
+        if (d == Dim.END) {
+            return "\u672b\u5730";
+        }
+        return "\u4e3b\u4e16\u754c";
     }
 
     public static void msg(String s) {
-        Minecraft mc = getMc();
-        if (mc != null && mc.player != null) mc.player.displayClientMessage(Component.literal(PREFIX + s), false);
+        Minecraft mc = StructureLocatorFeature.getMc();
+        if (mc != null && mc.player != null) {
+            mc.player.m_5661_(Component.literal((String)(PREFIX + s)), false);
+        }
     }
 
-    /** 标记显示名称 */
-    private static String markName = "";
-
-    // ──────── 类型 ────────
-    public enum Dim { OVERWORLD, NETHER, END }
-    public enum Kind { RANDOM_SPREAD, CONCENTRIC_RINGS }
+    static {
+        TARGETS.add(Target.rs("villages", "\u6751\u5e84", Dim.OVERWORLD, 34, 8, 10387312, "linear", 64, Set.of(Biomes.f_48202_, Biomes.f_48203_, Biomes.f_48157_, Biomes.f_186761_, Biomes.f_48206_)));
+        TARGETS.add(Target.rs("desert_pyramids", "\u6c99\u6f20\u795e\u6bbf", Dim.OVERWORLD, 32, 8, 14357617, "linear", 64, Set.of(Biomes.f_48203_)));
+        TARGETS.add(Target.rs("igloos", "\u96ea\u5c4b", Dim.OVERWORLD, 32, 8, 14357618, "linear", 64, Set.of(Biomes.f_186761_, Biomes.f_48182_, Biomes.f_48152_)));
+        TARGETS.add(Target.rs("jungle_temples", "\u4e1b\u6797\u795e\u5e99", Dim.OVERWORLD, 32, 8, 14357619, "linear", 64, Set.of(Biomes.f_48222_, Biomes.f_48197_)));
+        TARGETS.add(Target.rs("swamp_huts", "\u5973\u5deb\u5c0f\u5c4b", Dim.OVERWORLD, 32, 8, 14357620, "linear", 64, Set.of(Biomes.f_48207_)));
+        TARGETS.add(Target.rs("pillager_outposts", "\u63a0\u593a\u8005\u524d\u54e8", Dim.OVERWORLD, 32, 8, 165745296, "linear", 64, null));
+        TARGETS.add(Target.rs("woodland_mansions", "\u6797\u5730\u5e9c\u90b8", Dim.OVERWORLD, 80, 20, 10387319, "triangular", 64, Set.of(Biomes.f_48151_)));
+        TARGETS.add(Target.rs("trail_ruins", "\u53e4\u8ff9\u5e9f\u589f", Dim.OVERWORLD, 34, 8, 83469867, "linear", 64, null));
+        TARGETS.add(Target.rs("ruined_portals", "\u5e9f\u5f03\u4f20\u9001\u95e8(\u4e3b\u4e16\u754c)", Dim.OVERWORLD, 40, 15, 34222645, "linear", 64, null));
+        TARGETS.add(Target.rs("ocean_monuments", "\u6d77\u5e95\u795e\u6bbf", Dim.OVERWORLD, 32, 5, 10387313, "triangular", 64, Set.of(Biomes.f_48171_, Biomes.f_48172_, Biomes.f_48170_, Biomes.f_48225_)));
+        TARGETS.add(Target.rs("ocean_ruins", "\u6d77\u5e95\u5e9f\u589f", Dim.OVERWORLD, 20, 8, 14357621, "linear", 64, null));
+        TARGETS.add(Target.rs("shipwrecks", "\u6c89\u8239", Dim.OVERWORLD, 24, 4, 165745295, "linear", 64, null));
+        TARGETS.add(Target.rs("ancient_cities", "\u53e4\u57ce(\u76d1\u5b88\u8005)", Dim.OVERWORLD, 24, 8, 20083232, "linear", -50, Set.of(Biomes.f_220594_)));
+        TARGETS.add(Target.rs("nether_fossils", "\u4e0b\u754c\u5316\u77f3", Dim.NETHER, 2, 1, 14357921, "linear", 64, Set.of(Biomes.f_48199_)));
+        TARGETS.add(Target.rs("nether_complexes", "\u4e0b\u754c\u8981\u585e/\u5821\u5792", Dim.NETHER, 27, 4, 30084232, "linear", 64, null));
+        TARGETS.add(Target.rs("end_cities", "\u672b\u5730\u57ce", Dim.END, 20, 11, 10387313, "triangular", 64, Set.of(Biomes.f_48163_, Biomes.f_48164_)));
+        TARGETS.add(Target.rings("strongholds", "\u8981\u585e(\u542b\u672b\u5730\u4f20\u9001\u95e8)", 128, 32, 3));
+        TARGETS.add(Target.rs("acropolis", "\u00a7c\u536b\u57ce", Dim.OVERWORLD, 80, 50, 913530101, "linear", 64, null));
+        TARGETS.add(Target.rs("ancient_factory", "\u00a7c\u8fdc\u53e4\u5de5\u5382", Dim.OVERWORLD, 112, 70, 319514301, "linear", 64, null));
+        TARGETS.add(Target.rs("burning_arena", "\u00a7c\u71c3\u70e7\u7ade\u6280\u573a(\u706b\u7130\u5de8\u50cf)", Dim.NETHER, 80, 50, 533522197, "linear", 64, null));
+        TARGETS.add(Target.rs("cursed_pyramid", "\u00a7c\u8bc5\u5492\u91d1\u5b57\u5854", Dim.OVERWORLD, 80, 50, 577299997, "linear", 64, null));
+        TARGETS.add(Target.rs("frosted_prison", "\u00a7c\u51b0\u5c01\u76d1\u72f1", Dim.OVERWORLD, 80, 50, 1577172143, "linear", 64, null));
+        TARGETS.add(Target.rs("ruined_citadel", "\u00a7c\u5e9f\u5f03\u57ce\u5821(\u672b\u5f71\u5b88\u536b)", Dim.END, 50, 25, 367895146, "linear", 64, null));
+        TARGETS.add(Target.rs("soul_black_smith", "\u00a7c\u7075\u9b42\u94c1\u5320\u94fa", Dim.NETHER, 60, 50, 1984567320, "linear", 64, null));
+        TARGETS.add(Target.rs("sunken_city", "\u00a7c\u6c89\u6ca1\u4e4b\u57ce(\u5229\u7ef4\u5766)", Dim.OVERWORLD, 100, 70, 1673928450, "triangular", 64, null));
+        markName = "";
+    }
 
     public static final class Target {
-        public final String id, name, spread;
+        public final String id;
+        public final String name;
+        public final String spread;
         public final Dim dim;
         public final Kind kind;
-        public final int spacing, separation, salt, ringCount, ringDist, ringSpread, sampleY;
+        public final int spacing;
+        public final int separation;
+        public final int salt;
+        public final int ringCount;
+        public final int ringDist;
+        public final int ringSpread;
+        public final int sampleY;
         public final Set<ResourceKey<Biome>> biomes;
 
-        public Target(String id, String name, Dim dim, Kind kind, int spacing, int sep, int salt, String spread,
-                      int ringCount, int ringDist, int ringSpread, int sampleY, Set<ResourceKey<Biome>> biomes) {
-            this.id = id; this.name = name; this.dim = dim; this.kind = kind;
-            this.spacing = spacing; this.separation = sep; this.salt = salt; this.spread = spread;
-            this.ringCount = ringCount; this.ringDist = ringDist; this.ringSpread = ringSpread;
-            this.sampleY = sampleY; this.biomes = biomes;
+        public Target(String id, String name, Dim dim, Kind kind, int spacing, int sep, int salt, String spread, int ringCount, int ringDist, int ringSpread, int sampleY, Set<ResourceKey<Biome>> biomes) {
+            this.id = id;
+            this.name = name;
+            this.dim = dim;
+            this.kind = kind;
+            this.spacing = spacing;
+            this.separation = sep;
+            this.salt = salt;
+            this.spread = spread;
+            this.ringCount = ringCount;
+            this.ringDist = ringDist;
+            this.ringSpread = ringSpread;
+            this.sampleY = sampleY;
+            this.biomes = biomes;
         }
+
         static Target rs(String id, String name, Dim dim, int s, int sep, int salt, String spread, int sy, Set<ResourceKey<Biome>> b) {
             return new Target(id, name, dim, Kind.RANDOM_SPREAD, s, sep, salt, spread, 0, 0, 0, sy, b);
         }
+
         static Target rings(String id, String name, int c, int d, int sp) {
             return new Target(id, name, Dim.OVERWORLD, Kind.CONCENTRIC_RINGS, 0, 0, 0, "linear", c, d, sp, 64, null);
         }
     }
+
+    public static enum Dim {
+        OVERWORLD,
+        NETHER,
+        END;
+
+    }
+
+    public static enum Kind {
+        RANDOM_SPREAD,
+        CONCENTRIC_RINGS;
+
+    }
 }
+

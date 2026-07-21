@@ -1,79 +1,83 @@
-package fku.org.example.fku.client.gui.components; /* water */
+package fku.org.example.fku.client.gui.components;
 
+import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.GuiPanel;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.features.arrowdmg.ArrowDmgComponent;
 import fku.org.example.fku.features.criticals.CriticalsComponent;
+import fku.org.example.fku.features.killaura.KillAuraComponent;
 import fku.org.example.fku.features.knockback.KnockbackConfig;
 import fku.org.example.fku.features.knockback.KnockbackConfigScreen;
 import fku.org.example.fku.features.quickswitch.QuickSwitchComponent;
-import fku.org.example.fku.features.killaura.KillAuraComponent;
 import fku.org.example.fku.features.tpaura.TpAuraComponent;
-import fku.org.example.fku.client.gui.GuiRenderHelper;
-import fku.org.example.fku.config.GuiStyleConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 战斗面板
- * 仅保留自由击退方向的总开关，右键打开详细配置界面。
- * 所有模式选择、参数调节已迁移至 KnockbackConfigScreen。
- */
-public class CombatPanel extends GuiPanel {
-
+public class CombatPanel
+extends GuiPanel {
     public CombatPanel() {
-        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 120, 120);
+        super("\u6218\u6597", (Integer)FkuConfig.combatPanelX.get(), (Integer)FkuConfig.combatPanelY.get(), 120, 120);
     }
 
     @Override
     protected void init() {
-        // ★ 击退方向功能总开关（左键开关，右键配置界面）
-        addComponent(new ToggleComponent(0, 0, 110, 20, "击退方向") {
-            @Override protected boolean isEnabled() { return KnockbackConfig.getInstance().enabled; }
-            @Override protected void toggle() { KnockbackConfig cfg = KnockbackConfig.getInstance(); cfg.setEnabled(!cfg.enabled); }
-            @Override protected void saveConfig() { KnockbackConfig.save(); }
+        this.addComponent(new ToggleComponent(0, 0, 110, 20, "\u51fb\u9000\u65b9\u5411"){
+
+            @Override
+            protected boolean isEnabled() {
+                return KnockbackConfig.getInstance().enabled;
+            }
+
+            @Override
+            protected void toggle() {
+                KnockbackConfig cfg = KnockbackConfig.getInstance();
+                cfg.setEnabled(!cfg.enabled);
+            }
+
+            @Override
+            protected void saveConfig() {
+                KnockbackConfig.save();
+            }
 
             @Override
             public void render(GuiGraphics g, int mx, int my, float pt) {
-                if (!visible) return;
+                if (!this.visible) {
+                    return;
+                }
                 GuiStyleConfig config = GuiStyleConfig.getInstance();
-                boolean enabled = isEnabled();
-                GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-                String displayStr = label + ": " + (enabled ? "ON" : "OFF");
+                boolean enabled = this.isEnabled();
+                GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, enabled);
+                String displayStr = this.label + ": " + (enabled ? "ON" : "OFF");
                 int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
-                g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
-                // ★ 右键打开配置提示
-                g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+                g.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2, textColor);
+                g.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2, 0x888888);
             }
 
             @Override
             public boolean mouseClicked(double mx, double my, int button) {
-                if (!isHovered(mx, my)) return false;
+                if (!this.isHovered(mx, my)) {
+                    return false;
+                }
                 if (button == 0) {
-                    toggle();
-                    saveConfig();
+                    this.toggle();
+                    this.saveConfig();
                     return true;
-                } else if (button == 1) {
-                    Minecraft.getInstance().setScreen(new KnockbackConfigScreen());
+                }
+                if (button == 1) {
+                    Minecraft.getInstance().setScreen((Screen)new KnockbackConfigScreen());
                     return true;
                 }
                 return false;
             }
         });
-
-        // ★ 如来神掌功能开关（左键开关，右键配置界面）
-        addComponent(new TpAuraComponent(0, 0, 110, 25));
-
-        // ★ 鬼手秒切功能开关（左键开关，右键配置界面）
-        addComponent(new QuickSwitchComponent(0, 0, 110, 20));
-
-        // ★ 32k弓功能开关
-        addComponent(new ArrowDmgComponent(0, 0, 110, 25));
-
-        // ★ 杀戮光环（左键开关，右键配置）
-        addComponent(new KillAuraComponent(0, 0, 110, 22));
-
-        // ★ 刀刀暴击（左键开关，右键配置；借鉴 Wurst 的 Criticals）
-        addComponent(new CriticalsComponent(0, 0, 110, 22));
+        this.addComponent(new TpAuraComponent(0, 0, 110, 25));
+        this.addComponent(new QuickSwitchComponent(0, 0, 110, 20));
+        this.addComponent(new ArrowDmgComponent(0, 0, 110, 25));
+        this.addComponent(new KillAuraComponent(0, 0, 110, 22));
+        this.addComponent(new CriticalsComponent(0, 0, 110, 22));
     }
 
     @Override
@@ -82,3 +86,4 @@ public class CombatPanel extends GuiPanel {
         FkuConfig.combatPanelY.set(this.y);
     }
 }
+

@@ -1,11 +1,14 @@
-package fku.org.example.fku.features.worldedit; /* water */
+package fku.org.example.fku.features.worldedit;
 
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.worldedit.SelectionManager;
+import fku.org.example.fku.features.worldedit.SuperDistanceInteraction;
+import fku.org.example.fku.features.worldedit.TaskQueue;
+import fku.org.example.fku.features.worldedit.ToolManager;
+import fku.org.example.fku.features.worldedit.WorldEditConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -13,126 +16,107 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * WorldEdit Lite 主控类
- *
- * 职责：
- * 1. 注册事件订阅（聊天指令、Tick、渲染、点击）
- * 2. 管理超远距离头盔交互
- * 3. 驱动任务队列
- * 4. 驱动选区渲染
- * 5. 非创造模式自动禁用
- */
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class WorldEditFeature {
-
-    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean initialized = false;
 
-    /**
-     * 初始化
-     */
-    public static void init() {
-        if (initialized) return;
-        initialized = true;
-
-        WorldEditConfig.getInstance(); // 加载配置
-        Fku.LOGGER.info("[WorldEdit] 功能已初始化");
+    private static Minecraft getMc() {
+        return Minecraft.getInstance();
     }
 
-    /**
-     * Tick 事件 — 驱动任务队列 + 安全检查
-     */
+    public static void init() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+        WorldEditConfig.getInstance();
+        Fku.LOGGER.info("[WorldEdit] \u529f\u80fd\u5df2\u521d\u59cb\u5316");
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         WorldEditConfig cfg = WorldEditConfig.getInstance();
-        Minecraft mc = getMc();
-        if (mc == null || !cfg.enabled) return;
-        if (mc.player == null || mc.level == null) return;
-
-        // 非创造模式自动禁用
-        if (!mc.player.getAbilities().instabuild && cfg.safeMode) {
+        Minecraft mc = WorldEditFeature.getMc();
+        if (mc == null || !cfg.enabled) {
+            return;
+        }
+        if (mc.player == null || mc.f_91073_ == null) {
+            return;
+        }
+        if (!mc.player.m_150110_().f_35937_ && cfg.safeMode) {
             if (cfg.enabled) {
-                autoDisable("§cWorldEdit 仅创造模式可用");
+                WorldEditFeature.autoDisable("\u00a7cWorldEdit \u4ec5\u521b\u9020\u6a21\u5f0f\u53ef\u7528");
             }
             return;
         }
-
-        // 驱动任务队列
         TaskQueue.getInstance().tick();
     }
 
-    /**
-     * 渲染事件 — 选区边框
-     */
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            return;
+        }
         WorldEditConfig cfg = WorldEditConfig.getInstance();
-        Minecraft mc = getMc();
-        if (mc == null || !cfg.enabled || !cfg.renderSelection) return;
-        if (mc.player == null || mc.level == null) return;
-
+        Minecraft mc = WorldEditFeature.getMc();
+        if (mc == null || !cfg.enabled || !cfg.renderSelection) {
+            return;
+        }
+        if (mc.player == null || mc.f_91073_ == null) {
+            return;
+        }
         SelectionManager.getInstance().renderSelection(event.getPoseStack(), event.getPartialTick());
     }
 
-    /**
-     * 鼠标点击事件 — 工具处理 + 超远交互
-     */
     @SubscribeEvent
     public static void onClickInput(InputEvent.InteractionKeyMappingTriggered event) {
-        WorldEditConfig cfg = WorldEditConfig.getInstance();
-        Minecraft mc = getMc();
-        if (mc == null || !cfg.enabled) return;
-        if (mc.player == null || mc.level == null) return;
-
-        // 非创造模式安全检查
-        if (!mc.player.getAbilities().instabuild && cfg.safeMode) return;
-
-        // 工具处理（选区等）
-        int button = event.isAttack() ? 0 : (event.isUseItem() ? 1 : -1);
-        if (button < 0) return;
-
-        InteractionHand hand = event.getHand();
         boolean handled;
-
-        // 先尝试工具处理
+        int button;
+        WorldEditConfig cfg = WorldEditConfig.getInstance();
+        Minecraft mc = WorldEditFeature.getMc();
+        if (mc == null || !cfg.enabled) {
+            return;
+        }
+        if (mc.player == null || mc.f_91073_ == null) {
+            return;
+        }
+        if (!mc.player.m_150110_().f_35937_ && cfg.safeMode) {
+            return;
+        }
+        int n = event.isAttack() ? 0 : (button = event.isUseItem() ? 1 : -1);
+        if (button < 0) {
+            return;
+        }
+        InteractionHand hand = event.getHand();
         if (ToolManager.getInstance().getCurrentTool().equals("wand")) {
             handled = ToolManager.getInstance().handleClick(button, hand);
         } else {
-            // 再尝试超远交互
-            if (SuperDistanceInteraction.getInstance().isHelmetEquipped()) {
-                handled = SuperDistanceInteraction.getInstance().handleClick(button, hand);
-                if (handled) {
-                    event.setCanceled(true);
-                    event.setSwingHand(false);
-                    return;
-                }
+            if (SuperDistanceInteraction.getInstance().isHelmetEquipped() && (handled = SuperDistanceInteraction.getInstance().handleClick(button, hand))) {
+                event.setCanceled(true);
+                event.setSwingHand(false);
+                return;
             }
             handled = ToolManager.getInstance().handleClick(button, hand);
         }
-
         if (handled) {
             event.setCanceled(true);
             event.setSwingHand(false);
         }
     }
 
-    /**
-     * 自动禁用
-     */
     private static void autoDisable(String reason) {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         cfg.setEnabled(false);
         SuperDistanceInteraction.getInstance().disable();
         ToolManager.getInstance().disableAll();
         TaskQueue.getInstance().cancel();
-
-        Minecraft mc = getMc();
+        Minecraft mc = WorldEditFeature.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.displayClientMessage(
-                    Component.literal("§c[WorldEdit] " + reason), true);
+            mc.player.m_5661_(Component.literal((String)("\u00a7c[WorldEdit] " + reason)), true);
         }
     }
 }
+

@@ -1,6 +1,6 @@
 package fku.org.example.fku.features.baritone;
 
-import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.baritone.BaritoneConfig;
 import fku.org.example.fku.util.BaritoneBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -11,19 +11,14 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/**
- * Baritone 允许任意维度鞘翅
- * <p>
- * 强制 Baritone 的鞘翅飞行在所有维度可用，解除 Y 轴限制。
- * 开启时自动接受 Baritone 的鞘翅条款。
- * <p>
- * 参考：lexis.Hack.Hacks.Baritone.ElytraAnywhereHack
- */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class ElytraAnywhereFeature {
-
     private static boolean wasElytraEquipped = false;
+    public static volatile boolean hasGoal = false;
+    public static int goalX;
+    public static int goalY;
+    public static int goalZ;
 
     public static boolean isEnabled() {
         return BaritoneConfig.getInstance().elytraEnabled;
@@ -35,7 +30,9 @@ public class ElytraAnywhereFeature {
         cfg.save();
         if (v) {
             wasElytraEquipped = false;
-            if (!BaritoneBridge.isAvailable()) return;
+            if (!BaritoneBridge.isAvailable()) {
+                return;
+            }
             BaritoneBridge.suppressNextSetMessage();
             BaritoneBridge.executeCommand("set elytraTermsAccepted true");
         } else {
@@ -43,9 +40,6 @@ public class ElytraAnywhereFeature {
             wasElytraEquipped = false;
         }
     }
-
-    public static volatile boolean hasGoal = false;
-    public static int goalX, goalY, goalZ;
 
     public static void setGoal(int x, int y, int z) {
         goalX = x;
@@ -56,10 +50,14 @@ public class ElytraAnywhereFeature {
 
     @SubscribeEvent
     public static void onTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        double dz;
+        double dy;
+        double dx;
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         BaritoneConfig cfg = BaritoneConfig.getInstance();
-
         if (!cfg.elytraEnabled || mc.player == null) {
             if (hasGoal) {
                 hasGoal = false;
@@ -67,21 +65,13 @@ public class ElytraAnywhereFeature {
             }
             return;
         }
-
-        // 到达目标 5 格内自动停止
-        if (hasGoal) {
-            double dx = mc.player.getX() - goalX;
-            double dy = mc.player.getY() - goalY;
-            double dz = mc.player.getZ() - goalZ;
-            if (Math.sqrt(dx * dx + dy * dy + dz * dz) < 5.0) {
-                BaritoneBridge.stop();
-                hasGoal = false;
-                wasElytraEquipped = false;
-                return;
-            }
+        if (hasGoal && Math.sqrt((dx = mc.player.getX() - goalX) * dx + (dy = mc.player.getY() - goalY) * dy + (dz = mc.player.getZ() - goalZ) * dz) < 5.0) {
+            BaritoneBridge.stop();
+            hasGoal = false;
+            wasElytraEquipped = false;
+            return;
         }
-
-        boolean hasElytra = mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
+        boolean hasElytra = mc.player.m_6844_(EquipmentSlot.CHEST).m_150930_(Items.f_42741_);
         if (hasGoal && wasElytraEquipped && !hasElytra && BaritoneBridge.isAvailable()) {
             BaritoneBridge.stop();
             hasGoal = false;
@@ -92,10 +82,11 @@ public class ElytraAnywhereFeature {
     }
 
     public static boolean isProtecting() {
-        return isEnabled() && hasGoal && BaritoneBridge.isElytraActive();
+        return ElytraAnywhereFeature.isEnabled() && hasGoal && BaritoneBridge.isElytraActive();
     }
 
     public static void emergencyStop() {
         hasGoal = false;
     }
 }
+

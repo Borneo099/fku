@@ -1,8 +1,12 @@
-package fku.org.example.fku.features.antilag; /* water */
+package fku.org.example.fku.features.antilag;
 
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.antilag.AntiLagConfig;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
@@ -14,181 +18,128 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-/**
- * AntiLag（防拉回）核心逻辑类
- *
- * ★ 职责：
- *   1. 由 MixinClientPacketListener 调用 onPlayerPositionPacket() 拦截服务端拉回
- *   2. 在 ClientTickEvent 中执行 VClip 自动脱困 + 速率限制重置
- *   3. 管理假位置包的路径拆分发送
- *
- * ★ 设计思想（抓主要矛盾——服务端拉回拦截）：
- *   - Mixin 注入 handlePlayerPosition HEAD + cancel → 在位置被应用前拦截
- *   - 路径拆分（1.16模式）：从服务端位置到玩家位置的插值路径，骗过反作弊
- *   - 限制每秒发包数，防止被踢
- *
- * ★ 参考：
- *   AntiLag.java (Meteor Client) 的完整包拦截 + 假包发送逻辑移植
- */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = Fku.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class AntiLagFeature {
-
-    private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static boolean initialized = false;
-
-    /** 每秒包计数（线程安全） */
     private static final AtomicInteger movePacketCounter = new AtomicInteger(0);
 
-    /**
-     * 初始化
-     */
-    public static void init() {
-        if (initialized) return;
-        initialized = true;
-        AntiLagConfig.getInstance(); // 加载配置
-        Fku.LOGGER.info("[AntiLag] 功能已初始化");
+    private static Minecraft getMc() {
+        return Minecraft.getInstance();
     }
 
-    // ════════════════════════════════════════════════════════
-    // ★ Mixin 回调：由 MixinClientPacketListener.handlePlayerPosition HEAD 注入
-    // ════════════════════════════════════════════════════════
+    public static void init() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+        AntiLagConfig.getInstance();
+        Fku.LOGGER.info("[AntiLag] \u529f\u80fd\u5df2\u521d\u59cb\u5316");
+    }
 
-    /**
-     * 服务端位置同步包拦截处理
-     * 在 ClientPacketListener.handlePlayerPosition() 的 Mixin HEAD 注入中调用
-     *
-     * @param packet  服务端发来的 PlayerPositionLook 包
-     * @param ci      Mixin 回调控制，ci.cancel() 阻止位置被应用
-     */
     public static void onPlayerPositionPacket(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
         AntiLagConfig cfg = AntiLagConfig.getInstance();
-        if (!cfg.enabled) return;
-        Minecraft mc = getMc();
-        if (mc == null) return;
-
+        if (!cfg.enabled) {
+            return;
+        }
+        Minecraft mc = AntiLagFeature.getMc();
+        if (mc == null) {
+            return;
+        }
         LocalPlayer player = mc.player;
-        if (player == null || player.connection == null) return;
-
-        // ★ 服务端目标位置 vs 玩家当前位置
-        Vec3 serverPos = new Vec3(packet.getX(), packet.getY(), packet.getZ());
+        if (player == null || player.f_108617_ == null) {
+            return;
+        }
+        Vec3 serverPos = new Vec3(packet.m_132818_(), packet.m_132821_(), packet.m_132822_());
         Vec3 playerPos = player.position();
-        double dist = playerPos.distanceTo(serverPos);
-
-        // 超出范围 → 放行
-        if (dist > cfg.range) return;
-
-        // ★ 取消原位置更新（防止玩家被拉回）
+        double dist = playerPos.m_82554_(serverPos);
+        if (dist > cfg.range) {
+            return;
+        }
         ci.cancel();
-
-        // ★ 发送确认包（告知服务端"我已收到同步"）
-        player.connection.send(new ServerboundAcceptTeleportationPacket(packet.getId()));
-
-        // ★ 非反拉回模式：发送假位置包欺骗服务端
+        player.f_108617_.m_104955_((Packet)new ServerboundAcceptTeleportationPacket(packet.m_132825_()));
         if (!cfg.back) {
-            // 虚空保护
-            if (!cfg.allowIntoVoid && serverPos.y < player.level().getMinBuildHeight()) return;
-
-            // 检查速率限制
+            if (!cfg.allowIntoVoid && serverPos.y < player.m_9236_().m_141937_()) {
+                return;
+            }
             if (movePacketCounter.get() > cfg.limitPerSecond) {
                 if (cfg.printWhenTooManyPacket) {
-                    player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§7[AntiLag] 达到限速上限，跳过假包发送"),
-                            true);
+                    player.m_5661_(Component.literal((String)"\u00a77[AntiLag] \u8fbe\u5230\u9650\u901f\u4e0a\u9650\uff0c\u8df3\u8fc7\u5047\u5305\u53d1\u9001"), true);
                 }
                 return;
             }
-
             if ("MC1_16".equals(cfg.serverVersionMode)) {
-                // ★ 路径拆分模式：从服务端位置到玩家位置逐步发送小步进包
-                int steps = Math.max(1, (int) Math.ceil(dist / cfg.moveDistance));
-                for (int i = 1; i <= steps; i++) {
-                    double t = (double) i / steps;
+                int steps = Math.max(1, Math.ceil(dist / cfg.moveDistance));
+                for (int i = 1; i <= steps; ++i) {
+                    double t = i / steps;
                     double nx = serverPos.x + (playerPos.x - serverPos.x) * t;
                     double ny = serverPos.y + (playerPos.y - serverPos.y) * t;
                     double nz = serverPos.z + (playerPos.z - serverPos.z) * t;
-                    sendMovePacket(nx, ny, nz, player.onGround());
+                    AntiLagFeature.sendMovePacket(nx, ny, nz, player.m_20096_());
                 }
             } else {
-                // ★ 直接模式：发送当前位置一个包
-                sendMovePacket(playerPos.x, playerPos.y, playerPos.z, player.onGround());
+                AntiLagFeature.sendMovePacket(playerPos.x, playerPos.y, playerPos.z, player.m_20096_());
             }
         }
-
-        // ★ 此时由于 ci.cancel()，玩家位置仍为原始 clientPos，无需 setPos
-        Fku.LOGGER.debug("[AntiLag] 拦截拉回: dist={}, server={}, client={}", dist, serverPos, playerPos);
+        Fku.LOGGER.debug("[AntiLag] \u62e6\u622a\u62c9\u56de: dist={}, server={}, client={}", new Object[]{dist, serverPos, playerPos});
     }
-
-    // ════════════════════════════════════════════════════════
-    // ★ Tick 事件：VClip 自动脱困 + 速率限制重置
-    // ════════════════════════════════════════════════════════
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+        if (event.phase != TickEvent.Phase.START) {
+            return;
+        }
         AntiLagConfig cfg = AntiLagConfig.getInstance();
-        if (!cfg.enabled) return;
-        Minecraft mc = getMc();
-        if (mc == null || mc.player == null || mc.level == null) return;
-
+        if (!cfg.enabled) {
+            return;
+        }
+        Minecraft mc = AntiLagFeature.getMc();
+        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+            return;
+        }
         LocalPlayer player = mc.player;
-
-        // ★ 每秒重置包计数器
         long now = System.currentTimeMillis();
-        if (now - cfg.lastResetTime >= 1000) {
+        if (now - cfg.lastResetTime >= 1000L) {
             movePacketCounter.set(0);
             cfg.lastResetTime = now;
             cfg.rateLimited = false;
         }
-
-        // ★ VClip 自动脱困：水平碰撞 + 正在移动 + 非反拉回模式
         if (!cfg.back) {
-            boolean isMoving = player.zza != 0 || player.xxa != 0;
-            if (isMoving && player.horizontalCollision) {
-                double dy = 0;
+            boolean isMoving;
+            boolean bl = isMoving = player.f_20902_ != 0.0f || player.f_20900_ != 0.0f;
+            if (isMoving && player.f_19862_) {
+                double dy = 0.0;
                 if ("OnlyUp".equals(cfg.searchVclipMode) || "Both".equals(cfg.searchVclipMode)) {
                     dy = cfg.searchFindStep;
                 } else if ("Down".equals(cfg.searchVclipMode) || "Both".equals(cfg.searchVclipMode)) {
                     dy = -cfg.searchFindStep;
                 }
-                if (dy != 0) {
-                    player.setPos(player.getX(), player.getY() + dy, player.getZ());
-                    Fku.LOGGER.debug("[AntiLag] VClip 自动脱困: dy={}", dy);
+                if (dy != 0.0) {
+                    player.m_6034_(player.getX(), player.getY() + dy, player.getZ());
+                    Fku.LOGGER.debug("[AntiLag] VClip \u81ea\u52a8\u8131\u56f0: dy={}", dy);
                 }
             }
         }
     }
 
-    // ════════════════════════════════════════════════════════
-    // ★ 工具方法
-    // ════════════════════════════════════════════════════════
-
-    /**
-     * 发送假位置包（带速率计数）
-     */
     private static void sendMovePacket(double x, double y, double z, boolean onGround) {
-        Minecraft mc = getMc();
-        if (mc == null) return;
+        Minecraft mc = AntiLagFeature.getMc();
+        if (mc == null) {
+            return;
+        }
         LocalPlayer player = mc.player;
-        if (player == null || player.connection == null) return;
-
-        // 速率限制检查
+        if (player == null || player.f_108617_ == null) {
+            return;
+        }
         if (movePacketCounter.incrementAndGet() > AntiLagConfig.getInstance().limitPerSecond) {
             AntiLagConfig.getInstance().rateLimited = true;
             return;
         }
-
-        player.connection.send(new ServerboundMovePlayerPacket.PosRot(
-                x, y, z,
-                player.getYRot(),
-                player.getXRot(),
-                onGround));
+        player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.PosRot(x, y, z, player.m_146908_(), player.m_146909_(), onGround));
     }
 
-    /** 获取当前秒发包数（用于GUI显示） */
     public static int getCurrentPacketCount() {
         return movePacketCounter.get();
     }
 }
+

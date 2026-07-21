@@ -1,147 +1,185 @@
-package fku.org.example.fku.features.displaymodel; /* water */
+package fku.org.example.fku.features.displaymodel;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
 
-/**
- * 实体模型展示配置类
- * 使用JSON持久化，支持运行时实时修改
- *
- * 新增：保存指令行、GUI位置、预设系统
- */
 public class DisplayModelConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static DisplayModelConfig instance;
-
-    /** 同步等待延迟（毫秒）- 默认50 */
     public double placeDelay = 50.0;
-    /** 实体间生成间隔（毫秒）- 默认50 */
     public double generationDelay = 50.0;
-    /** 实体间距（格）- 默认0.5 */
     public double entitySpacing = 0.5;
-    /** 放置坐标 X（0=使用玩家位置） */
     public double placeX = 0.0;
-    /** 放置坐标 Y（0=使用玩家位置） */
     public double placeY = 0.0;
-    /** 放置坐标 Z（0=使用玩家位置） */
     public double placeZ = 0.0;
-    /** 实体可视距离（0=使用默认值） */
     public double viewRange = 0.0;
-
-    /** ★ 保存的指令行（多行），重启游戏后恢复 */
-    public List<String> commandLines = new ArrayList<>();
-
-    /** ★ GUI窗口X位置（-1=居中） */
+    public List<String> commandLines = new ArrayList<String>();
     public int guiX = -1;
-    /** ★ GUI窗口Y位置（-1=居中） */
     public int guiY = -1;
 
     private static File getConfigFile() {
-        File configDir = new File(getGameDirectory(), "fku");
-        if (!configDir.exists()) configDir.mkdirs();
+        File configDir = new File(DisplayModelConfig.getGameDirectory(), "fku");
+        if (!configDir.exists()) {
+            configDir.mkdirs();
+        }
         return new File(configDir, "display_model.json");
     }
 
     private static File getGameDirectory() {
         try {
-            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc != null) return mc.gameDirectory;
-        } catch (Exception ignored) {}
-        return Paths.get("config").toAbsolutePath().normalize().getParent().toFile();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                return mc.gameDirectory;
+            }
+        }
+        catch (Exception exception) {
+            // ignored
+        }
+        return Paths.get("config", new String[0]).toAbsolutePath().normalize().getParent().toFile();
     }
 
     public static DisplayModelConfig getInstance() {
-        if (instance == null) load();
+        if (instance == null) {
+            DisplayModelConfig.load();
+        }
         return instance;
     }
 
     public static void load() {
-        File configFile = getConfigFile();
+        File configFile = DisplayModelConfig.getConfigFile();
         if (configFile.exists()) {
-            try (FileReader reader = new FileReader(configFile)) {
-                instance = GSON.fromJson(reader, DisplayModelConfig.class);
-            } catch (IOException e) {
+            try (FileReader reader = new FileReader(configFile);){
+                instance = (DisplayModelConfig)GSON.fromJson(reader, DisplayModelConfig.class);
+            }
+            catch (IOException e) {
                 instance = new DisplayModelConfig();
             }
         } else {
             instance = new DisplayModelConfig();
-            save();
+            DisplayModelConfig.save();
         }
     }
 
     public static void save() {
-        if (instance == null) return;
-        try (FileWriter writer = new FileWriter(getConfigFile())) {
+        if (instance == null) {
+            return;
+        }
+        try (FileWriter writer = new FileWriter(DisplayModelConfig.getConfigFile());){
             GSON.toJson(instance, writer);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // ════════════ 预设系统 ════════════
-
-    /** 预设文件存储目录 */
     private static File getPresetsDir() {
-        File dir = new File(getGameDirectory(), "fku/display_presets");
-        if (!dir.exists()) dir.mkdirs();
+        File dir = new File(DisplayModelConfig.getGameDirectory(), "fku/display_presets");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
         return dir;
     }
 
-    /** 保存为预设 */
     public static void savePreset(String name, List<String> commands) {
-        File file = new File(getPresetsDir(), name + ".json");
-        try (FileWriter w = new FileWriter(file)) {
+        File file = new File(DisplayModelConfig.getPresetsDir(), name + ".json");
+        try (FileWriter w = new FileWriter(file);){
             GSON.toJson(commands, w);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    /** 加载预设 */
     public static List<String> loadPreset(String name) {
-        File file = new File(getPresetsDir(), name + ".json");
-        if (!file.exists()) return new ArrayList<>();
-        try (FileReader r = new FileReader(file)) {
-            Type type = new TypeToken<List<String>>(){}.getType();
-            List<String> cmds = GSON.fromJson(r, type);
-            return cmds != null ? cmds : new ArrayList<>();
-        } catch (IOException e) {
-            return new ArrayList<>();
+        List list;
+        File file = new File(DisplayModelConfig.getPresetsDir(), name + ".json");
+        if (!file.exists()) {
+            return new ArrayList<String>();
         }
+        FileReader r = new FileReader(file);
+        try {
+            Type type = new TypeToken<List<String>>(){}.getType();
+            List cmds = (List)GSON.fromJson(r, type);
+            list = cmds != null ? cmds : new ArrayList();
+        }
+        catch (Throwable throwable) {
+            try {
+                try {
+                    r.close();
+                }
+                catch (Throwable throwable2) {
+                    throwable.addSuppressed(throwable2);
+                }
+                throw throwable;
+            }
+            catch (IOException e) {
+                return new ArrayList<String>();
+            }
+        }
+        r.close();
+        return list;
     }
 
-    /** 列出所有预设 */
     public static String[] listPresets() {
-        File[] files = getPresetsDir().listFiles((dir, name) -> name.endsWith(".json"));
-        if (files == null) return new String[0];
+        File[] files = DisplayModelConfig.getPresetsDir().listFiles((dir, name) -> name.endsWith(".json"));
+        if (files == null) {
+            return new String[0];
+        }
         String[] names = new String[files.length];
-        for (int i = 0; i < files.length; i++) {
+        for (int i = 0; i < files.length; ++i) {
             names[i] = files[i].getName().replaceAll("\\.json$", "");
         }
         return names;
     }
 
-    /** 删除预设 */
     public static void deletePreset(String name) {
-        new File(getPresetsDir(), name + ".json").delete();
+        new File(DisplayModelConfig.getPresetsDir(), name + ".json").delete();
     }
 
-    // ════════ Setter方法 ════════
-    public void setPlaceDelay(double value) { this.placeDelay = Math.max(0, Math.min(5000, value)); save(); }
-    public void setGenerationDelay(double value) { this.generationDelay = Math.max(0, Math.min(5000, value)); save(); }
-    public void setEntitySpacing(double value) { this.entitySpacing = Math.max(0, Math.min(10, value)); save(); }
-    public void setPlaceX(double value) { this.placeX = value; save(); }
-    public void setPlaceY(double value) { this.placeY = value; save(); }
-    public void setPlaceZ(double value) { this.placeZ = value; save(); }
-    public void setViewRange(double value) { this.viewRange = Math.max(0, Math.min(10000, value)); save(); }
+    public void setPlaceDelay(double value) {
+        this.placeDelay = Math.max(0.0, Math.min(5000.0, value));
+        DisplayModelConfig.save();
+    }
+
+    public void setGenerationDelay(double value) {
+        this.generationDelay = Math.max(0.0, Math.min(5000.0, value));
+        DisplayModelConfig.save();
+    }
+
+    public void setEntitySpacing(double value) {
+        this.entitySpacing = Math.max(0.0, Math.min(10.0, value));
+        DisplayModelConfig.save();
+    }
+
+    public void setPlaceX(double value) {
+        this.placeX = value;
+        DisplayModelConfig.save();
+    }
+
+    public void setPlaceY(double value) {
+        this.placeY = value;
+        DisplayModelConfig.save();
+    }
+
+    public void setPlaceZ(double value) {
+        this.placeZ = value;
+        DisplayModelConfig.save();
+    }
+
+    public void setViewRange(double value) {
+        this.viewRange = Math.max(0.0, Math.min(10000.0, value));
+        DisplayModelConfig.save();
+    }
 }
+

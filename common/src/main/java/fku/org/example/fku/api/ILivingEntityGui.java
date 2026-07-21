@@ -1,6 +1,8 @@
 package fku.org.example.fku.api;
 
 public interface ILivingEntityGui {
-    void fku$setGuiRendering(boolean rendering);
-    boolean fku$isGuiRendering();
+    public void fku$setGuiRendering(boolean var1);
+
+    public boolean fku$isGuiRendering();
 }
+

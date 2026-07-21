@@ -1,28 +1,22 @@
-package fku.org.example.fku.features.loot; /* water */
+package fku.org.example.fku.features.loot;
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.loot.LootConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
-/**
- * 一键取物（Loot Nearby Containers）配置屏幕
- *
- * ★ 职责：
- *   提供扫描半径、点击延迟、容器延迟、背包满丢弃、自动关闭GUI、热键等参数的可视化配置。
- */
-public class LootScreen extends Screen {
-
+public class LootScreen
+extends Screen {
     private static final int WIDTH = 290;
     private static final int HEIGHT = 320;
-
-    // ════════ 行偏移常量 ════════
     private static final int ROW_RADIUS = 35;
     private static final int ROW_CLICK_DELAY = 58;
     private static final int ROW_CONTAINER_DELAY = 81;
@@ -31,7 +25,6 @@ public class LootScreen extends Screen {
     private static final int ROW_AUTO_CLOSE = 150;
     private static final int ROW_HOTKEY = 178;
     private static final int ROW_SAVE = 220;
-
     private EditBox radiusField;
     private EditBox clickDelayField;
     private EditBox containerDelayField;
@@ -39,192 +32,158 @@ public class LootScreen extends Screen {
     private Button dropOverflowButton;
     private Button autoCloseButton;
     private Button hotkeyBindButton;
-
-    /** 本地热键绑定等待状态 */
     private boolean waitingHotkey = false;
-
     private final LootConfig cfg = LootConfig.getInstance();
 
     public LootScreen() {
-        super(Component.literal("一键取物配置"));
+        super(Component.literal((String)"\u4e00\u952e\u53d6\u7269\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-        int cx = (width - WIDTH) / 2;
-        int cy = (height - HEIGHT) / 2;
-
-        // ── 扫描半径 ──
-        radiusField = createEditBox(cx + 100, cy + ROW_RADIUS, String.valueOf(cfg.radius), 2);
-        // ── 点击延迟 ──
-        clickDelayField = createEditBox(cx + 100, cy + ROW_CLICK_DELAY, String.valueOf(cfg.clickDelay), 3);
-        // ── 容器间隔 ──
-        containerDelayField = createEditBox(cx + 100, cy + ROW_CONTAINER_DELAY, String.valueOf(cfg.containerDelay), 4);
-        // ── 扫描刷新间隔 ──
-        scanIntervalField = createEditBox(cx + 150, cy + ROW_SCAN_INTERVAL, String.valueOf(cfg.scanRefreshInterval), 3);
-
-        // ── 背包满丢弃 ──
-        dropOverflowButton = Button.builder(
-                Component.literal(cfg.dropOverflow ? "§a开启" : "§c关闭"),
-                btn -> {
-                    cfg.setDropOverflow(!cfg.dropOverflow);
-                    btn.setMessage(Component.literal(cfg.dropOverflow ? "§a开启" : "§c关闭"));
-                })
-                .bounds(cx + 185, cy + ROW_DROP, 60, 18).build();
-        addRenderableWidget(dropOverflowButton);
-
-        // ── 自动关闭GUI ──
-        autoCloseButton = Button.builder(
-                Component.literal(cfg.autoCloseGUI ? "§a开启" : "§c关闭"),
-                btn -> {
-                    cfg.setAutoCloseGUI(!cfg.autoCloseGUI);
-                    btn.setMessage(Component.literal(cfg.autoCloseGUI ? "§a开启" : "§c关闭"));
-                })
-                .bounds(cx + 185, cy + ROW_AUTO_CLOSE, 60, 18).build();
-        addRenderableWidget(autoCloseButton);
-
-        // ════════ ★ 热键绑定 ════════
-        {
-            String hotkeyText = cfg.hotkeyKey >= 0
-                    ? "热键: " + getKeyName(cfg.hotkeyKey)
-                    : "热键: 未设置";
-            hotkeyBindButton = Button.builder(
-                    Component.literal(hotkeyText),
-                    btn -> {
-                        waitingHotkey = !waitingHotkey;
-                        updateHotkeyButton();
-                    }
-            ).bounds(cx + 10, cy + ROW_HOTKEY, 185, 18).build();
-            addRenderableWidget(hotkeyBindButton);
-
-            addRenderableWidget(Button.builder(
-                    Component.literal("清除"),
-                    btn -> {
-                        cfg.setHotkeyKey(-1);
-                        cfg.setHotkeyName("");
-                        waitingHotkey = false;
-                        updateHotkeyButton();
-                    }
-            ).bounds(cx + 205, cy + ROW_HOTKEY, 55, 18).build());
-        }
-
-        // ── 保存 ──
-        addRenderableWidget(Button.builder(
-                Component.literal("保存"),
-                btn -> saveConfig()
-        ).bounds(cx + 105, cy + ROW_SAVE, 80, 20).build());
+        int cx = (this.width - 290) / 2;
+        int cy = (this.height - 320) / 2;
+        this.radiusField = this.createEditBox(cx + 100, cy + 35, String.valueOf(this.cfg.radius), 2);
+        this.clickDelayField = this.createEditBox(cx + 100, cy + 58, String.valueOf(this.cfg.clickDelay), 3);
+        this.containerDelayField = this.createEditBox(cx + 100, cy + 81, String.valueOf(this.cfg.containerDelay), 4);
+        this.scanIntervalField = this.createEditBox(cx + 150, cy + 104, String.valueOf(this.cfg.scanRefreshInterval), 3);
+        this.dropOverflowButton = Button.builder(Component.literal((String)(this.cfg.dropOverflow ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")), btn -> {
+            this.cfg.setDropOverflow(!this.cfg.dropOverflow);
+            btn.setMessage(Component.literal((String)(this.cfg.dropOverflow ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")));
+        }).bounds(cx + 185, cy + 127, 60, 18).build();
+        this.addRenderableWidget(this.dropOverflowButton);
+        this.autoCloseButton = Button.builder(Component.literal((String)(this.cfg.autoCloseGUI ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")), btn -> {
+            this.cfg.setAutoCloseGUI(!this.cfg.autoCloseGUI);
+            btn.setMessage(Component.literal((String)(this.cfg.autoCloseGUI ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")));
+        }).bounds(cx + 185, cy + 150, 60, 18).build();
+        this.addRenderableWidget(this.autoCloseButton);
+        String hotkeyText = this.cfg.hotkeyKey >= 0 ? "\u70ed\u952e: " + this.getKeyName(this.cfg.hotkeyKey) : "\u70ed\u952e: \u672a\u8bbe\u7f6e";
+        this.hotkeyBindButton = Button.builder(Component.literal((String)hotkeyText), btn -> {
+            this.waitingHotkey = !this.waitingHotkey;
+            this.updateHotkeyButton();
+        }).bounds(cx + 10, cy + 178, 185, 18).build();
+        this.addRenderableWidget(this.hotkeyBindButton);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u6e05\u9664"), btn -> {
+            this.cfg.setHotkeyKey(-1);
+            this.cfg.setHotkeyName("");
+            this.waitingHotkey = false;
+            this.updateHotkeyButton();
+        }).bounds(cx + 205, cy + 178, 55, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 105, cy + 220, 80, 20).build());
     }
 
-    /** 简化 EditBox 创建 */
     private EditBox createEditBox(int x, int y, String value, int maxLen) {
-        EditBox box = new EditBox(font, x, y, 50, 18, Component.empty());
-        box.setValue(value);
-        box.setMaxLength(maxLen);
-        addRenderableWidget(box);
+        EditBox box = new EditBox(this.font, x, y, 50, 18, (Component)Component.m_237119_());
+        box.m_94144_(value);
+        box.m_94199_(maxLen);
+        this.addRenderableWidget(box);
         return box;
     }
 
-    // ══════════════════════════════════════════════
-    //  热键
-    // ══════════════════════════════════════════════
-
     private void updateHotkeyButton() {
-        if (hotkeyBindButton == null) return;
-        if (waitingHotkey) {
-            hotkeyBindButton.setMessage(Component.literal("按下按键... (Esc取消)"));
+        if (this.hotkeyBindButton == null) {
+            return;
+        }
+        if (this.waitingHotkey) {
+            this.hotkeyBindButton.setMessage(Component.literal((String)"\u6309\u4e0b\u6309\u952e. (Esc\u53d6\u6d88)"));
         } else {
-            String text = cfg.hotkeyKey >= 0
-                    ? "热键: " + getKeyName(cfg.hotkeyKey)
-                    : "热键: 未设置";
-            hotkeyBindButton.setMessage(Component.literal(text));
+            String text = this.cfg.hotkeyKey >= 0 ? "\u70ed\u952e: " + this.getKeyName(this.cfg.hotkeyKey) : "\u70ed\u952e: \u672a\u8bbe\u7f6e";
+            this.hotkeyBindButton.setMessage(Component.literal((String)text));
         }
     }
 
     private String getKeyName(int key) {
-        if (key <= 0) return "未设置";
+        if (key <= 0) {
+            return "\u672a\u8bbe\u7f6e";
+        }
         String name = GLFW.glfwGetKeyName(key, GLFW.glfwGetKeyScancode(key));
-        if (name != null && !name.isEmpty()) return name.toUpperCase();
+        if (name != null && !name.isEmpty()) {
+            return name.toUpperCase();
+        }
         return switch (key) {
-            case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
-            case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
-            case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
-            case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
-            case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
-            case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
-            case GLFW.GLFW_KEY_SPACE -> "SPACE";
-            case GLFW.GLFW_KEY_TAB -> "TAB";
-            case GLFW.GLFW_KEY_ESCAPE -> "ESC";
-            case GLFW.GLFW_KEY_ENTER -> "ENTER";
-            case GLFW.GLFW_KEY_CAPS_LOCK -> "CAPS";
+            case 340 -> "LSHIFT";
+            case 344 -> "RSHIFT";
+            case 341 -> "LCTRL";
+            case 345 -> "RCTRL";
+            case 342 -> "LALT";
+            case 346 -> "RALT";
+            case 32 -> "SPACE";
+            case 258 -> "TAB";
+            case 256 -> "ESC";
+            case 257 -> "ENTER";
+            case 280 -> "CAPS";
             default -> "KEY_" + key;
         };
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (waitingHotkey) {
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                waitingHotkey = false;
-                updateHotkeyButton();
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (this.waitingHotkey) {
+            if (keyCode == 256) {
+                this.waitingHotkey = false;
+                this.updateHotkeyButton();
                 return true;
             }
-            cfg.setHotkeyKey(keyCode);
+            this.cfg.setHotkeyKey(keyCode);
             String keyName = GLFW.glfwGetKeyName(keyCode, scanCode);
-            if (keyName == null || keyName.isEmpty()) {
-                keyName = getKeyName(keyCode);
-            } else {
-                keyName = keyName.toUpperCase();
-            }
-            cfg.setHotkeyName(keyName);
-            waitingHotkey = false;
-            updateHotkeyButton();
+            keyName = keyName == null || keyName.isEmpty() ? this.getKeyName(keyCode) : keyName.toUpperCase();
+            this.cfg.setHotkeyName(keyName);
+            this.waitingHotkey = false;
+            this.updateHotkeyButton();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
-
-    // ══════════════════════════════════════════════
-    //  保存 / 渲染
-    // ══════════════════════════════════════════════
 
     private void saveConfig() {
-        try { cfg.setRadius(Integer.parseInt(radiusField.getValue())); } catch (NumberFormatException ignored) {}
-        try { cfg.setClickDelay(Integer.parseInt(clickDelayField.getValue())); } catch (NumberFormatException ignored) {}
-        try { cfg.setContainerDelay(Integer.parseInt(containerDelayField.getValue())); } catch (NumberFormatException ignored) {}
-        try { cfg.setScanRefreshInterval(Integer.parseInt(scanIntervalField.getValue())); } catch (NumberFormatException ignored) {}
-        onClose();
+        try {
+            this.cfg.setRadius(Integer.parseInt(this.radiusField.m_94155_()));
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
+        try {
+            this.cfg.setClickDelay(Integer.parseInt(this.clickDelayField.m_94155_()));
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
+        try {
+            this.cfg.setContainerDelay(Integer.parseInt(this.containerDelayField.m_94155_()));
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
+        try {
+            this.cfg.setScanRefreshInterval(Integer.parseInt(this.scanIntervalField.m_94155_()));
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
+        this.onClose();
     }
 
-    @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
-        int cx = (width - WIDTH) / 2;
-        int cy = (height - HEIGHT) / 2;
-
-        GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "一键取物配置", cx + 10, cy + 10, 0xFFFFFF);
-
-        // 字段说明
-        guiGraphics.drawString(font, "扫描半径:", cx + 12, cy + ROW_RADIUS + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "物品点击间隔(ms):", cx + 12, cy + ROW_CLICK_DELAY + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "容器间隔(ms):", cx + 12, cy + ROW_CONTAINER_DELAY + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "刷新间隔(tick):", cx + 66, cy + ROW_SCAN_INTERVAL + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "背包满丢弃:", cx + 100, cy + ROW_DROP + 2, 0xAAAAAA);
-        guiGraphics.drawString(font, "自动关闭GUI:", cx + 100, cy + ROW_AUTO_CLOSE + 2, 0xAAAAAA);
-
-        // 热键提示
-        if (waitingHotkey) {
-            guiGraphics.drawString(font, "§e请在键盘上按下要绑定的按键...", cx + 10, cy + ROW_HOTKEY + 22, 0xFFFFAA);
+        this.fillGradient(guiGraphics);
+        int cx = (this.width - 290) / 2;
+        int cy = (this.height - 320) / 2;
+        GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, 290, 320, false);
+        guiGraphics.drawString(this.font, "\u4e00\u952e\u53d6\u7269\u914d\u7f6e", cx + 10, cy + 10, 0xFFFFFF);
+        guiGraphics.drawString(this.font, "\u626b\u63cf\u534a\u5f84:", cx + 12, cy + 35 + 2, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "\u7269\u54c1\u70b9\u51fb\u95f4\u9694(ms):", cx + 12, cy + 58 + 2, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "\u5bb9\u5668\u95f4\u9694(ms):", cx + 12, cy + 81 + 2, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "\u5237\u65b0\u95f4\u9694(tick):", cx + 66, cy + 104 + 2, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "\u80cc\u5305\u6ee1\u4e22\u5f03:", cx + 100, cy + 127 + 2, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "\u81ea\u52a8\u5173\u95edGUI:", cx + 100, cy + 150 + 2, 0xAAAAAA);
+        if (this.waitingHotkey) {
+            guiGraphics.drawString(this.font, "\u00a7e\u8bf7\u5728\u952e\u76d8\u4e0a\u6309\u4e0b\u8981\u7ed1\u5b9a\u7684\u6309\u952e.", cx + 10, cy + 178 + 22, 0xFFFFAA);
         }
-
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
-    @Override
     public void onClose() {
         Minecraft minecraft = this.minecraft;
         if (minecraft != null) {
@@ -232,3 +191,4 @@ public class LootScreen extends Screen {
         }
     }
 }
+

@@ -1,14 +1,32 @@
-package fku.org.example.fku.features.tpaura; /* water */
+package fku.org.example.fku.features.tpaura;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
+import fku.org.example.fku.features.healthtag.HealthTagManager;
+import fku.org.example.fku.features.killfx.KillFXFeature;
+import fku.org.example.fku.features.killicon.KillIconFeature;
+import fku.org.example.fku.features.tpaura.TpAuraConfig;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -16,7 +34,8 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -28,94 +47,46 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.joml.Matrix4f;
-
-import fku.org.example.fku.features.healthtag.HealthTagManager;
-import fku.org.example.fku.features.killfx.KillFXFeature;
-import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import org.lwjgl.glfw.GLFW;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-
-/**
- * TpAuraFeature — 如来神掌/瞬移攻击核心逻辑
- *
- * ★ 职责：
- *   通过瞬移机制实现超远距离近战攻击：
- *   1. 垫包预热 → 2. V-Clip上升(Paper模式) → 3. 瞬移至目标附近 → 4. 攻击(下落攻击加成)
- *   → 5. 回传原位
- *   纯客户端发包，支持静默切武、图腾绕过。
- *
- * ★ 设计思想（实践论）：
- *   完整复刻 Meteor TpAura 模块的核心逻辑，API 适配 Forge 1.20.1。
- *   使用 @SubscribeEvent 监听 ClientTickEvent / RenderLevelLastEvent。
- *   无需 Mixin，所有操作通过发包完成。
- *
- * ★ 参考来源：
- *   Meteor Client TpAura 模块
- *   (https://github.com/MeteorDevelopment/meteor-client)
- */
 @OnlyIn(Dist.CLIENT)
 public class TpAuraFeature {
-
     private static final Minecraft mc = Minecraft.getInstance();
-
-    /** 单例实例（用于渲染等需要访问实例状态的场景） */
     private static TpAuraFeature instance;
-
-    // ════════ 运行时状态 ════════
-    /** 当前目标实体 */
     public Entity currentTarget;
-    /** 瞬移路径节点列表（用于渲染） */
-    public final List<Vec3> renderPathNodes = new ArrayList<>();
-    /** 目标列表 */
-    private final List<Entity> targets = new ArrayList<>();
-
-    // 武器切换状态
+    public final List<Vec3> renderPathNodes = new ArrayList<Vec3>();
+    private final List<Entity> targets = new ArrayList<Entity>();
     private int originalSlot = -1;
     private int silentSwapSlot = -1;
     private int silentSwapPrevSlot = -1;
     private int delayTimer = 0;
-
-    // ★ 功能开关：始终从 Config 读取，见 isEnabled()
-
-    /** Overlay 显示截止时间戳（毫秒，超时后自动隐藏） */
-    private static long overlayShowUntil = 0;
-
-    // ════════ 热键系统 ════════
-    /** 热键按下状态（边沿检测） */
-    private static boolean wasHotkeyDown = false;
-    /** 是否正在等待按键绑定 */
-    private static boolean waitingKeyBind = false;
-    /** 等待绑定的回调，绑定完成后调用 */
+    private static long overlayShowUntil;
+    private static boolean wasHotkeyDown;
+    private static boolean waitingKeyBind;
     private static Runnable onKeyBoundCallback;
 
-    public static boolean isEnabled() { return TpAuraConfig.getInstance().enabled; }
+    public static boolean isEnabled() {
+        return TpAuraConfig.getInstance().enabled;
+    }
+
     public static void setEnabled(boolean v) {
         TpAuraConfig cfg = TpAuraConfig.getInstance();
         cfg.enabled = v;
         cfg.save();
-        overlayShowUntil = System.currentTimeMillis() + 3000;
+        overlayShowUntil = System.currentTimeMillis() + 3000L;
         if (v) {
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("§6[TpAura] §a已启用 §7(范围=" + cfg.maxRange + ", 模式=" + cfg.mode + ")"),
-                    false
-                );
+            if (TpAuraFeature.mc.player != null) {
+                TpAuraFeature.mc.player.m_5661_(Component.literal((String)("\u00a76[TpAura] \u00a7a\u5df2\u542f\u7528 \u00a77(\u8303\u56f4=" + cfg.maxRange + ", \u6a21\u5f0f=" + cfg.mode + ")")), false);
             }
         } else {
             TpAuraFeature feature = instance;
             if (feature != null) {
                 feature.cleanup();
             }
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("§6[TpAura] §c已禁用"),
-                    false
-                );
+            if (TpAuraFeature.mc.player != null) {
+                TpAuraFeature.mc.player.m_5661_(Component.literal((String)"\u00a76[TpAura] \u00a7c\u5df2\u7981\u7528"), false);
             }
         }
     }
@@ -124,7 +95,6 @@ public class TpAuraFeature {
         instance = this;
     }
 
-    /** 获取单例 */
     public static TpAuraFeature getInstance() {
         if (instance == null) {
             instance = new TpAuraFeature();
@@ -132,92 +102,65 @@ public class TpAuraFeature {
         return instance;
     }
 
-    /** 初始化：加载配置，创建实例 */
     public static void init() {
         TpAuraConfig.load();
-        getInstance();
+        TpAuraFeature.getInstance();
     }
 
-    // ══════════════════════════════════════════════
-    //  热键系统方法
-    // ══════════════════════════════════════════════
-
-    /** 开始热键绑定（由 TpAuraComponent 中键触发） */
     public static void startHotkeyBind(Runnable onBound) {
         waitingKeyBind = true;
         onKeyBoundCallback = onBound;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("§6[TpAura] §e按下键盘上的按键绑定热键... (Esc取消)"),
-                false
-            );
+        if (TpAuraFeature.mc.player != null) {
+            TpAuraFeature.mc.player.m_5661_(Component.literal((String)"\u00a76[TpAura] \u00a7e\u6309\u4e0b\u952e\u76d8\u4e0a\u7684\u6309\u952e\u7ed1\u5b9a\u70ed\u952e. (Esc\u53d6\u6d88)"), false);
         }
     }
 
-    /** 取消热键绑定 */
     public static void cancelHotkeyBind() {
         waitingKeyBind = false;
         onKeyBoundCallback = null;
-        if (mc.player != null) {
-            mc.player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("§6[TpAura] §7热键绑定已取消"),
-                false
-            );
+        if (TpAuraFeature.mc.player != null) {
+            TpAuraFeature.mc.player.m_5661_(Component.literal((String)"\u00a76[TpAura] \u00a77\u70ed\u952e\u7ed1\u5b9a\u5df2\u53d6\u6d88"), false);
         }
     }
 
-    /**
-     * InputEvent.Key — 全局键盘输入处理
-     * 两种用途：
-     *   1. 热键绑定模式：捕获按下的键保存到配置
-     *   2. 热键触发：检测已绑定的热键按下/释放边沿
-     */
     @SubscribeEvent
     public static void onKeyInput(InputEvent.Key event) {
-        if (mc.player == null) return;
-
-        // ── 热键绑定模式：捕获按下的键 ──
+        if (TpAuraFeature.mc.player == null) {
+            return;
+        }
         if (waitingKeyBind) {
-            // 忽略释放动作
-            if (event.getAction() != GLFW.GLFW_PRESS) return;
-
-            // Esc 取消
-            if (event.getKey() == GLFW.GLFW_KEY_ESCAPE) {
-                cancelHotkeyBind();
+            if (event.getAction() != 1) {
                 return;
             }
-
-            // 保存热键
+            if (event.getKey() == 256) {
+                TpAuraFeature.cancelHotkeyBind();
+                return;
+            }
             TpAuraConfig cfg = TpAuraConfig.getInstance();
             cfg.setHotkeyKey(event.getKey());
-            // 获取键名
             String keyName = GLFW.glfwGetKeyName(event.getKey(), event.getScanCode());
             if (keyName == null || keyName.isEmpty()) {
                 keyName = switch (event.getKey()) {
-                    case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
-                    case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
-                    case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
-                    case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
-                    case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
-                    case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
-                    case GLFW.GLFW_KEY_SPACE -> "SPACE";
-                    case GLFW.GLFW_KEY_TAB -> "TAB";
-                    case GLFW.GLFW_KEY_ESCAPE -> "ESC";
-                    case GLFW.GLFW_KEY_ENTER -> "ENTER";
-                    case GLFW.GLFW_KEY_CAPS_LOCK -> "CAPS";
+                    case 340 -> "LSHIFT";
+                    case 344 -> "RSHIFT";
+                    case 341 -> "LCTRL";
+                    case 345 -> "RCTRL";
+                    case 342 -> "LALT";
+                    case 346 -> "RALT";
+                    case 32 -> "SPACE";
+                    case 258 -> "TAB";
+                    case 256 -> "ESC";
+                    case 257 -> "ENTER";
+                    case 280 -> "CAPS";
                     default -> "KEY_" + event.getKey();
                 };
             } else {
                 keyName = keyName.toUpperCase();
             }
             cfg.setHotkeyName(keyName);
-
             waitingKeyBind = false;
-            if (mc.player != null) {
-                mc.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("§6[TpAura] §a热键已绑定: §e" + keyName),
-                    false
-                );
+            if (TpAuraFeature.mc.player != null) {
+                TpAuraFeature.mc.player.m_5661_(Component.literal((String)("\u00a76[TpAura] \u00a7a\u70ed\u952e\u5df2\u7ed1\u5b9a: \u00a7e" + keyName)), false);
             }
             if (onKeyBoundCallback != null) {
                 onKeyBoundCallback.run();
@@ -225,77 +168,54 @@ public class TpAuraFeature {
             }
             return;
         }
-
-        // ── 热键绑定模式已在上方处理，触发模式由 HotkeySystem 统一管理 ──
     }
 
-    // ═══════════ 自动飞行（箭伤飞行模式：启用即飞，关闭即停） ═══════════
-
-    // ══════════════════════════════════════════════
-    //  ClientTickEvent — 主循环
-    // ══════════════════════════════════════════════
-
-    /**
-     * 自动悬浮飞行 — 类似 FlightFeature 的飞行控制
-     *
-     * - 不设 mayfly（避免与 FlightFeature 冲突），仅设 flying
-     * - 读取 WASD 输入 + 镜头朝向 → 计算水平速度
-     * - 空格上升 / Shift 下降，速度取 autoFlightSpeed
-     * - 发送 abilities packet 尝试让服务器认可飞行
-     */
     private static void updateAutoFlight() {
-        var p = mc.player;
-        if (p == null) return;
+        LocalPlayer p = TpAuraFeature.mc.player;
+        if (p == null) {
+            return;
+        }
         TpAuraConfig cfg = TpAuraConfig.getInstance();
         if (cfg.autoFlight && cfg.enabled) {
-            p.getAbilities().flying = true;
-            p.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket(p.getAbilities()));
-
-            // ★ 水平速度（参考 FlightFeature）
-            float fwd = p.input.forwardImpulse;
-            float str = -p.input.leftImpulse;
-            float camYaw = mc.gameRenderer.getMainCamera().getYRot();
-            var h = net.minecraft.world.phys.Vec3.directionFromRotation(0, camYaw).multiply(fwd, 0, fwd)
-                    .add(net.minecraft.world.phys.Vec3.directionFromRotation(0, camYaw + 90).multiply(str, 0, str));
+            p.m_150110_().f_35935_ = true;
+            p.f_108617_.m_104955_((Packet)new ServerboundPlayerAbilitiesPacket(p.m_150110_()));
+            float fwd = p.f_108618_.f_108567_;
+            float str = -p.f_108618_.f_108566_;
+            float camYaw = TpAuraFeature.mc.f_91063_.m_109153_().m_90590_();
+            Vec3 h = Vec3.m_82498_(0.0f, camYaw).m_82542_(fwd, 0.0, fwd).add(Vec3.m_82498_(0.0f, (camYaw + 90.0f)).m_82542_(str, 0.0, str));
             double hSpeed = cfg.autoFlightHorizontalSpeed;
-            if (h.lengthSqr() > 1e-4) h = h.normalize().scale(hSpeed);
-            else h = net.minecraft.world.phys.Vec3.ZERO;
-
-            // ★ 垂直速度
-            double vy = p.input.jumping ? cfg.autoFlightSpeed
-                      : p.input.shiftKeyDown ? -cfg.autoFlightSpeed : 0;
-
-            p.setDeltaMovement(h.x, vy, h.z);
-            p.hurtMarked = true;
+            h = h.m_82556_() > 1.0E-4 ? h.normalize().scale(hSpeed) : Vec3.f_82478_;
+            double vy = p.f_108618_.f_108572_ ? cfg.autoFlightSpeed : (p.f_108618_.f_108573_ ? -cfg.autoFlightSpeed : 0.0);
+            p.m_20334_(h.x, vy, h.z);
+            p.f_19864_ = true;
         }
     }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (mc.player == null || mc.level == null) return;
-
-        TpAuraConfig cfg = TpAuraConfig.getInstance();
-
-        // ★ 自动飞行：只要启用 TpAura 就飞（箭伤飞行模式，不依赖目标）
-        updateAutoFlight();
-
-        if (!isEnabled()) return;
-
-        TpAuraFeature self = getInstance();
-
-        // 1. 武器切换
-        if (cfg.autoSwitch) self.checkAndSwapWeapon(cfg);
-
-        // 2. 蓄力检查
-        if ("Smart".equals(cfg.attackMode) || "Universal".equals(cfg.attackMode)) {
-            if (mc.player.getAttackStrengthScale(0.5f) < (float) cfg.cooldownThreshold) return;
+        if (event.phase != TickEvent.Phase.END) {
+            return;
         }
-
-        // 3. 延迟
-        if (self.delayTimer > 0) { self.delayTimer--; self.swapBackWeapon(); return; }
-
-        // 4. 索敌
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.f_91073_ == null) {
+            return;
+        }
+        TpAuraConfig cfg = TpAuraConfig.getInstance();
+        TpAuraFeature.updateAutoFlight();
+        if (!TpAuraFeature.isEnabled()) {
+            return;
+        }
+        TpAuraFeature self = TpAuraFeature.getInstance();
+        if (cfg.autoSwitch) {
+            self.checkAndSwapWeapon(cfg);
+        }
+        if (("Smart".equals(cfg.attackMode) || "Universal".equals(cfg.attackMode)) && TpAuraFeature.mc.player.m_36403_(0.5f) < cfg.cooldownThreshold) {
+            return;
+        }
+        if (self.delayTimer > 0) {
+            --self.delayTimer;
+            self.swapBackWeapon();
+            return;
+        }
         self.targets.clear();
         Entity target = self.findTarget(cfg);
         if (target == null) {
@@ -304,746 +224,561 @@ public class TpAuraFeature {
             return;
         }
         self.currentTarget = target;
-
-        // 5. 执行攻击
         self.executeTrouserAttack(target, cfg);
         self.swapBackWeapon();
         self.delayTimer = cfg.attackDelay;
     }
 
-    // ══════════════════════════════════════════════
-    //  RenderLevelLastEvent — 3D 渲染
-    // ══════════════════════════════════════════════
-
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
-        if (!isEnabled()) return;
-        if (mc.player == null || mc.level == null) return;
-
-        TpAuraFeature self = getInstance();
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+            return;
+        }
+        if (!TpAuraFeature.isEnabled()) {
+            return;
+        }
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.f_91073_ == null) {
+            return;
+        }
+        TpAuraFeature self = TpAuraFeature.getInstance();
         TpAuraConfig cfg = TpAuraConfig.getInstance();
-
         PoseStack poseStack = event.getPoseStack();
-        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
-
+        Vec3 camPos = TpAuraFeature.mc.f_91063_.m_109153_().getPosition();
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
-
-        VertexConsumer consumer = mc.renderBuffers().bufferSource().getBuffer(net.minecraft.client.renderer.RenderType.LINES);
-
-        // ── 渲染目标边界框 ──
+        VertexConsumer consumer = mc.m_91269_().m_110104_().m_6299_((RenderType)RenderType.f_110371_);
         if (self.currentTarget != null) {
-            renderBox(poseStack, consumer, self.currentTarget.getBoundingBox(), cfg.getTargetColor());
+            TpAuraFeature.renderBox(poseStack, consumer, self.currentTarget.m_20191_(), cfg.getTargetColor());
         }
-
-        // ── 渲染路径 ──
         if (cfg.renderPath && !self.renderPathNodes.isEmpty()) {
             int pathColor = cfg.getPathColor();
-            float pr = ((pathColor >> 16) & 0xFF) / 255f;
-            float pg = ((pathColor >> 8) & 0xFF) / 255f;
-            float pb = (pathColor & 0xFF) / 255f;
-            float pa = ((pathColor >> 24) & 0xFF) / 255f;
-
-            for (int i = 0; i < self.renderPathNodes.size(); i++) {
+            float pr = (pathColor >> 16 & 0xFF) / 255.0f;
+            float pg = (pathColor >> 8 & 0xFF) / 255.0f;
+            float pb = (pathColor & 0xFF) / 255.0f;
+            float pa = (pathColor >> 24 & 0xFF) / 255.0f;
+            for (int i = 0; i < self.renderPathNodes.size(); ++i) {
                 Vec3 n = self.renderPathNodes.get(i);
-                // 渲染节点小框
-                renderBox(poseStack, consumer,
-                        new AABB(n.x - 0.2, n.y, n.z - 0.2, n.x + 0.2, n.y + 2, n.z + 0.2),
-                        pathColor);
-
-                // 渲染连线
-                if (i < self.renderPathNodes.size() - 1) {
-                    Vec3 next = self.renderPathNodes.get(i + 1);
-                    Matrix4f mat = poseStack.last().pose();
-                    consumer.vertex(mat, (float) n.x, (float) (n.y + 1), (float) n.z).color(pr, pg, pb, pa).normal(0f, 1f, 0f).endVertex();
-                    consumer.vertex(mat, (float) next.x, (float) (next.y + 1), (float) next.z).color(pr, pg, pb, pa).normal(0f, 1f, 0f).endVertex();
-                }
+                TpAuraFeature.renderBox(poseStack, consumer, new AABB(n.x - 0.2, n.y, n.z - 0.2, n.x + 0.2, n.y + 2.0, n.z + 0.2), pathColor);
+                if (i >= self.renderPathNodes.size() - 1) continue;
+                Vec3 next = self.renderPathNodes.get(i + 1);
+                Matrix4f mat = poseStack.last().pose();
+                consumer.vertex(mat, n.x, (n.y + 1.0), n.z).m_85950_(pr, pg, pb, pa).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+                consumer.vertex(mat, next.x, (next.y + 1.0), next.z).m_85950_(pr, pg, pb, pa).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
             }
         }
-
         poseStack.popPose();
     }
 
-    /**
-     * 在物品栏上方渲染 TpAura 开关状态指示器
-     * 使用 HOTBAR 渲染后的时机，使文字叠加在物品栏上方居中位置
-     */
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.HOTBAR.type()) return;
-
-        // 只在切换后短时间内显示，超时自动隐藏，避免常驻干扰
-        if (System.currentTimeMillis() > overlayShowUntil) return;
-
-        String text = "§6[TpAura " + (isEnabled() ? "§aON" : "§cOFF") + "§6]";
-
-        int w = mc.getWindow().getGuiScaledWidth();
-        int h = mc.getWindow().getGuiScaledHeight();
-        int textX = w / 2 - mc.font.width(text) / 2;
-        int textY = h - 62; // 物品栏上方约两个槽位的高度
-
-        event.getGuiGraphics().drawString(mc.font, text, textX, textY, 0xFFFFFF);
-    }
-
-    // ══════════════════════════════════════════════
-    //  渲染辅助
-    // ══════════════════════════════════════════════
-
-    /** 渲染 AABB 边框 */
-    private static void renderBox(PoseStack poseStack, VertexConsumer consumer, AABB box, int color) {
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >> 8) & 0xFF) / 255f;
-        float b = (color & 0xFF) / 255f;
-        float a = ((color >> 24) & 0xFF) / 255f;
-
-        Matrix4f mat = poseStack.last().pose();
-        double minX = box.minX, minY = box.minY, minZ = box.minZ;
-        double maxX = box.maxX, maxY = box.maxY, maxZ = box.maxZ;
-
-        // 底部矩形（4条边线）
-        consumer.vertex(mat, (float) minX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, -1f, 0f).endVertex();
-
-        // 顶部矩形（4条边线）
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-
-        // 竖线（4条垂直边）
-        consumer.vertex(mat, (float) minX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-        consumer.vertex(mat, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a).normal(0f, 1f, 0f).endVertex();
-    }
-
-    // ══════════════════════════════════════════════
-    //  核心攻击逻辑
-    // ══════════════════════════════════════════════
-
-    /**
-     * 执行瞬移攻击（完整复刻 Meteor TpAura 逻辑）
-     *
-     * 流程：
-     *   A. 垫包预热 → B. 上升+瞬移 → C. 攻击（单次/图腾绕过多次）→ D. 回传
-     */
-    private void executeTrouserAttack(Entity target, TpAuraConfig cfg) {
-        // ★ 空指针防护：防止玩家死亡/切换维度时崩溃
-        if (mc.player == null || mc.level == null) return;
-        if (mc.player.connection == null) return;
-        if (target == null || !target.isAlive()) return;
-
-        try {
-            executeTrouserAttackInternal(target, cfg);
-        } catch (Exception e) {
-            // ★ 全局异常捕获：防止任何未预期的异常导致游戏卡死
-            //   记录异常并清理状态，确保下次 Tick 能正常恢复
-            cleanup();
-        }
-    }
-
-    /** 执行瞬移攻击内部逻辑（被 try-catch 包裹，防止异常卡死） */
-    private void executeTrouserAttackInternal(Entity target, TpAuraConfig cfg) {
-        // ★ 矛盾定性：Paper模式goUp每次攻击后Y坐标持续爬升的根本原因
-        //   在于高度计算锚点不一致——图腾绕过循环中 progressiveAbove 基于 finalPos.y，
-        //   而回传后玩家位置未完全复位，导致下一轮Tick的基准位置逐渐升高。
-        //   解决方案：一次性捕获固定基准位置 basePos，整个攻击流程（含所有子攻击）
-        //   的所有高度计算均锚定于此，攻击完成后强制复位到此位置。
-        Vec3 basePos = mc.player.position();
-        Vec3 targetPos = target.position();
-
-        // ★ NaN 防护：防止实体坐标异常导致后续计算卡死
-        if (Double.isNaN(basePos.x) || Double.isNaN(basePos.y) || Double.isNaN(basePos.z)) return;
-        if (Double.isNaN(targetPos.x) || Double.isNaN(targetPos.y) || Double.isNaN(targetPos.z)) return;
-        double reach = cfg.maxRange;
-
-        // ★ 世界边界检查：防止虚空/Y轴越界导致卡死
-        int worldMinY = mc.level.getMinBuildHeight();
-        int worldMaxY = mc.level.getMaxBuildHeight() - 1;
-        if (basePos.y < worldMinY || basePos.y > worldMaxY) return;
-
-        // ★ 天花板检测：V-Clip高度不超天花板下方2格（防穿墙拉回）
-        //   以固定 basePos 为锚点，确保每次Tick的检测结果一致
-        if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling) {
-            double safeHeight = getSafeCeilingHeight(basePos, reach, cfg.ceilingScanStep);
-            if (safeHeight <= basePos.y + 1) {
-                // 头顶紧贴天花板，V-Clip无意义→回退到不开goUp
-                reach = 0;
-            } else {
-                reach = Math.min(reach, safeHeight - basePos.y);
-            }
-        }
-
-        // 计算有效的攻击位置
-        // ★ tpOffset > 0 时：在目标周围随机选择加权安全落点
-        Vec3 finalPos;
-        if (cfg.tpOffset > 0) {
-            finalPos = findRandomLandingPoint(targetPos, cfg.tpOffset, cfg.maxRange);
-            if (finalPos == null) {
-                // 所有候选点都不可用，回退到原逻辑
-                finalPos = !invalid(targetPos) ? targetPos : findNearestPos(targetPos);
-            }
-        } else {
-            finalPos = !invalid(targetPos) ? targetPos : findNearestPos(targetPos);
-        }
-        if (finalPos == null) return;
-
-        Vec3 highStart = basePos.add(0, reach, 0);
-        Vec3 highTarget = finalPos.add(0, reach, 0);
-
-        // 记录渲染路径
-        renderPathNodes.clear();
-        renderPathNodes.add(basePos);
-        if ("Paper".equals(cfg.mode) && cfg.goUp) {
-            renderPathNodes.add(highStart);
-            renderPathNodes.add(highTarget);
-        }
-        renderPathNodes.add(finalPos);
-
-        // A. 垫包预热 — 发送 onGround=false 包使服务端进入"下落"状态
-        int spam = "Paper".equals(cfg.mode) ? cfg.paperPackets : 4;
-        // ★ 安全上限：防止配置异常导致过量发包
-        if (spam > 100) spam = 100;
-        for (int i = 0; i < spam; i++) {
-            if (mc.player == null || mc.player.connection == null) break;
-            mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                mc.player.getX(), mc.player.getY(), mc.player.getZ(), false
-            ));
-        }
-
-        boolean totemMode = cfg.totemBypass && "Paper".equals(cfg.mode);
-
-        // B. 攻击阶段
-        if (totemMode) {
-            // 图腾绕过：多次递增高度攻击以突破无敌帧
-            // ★ 每次递增高度均基于 basePos.y 计算，杜绝累积偏移
-            int attackCount = cfg.totemAttacks;
-
-            for (int i = 0; i < attackCount; i++) {
-                // ★ 固定锚点：高度 = basePos.y + reach + i * totemHeightIncrease
-                //   不再使用动态累加的 currentHeight，确保基准始终为 basePos.y
-                int blocks = (int) reach + i * cfg.totemHeightIncrease;
-
-                // ★ 天花板检测：基于 basePos 而非动态的 mc.player.position()
-                //   防止因前一次攻击导致玩家位置变化后检测结果不一致
-                if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling && blocks > 0) {
-                    double safeH = getSafeCeilingHeight(basePos, blocks, cfg.ceilingScanStep);
-                    if (safeH <= basePos.y + 1) break; // 已贴天花板
-                    blocks = Math.min(blocks, (int) (safeH - basePos.y));
-                }
-
-                if (mc.level != null) {
-                    int worldTop = mc.level.getMaxBuildHeight() - 1;
-                    if (basePos.y + blocks > worldTop) {
-                        blocks = (int) (worldTop - basePos.y);
-                        if (blocks < 1) break;
-                    }
-                }
-
-                // ★ progressiveAbove 基于 basePos 而非 finalPos，确保上升高度
-                //   始终以玩家原始位置为锚点，不会因目标位置不同而产生偏移
-                Vec3 progressiveAbove = new Vec3(basePos.x, basePos.y + blocks, basePos.z);
-                if (cfg.goUp) sendMove(progressiveAbove);
-                sendMove(finalPos);
-
-                performAttack(target, cfg);
-            }
-        } else {
-            // 单次攻击
-            if ("Paper".equals(cfg.mode) && cfg.goUp) {
-                sendMove(highStart);
-                sendMove(highTarget);
-            }
-            sendMove(finalPos);
-
-            performAttack(target, cfg);
-        }
-
-        // C. 回传（保持原有 returnPos 和 offsetFix 配置行为不变）
-        doReturn(basePos, finalPos, cfg);
-
-        // ★ 强化复位：在 doReturn 之外额外执行一次强制复位
-        //   连续发送2个位置包 + setPosition，增强服务端同步可靠性
-        if (cfg.returnPos && mc.player != null) {
-            mc.player.setPos(basePos.x, basePos.y, basePos.z);
-            if (mc.player.connection != null) {
-                mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                    basePos.x, basePos.y, basePos.z, false));
-                mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                    basePos.x, basePos.y, basePos.z, false));
-            }
-        }
-    }
-
-    /** 执行攻击发包 */
-    private void performAttack(Entity target, TpAuraConfig cfg) {
-        if (mc.player == null || mc.player.connection == null) return;
-        if (target == null) return;
-
-        // ★ 假人联动：如果目标是本地假人，直接在客户端模拟伤害，不发包
-        //   服务端不认识客户端假人实体，发攻击包会被丢弃
-        if (FakePlayerFeature.handleTpAuraAttack(target)) {
-            if (cfg.swingHand) {
-                mc.player.swing(InteractionHand.MAIN_HAND);
-            }
-            mc.player.resetAttackStrengthTicker();
+        if (event.getOverlay() != VanillaGuiOverlay.HOTBAR.type()) {
             return;
         }
-
-        // ★ 直接发送标准攻击包（原始发包方式，经测试最可靠）
-        // 注意：LocalPlayer#attack() 在 Forge 1.20.1 中有额外客户端检查
-        // （如 onClientAttack 事件），可能取消发包，因此直接发原始包。
-        mc.player.connection.send(ServerboundInteractPacket.createAttackPacket(target, mc.player.isShiftKeyDown()));
-
-        // ★ TpAura 联动 KillFX/KillIcon：手动记录攻击记录
-        KillFXFeature.markAttackedByTpAura(target.getId());
-        fku.org.example.fku.features.killicon.KillIconFeature.markAttackedByTpAura(target.getId());
-
-        // ★ TpAura 联动 HealthTag：手动锁定目标
-        //   同样绕过 AttackEntityEvent，导致 HealthTag 无法锁定被攻击目标。
-        HealthTagManager.onAttack(target);
-
-        if (cfg.swingHand) {
-            mc.player.swing(InteractionHand.MAIN_HAND);
+        if (System.currentTimeMillis() > overlayShowUntil) {
+            return;
         }
-
-        // ★ 强制重置攻击蓄力计时器
-        mc.player.resetAttackStrengthTicker();
+        String text = "\u00a76[TpAura " + (TpAuraFeature.isEnabled() ? "\u00a7aON" : "\u00a7cOFF") + "\u00a76]";
+        int w = mc.getWindow().m_85445_();
+        int h = mc.getWindow().m_85446_();
+        int textX = w / 2 - TpAuraFeature.mc.font.m_92895_(text) / 2;
+        int textY = h - 62;
+        event.getGuiGraphics().drawString(TpAuraFeature.mc.font, text, textX, textY, 0xFFFFFF);
     }
 
-    // ══════════════════════════════════════════════
-    //  位置包发送
-    // ══════════════════════════════════════════════
+    private static void renderBox(PoseStack poseStack, VertexConsumer consumer, AABB box, int color) {
+        float r = (color >> 16 & 0xFF) / 255.0f;
+        float g = (color >> 8 & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+        float a = (color >> 24 & 0xFF) / 255.0f;
+        Matrix4f mat = poseStack.last().pose();
+        double minX = box.f_82288_;
+        double minY = box.f_82289_;
+        double minZ = box.f_82290_;
+        double maxX = box.f_82291_;
+        double maxY = box.f_82292_;
+        double maxZ = box.f_82293_;
+        consumer.vertex(mat, minX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, maxX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, minX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+    }
 
-    /** 发送位置包（模拟 PositionAndOnGround） */
+    private void executeTrouserAttack(Entity target, TpAuraConfig cfg) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.f_91073_ == null) {
+            return;
+        }
+        if (TpAuraFeature.mc.player.f_108617_ == null) {
+            return;
+        }
+        if (target == null || !target.m_6084_()) {
+            return;
+        }
+        try {
+            this.executeTrouserAttackInternal(target, cfg);
+        }
+        catch (Exception e) {
+            this.cleanup();
+        }
+    }
+
+    private void executeTrouserAttackInternal(Entity target, TpAuraConfig cfg) {
+        boolean totemMode;
+        int spam;
+        Vec3 finalPos;
+        Vec3 basePos = TpAuraFeature.mc.player.position();
+        Vec3 targetPos = target.position();
+        if (Double.isNaN(basePos.x) || Double.isNaN(basePos.y) || Double.isNaN(basePos.z)) {
+            return;
+        }
+        if (Double.isNaN(targetPos.x) || Double.isNaN(targetPos.y) || Double.isNaN(targetPos.z)) {
+            return;
+        }
+        double reach = cfg.maxRange;
+        int worldMinY = TpAuraFeature.mc.f_91073_.m_141937_();
+        int worldMaxY = TpAuraFeature.mc.f_91073_.m_151558_() - 1;
+        if (basePos.y < worldMinY || basePos.y > worldMaxY) {
+            return;
+        }
+        if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling) {
+            double safeHeight = this.getSafeCeilingHeight(basePos, reach, cfg.ceilingScanStep);
+            reach = safeHeight <= basePos.y + 1.0 ? 0.0 : Math.min(reach, safeHeight - basePos.y);
+        }
+        if (cfg.tpOffset > 0) {
+            finalPos = this.findRandomLandingPoint(targetPos, cfg.tpOffset, cfg.maxRange);
+            if (finalPos == null) {
+                finalPos = !this.invalid(targetPos) ? targetPos : this.findNearestPos(targetPos);
+            }
+        } else {
+            Vec3 vec3 = finalPos = !this.invalid(targetPos) ? targetPos : this.findNearestPos(targetPos);
+        }
+        if (finalPos == null) {
+            return;
+        }
+        Vec3 highStart = basePos.add(0.0, reach, 0.0);
+        Vec3 highTarget = finalPos.add(0.0, reach, 0.0);
+        this.renderPathNodes.clear();
+        this.renderPathNodes.add(basePos);
+        if ("Paper".equals(cfg.mode) && cfg.goUp) {
+            this.renderPathNodes.add(highStart);
+            this.renderPathNodes.add(highTarget);
+        }
+        this.renderPathNodes.add(finalPos);
+        int n = spam = "Paper".equals(cfg.mode) ? cfg.paperPackets : 4;
+        if (spam > 100) {
+            spam = 100;
+        }
+        for (int i = 0; i < spam && TpAuraFeature.mc.player != null && TpAuraFeature.mc.player.f_108617_ != null; ++i) {
+            TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(TpAuraFeature.mc.player.getX(), TpAuraFeature.mc.player.getY(), TpAuraFeature.mc.player.getZ(), false));
+        }
+        boolean bl = totemMode = cfg.totemBypass && "Paper".equals(cfg.mode);
+        if (totemMode) {
+            int attackCount = cfg.totemAttacks;
+            for (int i = 0; i < attackCount; ++i) {
+                int worldTop;
+                int blocks = reach + i * cfg.totemHeightIncrease;
+                if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling && blocks > 0) {
+                    double safeH = this.getSafeCeilingHeight(basePos, blocks, cfg.ceilingScanStep);
+                    if (safeH <= basePos.y + 1.0) break;
+                    blocks = Math.min(blocks, (safeH - basePos.y));
+                }
+                if (TpAuraFeature.mc.f_91073_ == null || !(basePos.y + blocks > (worldTop = TpAuraFeature.mc.f_91073_.m_151558_() - 1)) || (blocks = (worldTop - basePos.y)) >= 1) {
+                    Vec3 progressiveAbove = new Vec3(basePos.x, basePos.y + blocks, basePos.z);
+                    if (cfg.goUp) {
+                        this.sendMove(progressiveAbove);
+                    }
+                    this.sendMove(finalPos);
+                    this.performAttack(target, cfg);
+                    continue;
+                }
+                break;
+            }
+        } else {
+            if ("Paper".equals(cfg.mode) && cfg.goUp) {
+                this.sendMove(highStart);
+                this.sendMove(highTarget);
+            }
+            this.sendMove(finalPos);
+            this.performAttack(target, cfg);
+        }
+        this.doReturn(basePos, finalPos, cfg);
+        if (cfg.returnPos && TpAuraFeature.mc.player != null) {
+            TpAuraFeature.mc.player.m_6034_(basePos.x, basePos.y, basePos.z);
+            if (TpAuraFeature.mc.player.f_108617_ != null) {
+                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(basePos.x, basePos.y, basePos.z, false));
+                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(basePos.x, basePos.y, basePos.z, false));
+            }
+        }
+    }
+
+    private void performAttack(Entity target, TpAuraConfig cfg) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.f_108617_ == null) {
+            return;
+        }
+        if (target == null) {
+            return;
+        }
+        if (FakePlayerFeature.handleTpAuraAttack(target)) {
+            if (cfg.swingHand) {
+                TpAuraFeature.mc.player.m_6674_(InteractionHand.MAIN_HAND);
+            }
+            TpAuraFeature.mc.player.m_36334_();
+            return;
+        }
+        TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)ServerboundInteractPacket.m_179605_(target, (boolean)TpAuraFeature.mc.player.m_6144_()));
+        KillFXFeature.markAttackedByTpAura(target.m_19879_());
+        KillIconFeature.markAttackedByTpAura(target.m_19879_());
+        HealthTagManager.onAttack(target);
+        if (cfg.swingHand) {
+            TpAuraFeature.mc.player.m_6674_(InteractionHand.MAIN_HAND);
+        }
+        TpAuraFeature.mc.player.m_36334_();
+    }
+
     private void sendMove(Vec3 pos) {
-        if (mc.player == null || mc.player.connection == null) return;
-        mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.f_108617_ == null) {
+            return;
+        }
+        TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
     }
 
-    /** 计算回传位置并设置玩家位置 */
     private void doReturn(Vec3 startPos, Vec3 finalPos, TpAuraConfig cfg) {
-        if (mc.player == null) return;
+        if (TpAuraFeature.mc.player == null) {
+            return;
+        }
         if (cfg.returnPos) {
             if ("Paper".equals(cfg.mode) && cfg.goUp) {
                 double returnReach = cfg.maxRange;
                 if (cfg.limitCeiling) {
-                    double safeH = getSafeCeilingHeight(startPos, returnReach, cfg.ceilingScanStep);
-                    returnReach = Math.max(0, safeH - startPos.y);
+                    double safeH = this.getSafeCeilingHeight(startPos, returnReach, cfg.ceilingScanStep);
+                    returnReach = Math.max(0.0, safeH - startPos.y);
                 }
-                Vec3 highStart = startPos.add(0, Math.min(cfg.maxRange, returnReach), 0);
-                Vec3 highTarget = finalPos.add(0, Math.min(cfg.maxRange, returnReach), 0);
-                sendMove(highTarget);
-                sendMove(highStart);
+                Vec3 highStart = startPos.add(0.0, Math.min(cfg.maxRange, returnReach), 0.0);
+                Vec3 highTarget = finalPos.add(0.0, Math.min(cfg.maxRange, returnReach), 0.0);
+                this.sendMove(highTarget);
+                this.sendMove(highStart);
             }
-            sendMove(startPos);
-
+            this.sendMove(startPos);
             if (cfg.offsetFix) {
-                Vec3 offset = getOffset(startPos);
-                sendMove(offset);
-                mc.player.setPos(offset.x, offset.y, offset.z);
+                Vec3 offset = this.getOffset(startPos);
+                this.sendMove(offset);
+                TpAuraFeature.mc.player.m_6034_(offset.x, offset.y, offset.z);
             } else {
-                mc.player.setPos(startPos.x, startPos.y, startPos.z);
+                TpAuraFeature.mc.player.m_6034_(startPos.x, startPos.y, startPos.z);
             }
+        } else if (cfg.offsetFix) {
+            Vec3 offset = this.getOffset(finalPos);
+            this.sendMove(offset);
+            TpAuraFeature.mc.player.m_6034_(offset.x, offset.y, offset.z);
         } else {
-            if (cfg.offsetFix) {
-                Vec3 offset = getOffset(finalPos);
-                sendMove(offset);
-                mc.player.setPos(offset.x, offset.y, offset.z);
-            } else {
-                mc.player.setPos(finalPos.x, finalPos.y, finalPos.z);
-            }
+            TpAuraFeature.mc.player.m_6034_(finalPos.x, finalPos.y, finalPos.z);
         }
     }
 
-    /** 生成微小偏移量，防止服务端拉回 */
     private Vec3 getOffset(Vec3 base) {
-        double dx = 0.05, dy = 0.01;
-        List<Vec3> offsets = Arrays.asList(
-                base.add(dx, dy, 0),
-                base.add(-dx, dy, 0),
-                base.add(0, dy, dx),
-                base.add(0, dy, -dx)
-        );
+        double dx = 0.05;
+        double dy = 0.01;
+        List<Vec3> offsets = Arrays.asList(base.add(dx, dy, 0.0), base.add(-dx, dy, 0.0), base.add(0.0, dy, dx), base.add(0.0, dy, -dx));
         Collections.shuffle(offsets);
         for (Vec3 pos : offsets) {
-            if (!invalid(pos)) return pos;
+            if (this.invalid(pos)) continue;
+            return pos;
         }
-        return base.add(0, dy, 0);
+        return base.add(0.0, dy, 0.0);
     }
 
-    // ══════════════════════════════════════════════
-    //  工具方法
-    // ══════════════════════════════════════════════
-
-    /** 检查位置是否无效（碰撞箱重叠或岩浆） */
     private boolean invalid(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return true;
-        BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
-        // ★ 世界边界检查：防止虚空/Y轴越界导致异常
-        if (bp.getY() < mc.level.getMinBuildHeight() || bp.getY() >= mc.level.getMaxBuildHeight()) return true;
-        if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return true;
-        AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
-        for (BlockPos bPos : BlockPos.betweenClosed(
-                BlockPos.containing(box.minX, box.minY, box.minZ),
-                BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
-            var state = mc.level.getBlockState(bPos);
-            if (!state.getCollisionShape(mc.level, bPos).isEmpty()
-                    || state.getBlock() == net.minecraft.world.level.block.Blocks.LAVA) {
-                return true;
-            }
+        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+            return true;
+        }
+        BlockPos bp = BlockPos.m_274561_(pos.x, pos.y, pos.z);
+        if (bp.m_123342_() < TpAuraFeature.mc.f_91073_.m_141937_() || bp.m_123342_() >= TpAuraFeature.mc.f_91073_.m_151558_()) {
+            return true;
+        }
+        if (TpAuraFeature.mc.f_91073_.m_6325_(bp.m_123341_() >> 4, bp.m_123343_() >> 4) == null) {
+            return true;
+        }
+        AABB box = TpAuraFeature.mc.player.m_20191_().m_82383_(pos.subtract(TpAuraFeature.mc.player.position()));
+        for (BlockPos bPos : BlockPos.m_121940_((BlockPos)BlockPos.m_274561_(box.f_82288_, box.f_82289_, box.f_82290_), (BlockPos)BlockPos.m_274561_(box.f_82291_, box.f_82292_, box.f_82293_))) {
+            BlockState state = TpAuraFeature.mc.f_91073_.m_8055_(bPos);
+            if (state.m_60812_((BlockGetter)TpAuraFeature.mc.f_91073_, bPos).m_83281_() && state.m_60734_() != Blocks.f_49991_) continue;
+            return true;
         }
         return false;
     }
 
-    /** 在目标位置附近寻找有效位置 */
     private Vec3 findNearestPos(Vec3 desired) {
-        for (int dy = 0; dy <= 2; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
+        for (int dy = 0; dy <= 2; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                for (int dz = -1; dz <= 1; ++dz) {
                     Vec3 test = desired.add(dx, dy, dz);
-                    if (!invalid(test)) return test;
+                    if (this.invalid(test)) continue;
+                    return test;
                 }
             }
         }
         return null;
     }
 
-    /**
-     * ★ 天花板检测：从 startPos 向上扫描，返回安全传送高度
-     *
-     * 玩家高度1.8格（判定2格），传送点必须在天花板下方至少2格，
-     * 否则头部卡入方块触发服务端拉回。
-     *
-     * @param startPos  起始位置
-     * @param maxHeight 最大扫描高度
-     * @param step      扫描步长（1=精确，2=快速）
-     * @return 安全传送高度（Y坐标），最低不小于 startPos.y
-     */
     private double getSafeCeilingHeight(Vec3 startPos, double maxHeight, int step) {
-        if (mc.level == null) return startPos.y + maxHeight;
-
-        for (int y = step; y <= (int) maxHeight; y += step) {
-            BlockPos checkPos = BlockPos.containing(startPos.x, startPos.y + y, startPos.z);
-            BlockState state = mc.level.getBlockState(checkPos);
-            if (!state.isAir() && !state.getCollisionShape(mc.level, checkPos).isEmpty()) {
-                // 天花板下方至少留2格给玩家高度（1.8格≈判定2格）
-                return Math.max(startPos.y, startPos.y + y - 2.0);
-            }
+        if (TpAuraFeature.mc.f_91073_ == null) {
+            return startPos.y + maxHeight;
+        }
+        for (int y = step; y <= maxHeight; y += step) {
+            BlockPos checkPos = BlockPos.m_274561_(startPos.x, (startPos.y + y), startPos.z);
+            BlockState state = TpAuraFeature.mc.f_91073_.m_8055_(checkPos);
+            if (state.m_60795_() || state.m_60812_((BlockGetter)TpAuraFeature.mc.f_91073_, checkPos).m_83281_()) continue;
+            return Math.max(startPos.y, startPos.y + y - 2.0);
         }
         return startPos.y + maxHeight;
     }
 
-    /**
-     * ★ 在目标周围 tpOffset 格范围内随机选择加权安全落点
-     *
-     * 权重优先级（从高到低）：
-     *   1. 无实体 + 无方块阻挡 → 权重最高，首选
-     *   2. 有实体（但无方块）→ 权重中等
-     *   3. 目标实体正上方/旁边 → 权重较低
-     *   4. 有方块阻挡 → 权重最低，尽量避免
-     *
-     * @param center    目标实体位置
-     * @param offset    搜索半径（格）
-     * @return 选中的落点位置，null 表示没有可用点
-     */
     private Vec3 findRandomLandingPoint(Vec3 center, int offset, double maxRange) {
-        if (mc.level == null || mc.player == null) return null;
-
-        // 收集所有候选点及其权重
-        List<LandingCandidate> candidates = new ArrayList<>();
+        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+            return null;
+        }
+        ArrayList<LandingCandidate> candidates = new ArrayList<LandingCandidate>();
         int radius = Math.max(0, offset);
-
-        // 遍历以目标为中心的立方体区域（包含Y轴±1微调）
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    Vec3 testPos = center.add(dx, dy, 0);
-                    // ★ 约束：候选落点不能超出最大TP范围（防瞬移过远）
-                    if (mc.player.distanceToSqr(testPos) > maxRange * maxRange) continue;
-                    LandingCandidate candidate = evaluateLandingPoint(testPos);
-                    if (candidate != null) {
-                        candidates.add(candidate);
-                    }
+        for (int dx = -radius; dx <= radius; ++dx) {
+            for (int dz = -radius; dz <= radius; ++dz) {
+                for (int dy = -1; dy <= 1; ++dy) {
+                    LandingCandidate candidate;
+                    Vec3 testPos = center.add(dx, dy, 0.0);
+                    if (TpAuraFeature.mc.player.m_20238_(testPos) > maxRange * maxRange || (candidate = this.evaluateLandingPoint(testPos)) == null) continue;
+                    candidates.add(candidate);
                 }
             }
         }
-
-        if (candidates.isEmpty()) return null;
-
-        // ★ 按权重随机选择：权重越高，被选中概率越大
-        return weightedRandomSelect(candidates);
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return this.weightedRandomSelect(candidates);
     }
 
-    /**
-     * 评估单个落点的安全性和质量，返回候选对象（含权重）
-     * null 表示该点不可用
-     */
     private LandingCandidate evaluateLandingPoint(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return null;
-
-        // 基础检查：世界边界 + 区块加载
-        BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
-        if (bp.getY() < mc.level.getMinBuildHeight() || bp.getY() >= mc.level.getMaxBuildHeight()) return null;
-        if (mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) return null;
-
-        // ★ 检查方块碰撞
-        boolean hasBlockCollision = checkBlockCollision(pos);
+        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+            return null;
+        }
+        BlockPos bp = BlockPos.m_274561_(pos.x, pos.y, pos.z);
+        if (bp.m_123342_() < TpAuraFeature.mc.f_91073_.m_141937_() || bp.m_123342_() >= TpAuraFeature.mc.f_91073_.m_151558_()) {
+            return null;
+        }
+        if (TpAuraFeature.mc.f_91073_.m_6325_(bp.m_123341_() >> 4, bp.m_123343_() >> 4) == null) {
+            return null;
+        }
+        boolean hasBlockCollision = this.checkBlockCollision(pos);
         if (hasBlockCollision) {
-            // 方块阻挡的点也纳入候选，但给最低权重（极端情况下总比没有好）
             return new LandingCandidate(pos, 1);
         }
-
-        // ★ 检查该位置是否有其他实体（排除自己）
-        boolean hasEntity = checkEntityAtPosition(pos);
-
-        // ★ 计算权重
-        int weight;
-        if (!hasEntity) {
-            weight = 100; // 无实体+无方块 → 最佳落点
-        } else {
-            weight = 50;  // 有实体 → 中等权重
-        }
-
+        boolean hasEntity = this.checkEntityAtPosition(pos);
+        int weight = !hasEntity ? 100 : 50;
         return new LandingCandidate(pos, weight);
     }
 
-    /** 检查位置是否有方块碰撞（与 invalid() 同逻辑但不检查岩浆） */
     private boolean checkBlockCollision(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return true;
-        AABB box = mc.player.getBoundingBox().move(pos.subtract(mc.player.position()));
-        for (BlockPos bPos : BlockPos.betweenClosed(
-                BlockPos.containing(box.minX, box.minY, box.minZ),
-                BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
-            var state = mc.level.getBlockState(bPos);
-            if (!state.getCollisionShape(mc.level, bPos).isEmpty()
-                    || state.getBlock() == net.minecraft.world.level.block.Blocks.LAVA) {
-                return true;
-            }
+        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+            return true;
+        }
+        AABB box = TpAuraFeature.mc.player.m_20191_().m_82383_(pos.subtract(TpAuraFeature.mc.player.position()));
+        for (BlockPos bPos : BlockPos.m_121940_((BlockPos)BlockPos.m_274561_(box.f_82288_, box.f_82289_, box.f_82290_), (BlockPos)BlockPos.m_274561_(box.f_82291_, box.f_82292_, box.f_82293_))) {
+            BlockState state = TpAuraFeature.mc.f_91073_.m_8055_(bPos);
+            if (state.m_60812_((BlockGetter)TpAuraFeature.mc.f_91073_, bPos).m_83281_() && state.m_60734_() != Blocks.f_49991_) continue;
+            return true;
         }
         return false;
     }
 
-    /** 检查位置是否有其他实体存在 */
     private boolean checkEntityAtPosition(Vec3 pos) {
-        if (mc.level == null || mc.player == null) return false;
-        AABB checkArea = new AABB(pos.x - 0.5, pos.y, pos.z - 0.5,
-                                   pos.x + 0.5, pos.y + 2, pos.z + 0.5);
-        for (Entity e : mc.level.getEntities(null, checkArea)) {
-            if (e != mc.player && e.isAlive()) {
-                return true;
-            }
+        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+            return false;
+        }
+        AABB checkArea = new AABB(pos.x - 0.5, pos.y, pos.z - 0.5, pos.x + 0.5, pos.y + 2.0, pos.z + 0.5);
+        for (Entity e : TpAuraFeature.mc.f_91073_.m_45933_(null, checkArea)) {
+            if (e == TpAuraFeature.mc.player || !e.m_6084_()) continue;
+            return true;
         }
         return false;
     }
 
-    /** 加权随机选择 */
     private Vec3 weightedRandomSelect(List<LandingCandidate> candidates) {
-        if (candidates.isEmpty()) return null;
-        if (candidates.size() == 1) return candidates.get(0).pos;
-
-        // 计算总权重
-        long totalWeight = 0;
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        if (candidates.size() == 1) {
+            return candidates.get(0).pos;
+        }
+        long totalWeight = 0L;
         for (LandingCandidate c : candidates) {
             totalWeight += c.weight;
         }
-
-        // 加权随机
         long rand = ThreadLocalRandom.current().nextLong(totalWeight);
-        long cumulative = 0;
+        long cumulative = 0L;
         for (LandingCandidate c : candidates) {
-            cumulative += c.weight;
-            if (rand < cumulative) {
-                return c.pos;
-            }
+            if (rand >= (cumulative += c.weight)) continue;
+            return c.pos;
         }
-        // 兜底返回最后一个
-        return candidates.get(candidates.size() - 1).pos;
+        return candidates.get((candidates.size() - 1)).pos;
     }
 
-    /**
-     * 落点候选内部类：位置 + 权重
-     */
+    private Entity findTarget(TpAuraConfig cfg) {
+        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+            return null;
+        }
+        Set<String> allowedTypes = cfg.getEntityTypeSet();
+        Entity best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Entity entity : TpAuraFeature.mc.f_91073_.m_104735_()) {
+            if (!this.entityFilter(entity, cfg, allowedTypes)) continue;
+            double dist = TpAuraFeature.mc.player.distanceTo(entity);
+            double effectiveRange = cfg.maxRange;
+            if (!(dist < bestDist) || !(dist <= effectiveRange)) continue;
+            bestDist = dist;
+            best = entity;
+        }
+        return best;
+    }
+
+    private boolean entityFilter(Entity entity, TpAuraConfig cfg, Set<String> allowedTypes) {
+        Player p;
+        TamableAnimal ta;
+        String entityTypeKey;
+        if (!(entity instanceof LivingEntity) || !entity.m_6084_() || entity == TpAuraFeature.mc.player) {
+            return false;
+        }
+        if (!cfg.attackAllEntities && !allowedTypes.contains(entityTypeKey = ForgeRegistries.ENTITY_TYPES.getKey(entity.m_6095_()).m_135815_().toLowerCase())) {
+            return false;
+        }
+        if (TpAuraFeature.mc.player.distanceTo(entity) > cfg.maxRange) {
+            return false;
+        }
+        if (cfg.ignoreNamed && entity.m_8077_()) {
+            return false;
+        }
+        if (cfg.ignoreTamed && entity instanceof TamableAnimal && (ta = (TamableAnimal)entity).m_21824_()) {
+            return false;
+        }
+        if (cfg.whitelistEnabled) {
+            String entityType = ForgeRegistries.ENTITY_TYPES.getKey(entity.m_6095_()).m_135815_().toLowerCase();
+            List wl = Arrays.stream(cfg.whitelist.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+            if (wl.contains(entityType)) {
+                return false;
+            }
+        }
+        return !(entity instanceof Player) || !(p = (Player)entity).m_7500_() && !p.m_5833_();
+    }
+
+    private int findWeaponInventorySlot() {
+        if (TpAuraFeature.mc.player == null) {
+            return -1;
+        }
+        for (int i = 0; i < 45; ++i) {
+            String name = TpAuraFeature.mc.player.m_150109_().m_8020_(i).m_41720_().toString().toLowerCase();
+            if (!name.contains("sword") && !name.contains("mace") && !name.contains("axe")) continue;
+            return i;
+        }
+        return -1;
+    }
+
+    private boolean checkAndSwapWeapon(TpAuraConfig cfg) {
+        boolean isWeapon;
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.f_108617_ == null) {
+            return false;
+        }
+        ItemStack mainHand = TpAuraFeature.mc.player.m_21205_();
+        String itemName = mainHand.m_41720_().toString().toLowerCase();
+        boolean bl = isWeapon = itemName.contains("sword") || itemName.contains("mace") || itemName.contains("axe");
+        if (isWeapon && (!cfg.requireMace || itemName.contains("mace"))) {
+            return true;
+        }
+        if (cfg.silentSwap) {
+            int slot = this.findWeaponInventorySlot();
+            if (slot != -1) {
+                this.silentSwapSlot = slot;
+                this.silentSwapPrevSlot = TpAuraFeature.mc.player.m_150109_().f_35977_;
+                if (slot >= 36) {
+                    TpAuraFeature.mc.player.m_150109_().f_35977_ = slot - 36;
+                } else {
+                    TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(0, TpAuraFeature.mc.player.f_36096_.m_182424_(), slot, 0, ClickType.SWAP, TpAuraFeature.mc.player.f_36096_.m_142621_(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+                    TpAuraFeature.mc.player.m_150109_().f_35977_ = 0;
+                }
+                return true;
+            }
+        } else {
+            for (int i = 0; i < 9; ++i) {
+                String name = TpAuraFeature.mc.player.m_150109_().m_8020_(i).m_41720_().toString().toLowerCase();
+                if (!name.contains("sword") && !name.contains("mace") && !name.contains("axe")) continue;
+                if (this.originalSlot == -1) {
+                    this.originalSlot = TpAuraFeature.mc.player.m_150109_().f_35977_;
+                }
+                TpAuraFeature.mc.player.m_150109_().f_35977_ = i;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void swapBackWeapon() {
+        if (this.silentSwapSlot == -1 && this.originalSlot == -1) {
+            return;
+        }
+        if (this.silentSwapSlot != -1 && TpAuraFeature.mc.player != null && TpAuraFeature.mc.player.f_108617_ != null) {
+            if (this.silentSwapSlot >= 36) {
+                TpAuraFeature.mc.player.m_150109_().f_35977_ = this.silentSwapPrevSlot;
+            } else {
+                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(0, TpAuraFeature.mc.player.f_36096_.m_182424_(), this.silentSwapSlot, 0, ClickType.SWAP, TpAuraFeature.mc.player.f_36096_.m_142621_(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+                TpAuraFeature.mc.player.m_150109_().f_35977_ = this.silentSwapPrevSlot;
+                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClosePacket(TpAuraFeature.mc.player.f_36096_.f_38840_));
+            }
+            this.silentSwapSlot = -1;
+            this.silentSwapPrevSlot = -1;
+        }
+        if (this.originalSlot != -1 && TpAuraFeature.mc.player != null) {
+            TpAuraFeature.mc.player.m_150109_().f_35977_ = this.originalSlot;
+            this.originalSlot = -1;
+        }
+    }
+
+    private void cleanup() {
+        this.swapBackWeapon();
+        this.currentTarget = null;
+        this.targets.clear();
+        this.renderPathNodes.clear();
+        this.delayTimer = 0;
+    }
+
+    static {
+        overlayShowUntil = 0L;
+        wasHotkeyDown = false;
+        waitingKeyBind = false;
+    }
+
     private static class LandingCandidate {
         final Vec3 pos;
         final int weight;
+
         LandingCandidate(Vec3 pos, int weight) {
             this.pos = pos;
             this.weight = weight;
         }
     }
-
-    /** 查找最近的有效目标 */
-    private Entity findTarget(TpAuraConfig cfg) {
-        if (mc.level == null || mc.player == null) return null;
-
-        Set<String> allowedTypes = cfg.getEntityTypeSet();
-
-        Entity best = null;
-        double bestDist = Double.MAX_VALUE;
-
-        for (Entity entity : mc.level.entitiesForRendering()) {
-            if (!entityFilter(entity, cfg, allowedTypes)) continue;
-            double dist = mc.player.distanceTo(entity);
-            // ★ TpAura 瞬移攻击对所有实体统一使用 maxRange（瞬移不依赖距离）
-            double effectiveRange = cfg.maxRange;
-            if (dist < bestDist && dist <= effectiveRange) {
-                bestDist = dist;
-                best = entity;
-            }
-        }
-        return best;
-    }
-
-    /** 实体过滤器 */
-    private boolean entityFilter(Entity entity, TpAuraConfig cfg, Set<String> allowedTypes) {
-        if (!(entity instanceof LivingEntity) || !entity.isAlive() || entity == mc.player) return false;
-
-        // ★ 全生物攻击模式：不按类型过滤
-        if (!cfg.attackAllEntities) {
-            String entityTypeKey = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).getPath().toLowerCase();
-            if (!allowedTypes.contains(entityTypeKey)) return false;
-        }
-
-        if (mc.player.distanceTo(entity) > cfg.maxRange) return false;
-
-        // 忽略条件
-        if (cfg.ignoreNamed && entity.hasCustomName()) return false;
-        if (cfg.ignoreTamed && entity instanceof TamableAnimal ta && ta.isTame()) return false;
-
-        // ★ 白名单检查（所有实体均有效，不限于玩家）
-        //   之前版本将白名单检查放在 Player 分支内，导致全生物模式下非玩家实体绕过白名单。
-        if (cfg.whitelistEnabled) {
-            String entityType = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES
-                    .getKey(entity.getType()).getPath().toLowerCase();
-            List<String> wl = Arrays.stream(cfg.whitelist.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.toList());
-            if (wl.contains(entityType)) return false; // 实体类型在白名单中 → 跳过
-        }
-
-        // 玩家特殊处理
-        if (entity instanceof Player p) {
-            if (p.isCreative() || p.isSpectator()) return false;
-        }
-
-        return true;
-    }
-
-    // ══════════════════════════════════════════════
-    //  武器切换
-    // ══════════════════════════════════════════════
-
-    /** 查找武器在背包中的槽位 */
-    private int findWeaponInventorySlot() {
-        if (mc.player == null) return -1;
-        for (int i = 0; i < 45; i++) {
-            String name = mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
-            if (name.contains("sword") || name.contains("mace") || name.contains("axe")) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /** 检查并切换到武器 */
-    private boolean checkAndSwapWeapon(TpAuraConfig cfg) {
-        if (mc.player == null || mc.player.connection == null) return false;
-
-        ItemStack mainHand = mc.player.getMainHandItem();
-        String itemName = mainHand.getItem().toString().toLowerCase();
-        boolean isWeapon = itemName.contains("sword") || itemName.contains("mace") || itemName.contains("axe");
-        if (isWeapon && !(cfg.requireMace && !itemName.contains("mace"))) return true;
-
-        if (cfg.silentSwap) {
-            int slot = findWeaponInventorySlot();
-            if (slot != -1) {
-                silentSwapSlot = slot;
-                silentSwapPrevSlot = mc.player.getInventory().selected;
-                if (slot >= 36) {
-                    // 热栏槽位，直接切换
-                    mc.player.getInventory().selected = slot - 36;
-                } else {
-                    // 背包槽位，使用 SWAP 操作
-                    mc.player.connection.send(new ServerboundContainerClickPacket(
-                            0, // 玩家背包容器ID
-                            mc.player.containerMenu.getStateId(),
-                            slot, // 背包中武器槽位
-                            0, // 热栏槽位 0
-                            ClickType.SWAP,
-                            mc.player.containerMenu.getCarried(),
-                            new Int2ObjectOpenHashMap<>()
-                    ));
-                    mc.player.getInventory().selected = 0;
-                }
-                return true;
-            }
-        } else {
-            // 非静默切换：直接搜索热栏
-            for (int i = 0; i < 9; i++) {
-                String name = mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
-                if (name.contains("sword") || name.contains("mace") || name.contains("axe")) {
-                    if (originalSlot == -1) originalSlot = mc.player.getInventory().selected;
-                    mc.player.getInventory().selected = i;
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /** 恢复武器槽位 */
-    private void swapBackWeapon() {
-        if (silentSwapSlot == -1 && originalSlot == -1) return;
-
-        if (silentSwapSlot != -1 && mc.player != null && mc.player.connection != null) {
-            if (silentSwapSlot >= 36) {
-                mc.player.getInventory().selected = silentSwapPrevSlot;
-            } else {
-                mc.player.connection.send(new ServerboundContainerClickPacket(
-                        0,
-                        mc.player.containerMenu.getStateId(),
-                        silentSwapSlot,
-                        0,
-                        ClickType.SWAP,
-                        mc.player.containerMenu.getCarried(),
-                        new Int2ObjectOpenHashMap<>()
-                ));
-                mc.player.getInventory().selected = silentSwapPrevSlot;
-                mc.player.connection.send(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
-            }
-            silentSwapSlot = -1;
-            silentSwapPrevSlot = -1;
-        }
-
-        if (originalSlot != -1 && mc.player != null) {
-            mc.player.getInventory().selected = originalSlot;
-            originalSlot = -1;
-        }
-    }
-
-    /** 清理所有状态 */
-    private void cleanup() {
-        swapBackWeapon();
-        currentTarget = null;
-        targets.clear();
-        renderPathNodes.clear();
-        delayTimer = 0;
-    }
 }
+

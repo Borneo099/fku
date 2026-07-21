@@ -1,149 +1,152 @@
 package fku.org.example.fku.features.baritone;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.baritone.BaritoneConfig;
+import fku.org.example.fku.features.baritone.BaritoneParkourFeature;
+import fku.org.example.fku.features.baritone.BaritoneSpeedFeature;
+import fku.org.example.fku.features.baritone.ElytraAnywhereFeature;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Consumer;
-
-/**
- * Baritone 配置界面 — 规整排版，避免拥挤/重叠
- */
-public class BaritoneScreen extends Screen {
-
-    private static final int W = 300, H = 320;
-    private int cx, cy;
+public class BaritoneScreen
+extends Screen {
+    private static final int W = 300;
+    private static final int H = 320;
+    private int cx;
+    private int cy;
+    private int yParkourLabelY;
+    private int ySpeedLabelY;
+    private int yElytraLabelY;
 
     public BaritoneScreen() {
-        super(Component.literal("Baritone 设置"));
+        super(Component.literal((String)"Baritone \u8bbe\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-        cx = (width - W) / 2;
-        cy = (height - H) / 2;
-        var cfg = BaritoneConfig.getInstance();
-
-        int y = cy + 28, sp = 16;
-
-        // ════════ 跑酷模式 ════════
-        toggle("  破坏方块",     y, c -> c.allowBreak,     (c, v) -> c.allowBreak = v); y += sp;
-        toggle("  放置方块",     y, c -> c.allowPlace,     (c, v) -> c.allowPlace = v); y += sp;
-        toggle("  疾跑",         y, c -> c.allowSprint,    (c, v) -> c.allowSprint = v); y += sp;
-        toggle("  跑酷跳跃",     y, c -> c.allowParkour,   (c, v) -> c.allowParkour = v); y += sp;
-        toggle("  跑酷放置",     y, c -> c.allowParkourPlace, (c, v) -> c.allowParkourPlace = v); y += sp;
-        toggle("  背包操作",     y, c -> c.allowInventory, (c, v) -> c.allowInventory = v); y += sp;
-
-        // ── 跑酷总开关（单独一行，用不同颜色） ──
-        toggleParkour(cfg, y); y += sp + 4;
-
-        // ════════ 加速 ════════
-        y += 4;
-        int speedToggleY = y;
-        toggle("启用加速",      y, c -> c.speedEnabled,   (c, v) -> { c.speedEnabled = v; BaritoneSpeedFeature.setEnabled(v); }); y += sp;
-
-        // 速度倍率行
-        int btnY = y;
-        speedBtn("-0.5", cx + 68, btnY, c -> c.speedMultiplier = Math.max(1.0, c.speedMultiplier - 0.5));
-        speedBtn("-0.1", cx + 108, btnY, c -> c.speedMultiplier = Math.max(1.0, c.speedMultiplier - 0.1));
-        speedBtn("+0.1", cx + 148, btnY, c -> c.speedMultiplier = Math.min(32.0, c.speedMultiplier + 0.1));
-        speedBtn("+0.5", cx + 188, btnY, c -> c.speedMultiplier = Math.min(32.0, c.speedMultiplier + 0.5));
-        y += 18;
-
-        toggle("  仅地面加速",  y, c -> c.groundOnly,    (c, v) -> c.groundOnly = v); y += sp + 6;
-
-        // ════════ 鞘翅 ════════
-        y += 4;
-        int elytraY = y;
-        toggle("启用鞘翅任意维度", y, c -> c.elytraEnabled, (c, v) -> { c.elytraEnabled = v; ElytraAnywhereFeature.setEnabled(v); });
-
-        // ── 保存区 ──
+        this.cx = (this.width - 300) / 2;
+        this.cy = (this.height - 320) / 2;
+        BaritoneConfig cfg = BaritoneConfig.getInstance();
+        int y = this.cy + 28;
+        int sp = 16;
+        this.toggle("  \u7834\u574f\u65b9\u5757", y, c -> c.allowBreak, (c, v) -> {
+            c.allowBreak = v;
+        });
+        this.toggle("  \u653e\u7f6e\u65b9\u5757", y += sp, c -> c.allowPlace, (c, v) -> {
+            c.allowPlace = v;
+        });
+        this.toggle("  \u75be\u8dd1", y += sp, c -> c.allowSprint, (c, v) -> {
+            c.allowSprint = v;
+        });
+        this.toggle("  \u8dd1\u9177\u8df3\u8dc3", y += sp, c -> c.allowParkour, (c, v) -> {
+            c.allowParkour = v;
+        });
+        this.toggle("  \u8dd1\u9177\u653e\u7f6e", y += sp, c -> c.allowParkourPlace, (c, v) -> {
+            c.allowParkourPlace = v;
+        });
+        this.toggle("  \u80cc\u5305\u64cd\u4f5c", y += sp, c -> c.allowInventory, (c, v) -> {
+            c.allowInventory = v;
+        });
+        this.toggleParkour(cfg, y += sp);
+        y += sp + 4;
+        int speedToggleY = y += 4;
+        this.toggle("\u542f\u7528\u52a0\u901f", y, c -> c.speedEnabled, (c, v) -> {
+            c.speedEnabled = v;
+            BaritoneSpeedFeature.setEnabled(v);
+        });
+        int btnY = y += sp;
+        this.speedBtn("-0.5", this.cx + 68, btnY, c -> {
+            c.speedMultiplier = Math.max(1.0, c.speedMultiplier - 0.5);
+        });
+        this.speedBtn("-0.1", this.cx + 108, btnY, c -> {
+            c.speedMultiplier = Math.max(1.0, c.speedMultiplier - 0.1);
+        });
+        this.speedBtn("+0.1", this.cx + 148, btnY, c -> {
+            c.speedMultiplier = Math.min(32.0, c.speedMultiplier + 0.1);
+        });
+        this.speedBtn("+0.5", this.cx + 188, btnY, c -> {
+            c.speedMultiplier = Math.min(32.0, c.speedMultiplier + 0.5);
+        });
+        this.toggle("  \u4ec5\u5730\u9762\u52a0\u901f", y += 18, c -> c.groundOnly, (c, v) -> {
+            c.groundOnly = v;
+        });
         y += sp + 6;
-        addRenderableWidget(Button.builder(
-                Component.literal("§a保存并返回"),
-                b -> onClose()
-        ).bounds(cx + W / 2 - 45, y, 90, 18).build());
-
-        // 记录各区域标题 Y 供 render 使用
-        yParkourLabelY = cy + 26;
-        ySpeedLabelY = speedToggleY - 2;
-        yElytraLabelY = elytraY - 2;
+        int elytraY = y += 4;
+        this.toggle("\u542f\u7528\u9798\u7fc5\u4efb\u610f\u7ef4\u5ea6", y, c -> c.elytraEnabled, (c, v) -> {
+            c.elytraEnabled = v;
+            ElytraAnywhereFeature.setEnabled(v);
+        });
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> this.onClose()).bounds(this.cx + 150 - 45, y += sp + 6, 90, 18).build());
+        this.yParkourLabelY = this.cy + 26;
+        this.ySpeedLabelY = speedToggleY - 2;
+        this.yElytraLabelY = elytraY - 2;
     }
 
-    private int yParkourLabelY, ySpeedLabelY, yElytraLabelY;
-
-    /** 切换按钮 — 初始文字从 Config 读取，点击实时读取 */
-    private void toggle(String label, int y,
-                        java.util.function.Function<BaritoneConfig, Boolean> getter,
-                        BaritoneSetter setter) {
-        var cfg = BaritoneConfig.getInstance();
+    private void toggle(String label, int y, Function<BaritoneConfig, Boolean> getter, BaritoneSetter setter) {
+        BaritoneConfig cfg = BaritoneConfig.getInstance();
         boolean cur = getter.apply(cfg);
-        addRenderableWidget(Button.builder(
-                Component.literal(label + (cur ? " §a[ON]" : " §7[OFF]")),
-                btn -> {
-                    var c = BaritoneConfig.getInstance();
-                    boolean now = !getter.apply(c);
-                    setter.accept(c, now);
-                    c.save();
-                    btn.setMessage(Component.literal(label + (now ? " §a[ON]" : " §7[OFF]")));
-                }
-        ).bounds(cx + 20, y, W - 50, 14).build());
+        this.addRenderableWidget(Button.builder(Component.literal((String)(label + (cur ? " \u00a7a[ON]" : " \u00a77[OFF]"))), btn -> {
+            BaritoneConfig c = BaritoneConfig.getInstance();
+            boolean now = (Boolean)getter.apply(c) == false;
+            setter.accept(c, now);
+            c.save();
+            btn.setMessage(Component.literal((String)(label + (now ? " \u00a7a[ON]" : " \u00a77[OFF]"))));
+        }).bounds(this.cx + 20, y, 250, 14).build());
     }
 
-    /** 跑酷总开关（宽按钮 + 高亮） */
     private void toggleParkour(BaritoneConfig cfg, int y) {
         boolean cur = cfg.parkourEnabled;
-        addRenderableWidget(Button.builder(
-                Component.literal("§6§l★ 跑酷模式 §7" + (cur ? "§a[ON]" : "§c[OFF]")),
-                btn -> {
-                    var c = BaritoneConfig.getInstance();
-                    boolean now = !c.parkourEnabled;
-                    c.parkourEnabled = now;
-                    BaritoneParkourFeature.setEnabled(now);
-                    c.save();
-                    btn.setMessage(Component.literal("§6§l★ 跑酷模式 §7" + (now ? "§a[ON]" : "§c[OFF]")));
-                }
-        ).bounds(cx + 10, y, W - 20, 15).build());
+        this.addRenderableWidget(Button.builder(Component.literal((String)("\u00a76\u00a7l\u2605 \u8dd1\u9177\u6a21\u5f0f \u00a77" + (cur ? "\u00a7a[ON]" : "\u00a7c[OFF]"))), btn -> {
+            boolean now;
+            BaritoneConfig c = BaritoneConfig.getInstance();
+            c.parkourEnabled = now = !c.parkourEnabled;
+            BaritoneParkourFeature.setEnabled(now);
+            c.save();
+            btn.setMessage(Component.literal((String)("\u00a76\u00a7l\u2605 \u8dd1\u9177\u6a21\u5f0f \u00a77" + (now ? "\u00a7a[ON]" : "\u00a7c[OFF]"))));
+        }).bounds(this.cx + 10, y, 280, 15).build());
     }
 
-    @FunctionalInterface
-    private interface BaritoneSetter { void accept(BaritoneConfig cfg, boolean v); }
-
     private void speedBtn(String text, int x, int y, Consumer<BaritoneConfig> modifier) {
-        addRenderableWidget(Button.builder(Component.literal(text), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal((String)text), b -> {
             modifier.accept(BaritoneConfig.getInstance());
             BaritoneConfig.save();
         }).bounds(x, y, 34, 15).build());
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
-        GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
-        g.drawString(font, "§l§dBaritone 设置", cx + 10, cy + 8, 0xFFFFFF);
-
-        // 区域标题
-        g.drawString(font, "§b≡ 跑酷模式", cx + 12, yParkourLabelY, 0x55FFFF);
-        g.drawString(font, "§e≡ 加速", cx + 12, ySpeedLabelY, 0xFFFF55);
-        g.drawString(font, "§a≡ 鞘翅任意维度", cx + 12, yElytraLabelY, 0x55FF55);
-
-        // 实时速度倍率
+        this.fillGradient(g);
+        GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 300, 320, false);
+        g.drawString(this.font, "\u00a7l\u00a7dBaritone \u8bbe\u7f6e", this.cx + 10, this.cy + 8, 0xFFFFFF);
+        g.drawString(this.font, "\u00a7b\u2261 \u8dd1\u9177\u6a21\u5f0f", this.cx + 12, this.yParkourLabelY, 0x55FFFF);
+        g.drawString(this.font, "\u00a7e\u2261 \u52a0\u901f", this.cx + 12, this.ySpeedLabelY, 0xFFFF55);
+        g.drawString(this.font, "\u00a7a\u2261 \u9798\u7fc5\u4efb\u610f\u7ef4\u5ea6", this.cx + 12, this.yElytraLabelY, 0x55FF55);
         double spd = BaritoneConfig.getInstance().speedMultiplier;
-        g.drawString(font, "§7速度: §b" + String.format("%.1f", spd) + "x", cx + 16, ySpeedLabelY + 32, 0xCCCCCC);
-
-        g.drawString(font, "§7§o需安装 Baritone", cx + 10, cy + H - 14, 0x666666);
+        g.drawString(this.font, "\u00a77\u901f\u5ea6: \u00a7b" + String.format("%.1f", spd) + "x", this.cx + 16, this.ySpeedLabelY + 32, 0xCCCCCC);
+        g.drawString(this.font, "\u00a77\u00a7o\u9700\u5b89\u88c5 Baritone", this.cx + 10, this.cy + 320 - 14, 0x666666);
         super.render(g, mx, my, pt);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) { onClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) {
+            this.onClose();
+            return true;
+        }
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
 
-    @Override public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @FunctionalInterface
+    private static interface BaritoneSetter {
+        public void accept(BaritoneConfig var1, boolean var2);
+    }
 }
+

@@ -1,82 +1,78 @@
-package fku.org.example.fku.features.healthtag; /* water */
+package fku.org.example.fku.features.healthtag;
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * HealthTag配置界面
- * 支持调整位置和颜色
- */
-public class HealthTagConfigScreen extends Screen {
+public class HealthTagConfigScreen
+extends Screen {
     private static final int WIDTH = 250;
     private static final int HEIGHT = 150;
-    
     private EditBox xPosInput;
     private EditBox yPosInput;
-    
-    private final HealthTagConfig config;
+    private final HealthTagConfig config = HealthTagConfig.getInstance();
 
     public HealthTagConfigScreen() {
-        super(Component.literal("HealthTag配置"));
-        this.config = HealthTagConfig.getInstance();
+        super(Component.literal((String)"HealthTag\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-        int x = (width - WIDTH) / 2;
-        int y = (height - HEIGHT) / 2;
-
-        xPosInput = new EditBox(font, x + 150, y + 30, 60, 20, Component.literal(""));
-        xPosInput.setValue(String.valueOf(config.x));
-        xPosInput.setMaxLength(5);
-        addRenderableWidget(xPosInput);
-
-        yPosInput = new EditBox(font, x + 150, y + 60, 60, 20, Component.literal(""));
-        yPosInput.setValue(String.valueOf(config.y));
-        yPosInput.setMaxLength(5);
-        addRenderableWidget(yPosInput);
-
-        addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("完成"), btn -> {
-            saveConfig();
+        int x = (this.width - 250) / 2;
+        int y = (this.height - 150) / 2;
+        this.xPosInput = new EditBox(this.font, x + 150, y + 30, 60, 20, Component.literal((String)""));
+        this.xPosInput.m_94144_(String.valueOf(this.config.x));
+        this.xPosInput.m_94199_(5);
+        this.addRenderableWidget(this.xPosInput);
+        this.yPosInput = new EditBox(this.font, x + 150, y + 60, 60, 20, Component.literal((String)""));
+        this.yPosInput.m_94144_(String.valueOf(this.config.y));
+        this.yPosInput.m_94199_(5);
+        this.addRenderableWidget(this.yPosInput);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> {
+            this.saveConfig();
             Minecraft.getInstance().setScreen(new ClickGuiScreen());
         }).bounds(x + 75, y + 100, 100, 20).build());
     }
 
     private void saveConfig() {
         try {
-            int xPos = Integer.parseInt(xPosInput.getValue());
-            int yPos = Integer.parseInt(yPosInput.getValue());
-            config.x = xPos;
-            config.y = yPos;
+            int xPos = Integer.parseInt(this.xPosInput.m_94155_());
+            int yPos = Integer.parseInt(this.yPosInput.m_94155_());
+            this.config.x = xPos;
+            this.config.y = yPos;
             HealthTagConfig.save();
-            Minecraft.getInstance().player.displayClientMessage(Component.literal("§aHealthTag配置已保存"), true);
-        } catch (NumberFormatException e) {
-            Minecraft.getInstance().player.displayClientMessage(Component.literal("§c输入无效"), true);
+            Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7aHealthTag\u914d\u7f6e\u5df2\u4fdd\u5b58"), true);
+        }
+        catch (NumberFormatException e) {
+            Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7c\u8f93\u5165\u65e0\u6548"), true);
         }
     }
 
-    @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
-        int x = (width - WIDTH) / 2;
-        int y = (height - HEIGHT) / 2;
-        GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, WIDTH, HEIGHT, false);
-        guiGraphics.drawString(font, "HealthTag配置", x + 10, y + 10, 0xFFFFFF);
-        guiGraphics.drawString(font, "X坐标:", x + 20, y + 35, 0xAAAAAA);
-        guiGraphics.drawString(font, "Y坐标:", x + 20, y + 65, 0xAAAAAA);
+        this.fillGradient(guiGraphics);
+        int x = (this.width - 250) / 2;
+        int y = (this.height - 150) / 2;
+        GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, 250, 150, false);
+        guiGraphics.drawString(this.font, "HealthTag\u914d\u7f6e", x + 10, y + 10, 0xFFFFFF);
+        guiGraphics.drawString(this.font, "X\u5750\u6807:", x + 20, y + 35, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "Y\u5750\u6807:", x + 20, y + 65, 0xAAAAAA);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
-    @Override
-    public void onClose() { this.minecraft.setScreen(new ClickGuiScreen()); }
+    public void onClose() {
+        this.minecraft.setScreen(new ClickGuiScreen());
+    }
 }
+

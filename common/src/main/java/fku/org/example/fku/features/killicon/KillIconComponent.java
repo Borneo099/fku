@@ -1,25 +1,29 @@
-package fku.org.example.fku.features.killicon; /* water */
+package fku.org.example.fku.features.killicon;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.features.killicon.KillIconConfig;
+import fku.org.example.fku.features.killicon.KillIconScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import fku.org.example.fku.client.gui.components.ToggleComponent;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 击杀图标开关组件 — 左键开关，右键打开配置
- */
-public class KillIconComponent extends ToggleComponent {
-
+public class KillIconComponent
+extends ToggleComponent {
     @Override
-    protected String getFeatureName() { return "击杀图标"; }
+    protected String getFeatureName() {
+        return "\u51fb\u6740\u56fe\u6807";
+    }
 
     public KillIconComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "击杀图标");
+        super(x, y, width, height, "\u51fb\u6740\u56fe\u6807");
     }
 
     @Override
-    protected boolean isEnabled() { return KillIconConfig.getInstance().enabled; }
+    protected boolean isEnabled() {
+        return KillIconConfig.getInstance().enabled;
+    }
 
     @Override
     protected void toggle() {
@@ -28,28 +32,44 @@ public class KillIconComponent extends ToggleComponent {
     }
 
     @Override
-    protected void saveConfig() { KillIconConfig.save(); }
+    protected void saveConfig() {
+        KillIconConfig.save();
+    }
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible) return;
-        if (renderHotkeyWait(g)) return;
+        if (!this.visible) {
+            return;
+        }
+        if (this.renderHotkeyWait(g)) {
+            return;
+        }
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String displayStr = hotkeyAppend(label + ": " + (enabled ? "开" : "关"));
+        boolean enabled = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, enabled);
+        String displayStr = this.hotkeyAppend(this.label + ": " + (enabled ? "\u5f00" : "\u5173"));
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
-        g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2, textColor);
+        g.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2, 0x888888);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY)) {
-            if (button == 0) { toggle(); saveConfig(); return true; }
-            else if (button == 1) { Minecraft.getInstance().setScreen(new KillIconScreen()); return true; }
-            else if (button == 2) { return handleMiddleClick(mouseX, mouseY, button); }
+        if (this.isHovered(mouseX, mouseY)) {
+            if (button == 0) {
+                this.toggle();
+                this.saveConfig();
+                return true;
+            }
+            if (button == 1) {
+                Minecraft.getInstance().setScreen((Screen)new KillIconScreen());
+                return true;
+            }
+            if (button == 2) {
+                return this.handleMiddleClick(mouseX, mouseY, button);
+            }
         }
         return false;
     }
 }
+

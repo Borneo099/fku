@@ -2,71 +2,89 @@ package fku.org.example.fku.features.structure_locator;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Paths;
+import net.minecraft.client.Minecraft;
 
 public class StructureLocatorConfig {
-
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static StructureLocatorConfig instance;
-
     public boolean enabled = false;
     public String manualSeed = "";
-    public long capturedSeed = 0;
+    public long capturedSeed = 0L;
     public boolean hasSeed = false;
     public int targetIndex = 0;
     public int searchRadius = 16;
-    /** 标记自动清除距离（格），玩家进入此距离自动清除 #goal 标记 */
     public int markClearDistance = 10;
 
-    private StructureLocatorConfig() {}
+    private StructureLocatorConfig() {
+    }
 
     private static File getConfigFile() {
-        File configDir = new File(getGameDirectory(), "fku");
-        if (!configDir.exists()) configDir.mkdirs();
+        File configDir = new File(StructureLocatorConfig.getGameDirectory(), "fku");
+        if (!configDir.exists()) {
+            configDir.mkdirs();
+        }
         return new File(configDir, "structure_locator.json");
     }
 
     private static File getGameDirectory() {
         try {
-            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc != null) return mc.gameDirectory;
-        } catch (Exception ignored) {}
-        return Paths.get(".").toAbsolutePath().normalize().toFile();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                return mc.gameDirectory;
+            }
+        }
+        catch (Exception exception) {
+            // ignored
+        }
+        return Paths.get(".", new String[0]).toAbsolutePath().normalize().toFile();
     }
 
     public static StructureLocatorConfig getInstance() {
-        if (instance == null) load();
+        if (instance == null) {
+            StructureLocatorConfig.load();
+        }
         return instance;
     }
 
     public static void load() {
-        File f = getConfigFile();
+        File f = StructureLocatorConfig.getConfigFile();
         if (f.exists()) {
-            try (FileReader r = new FileReader(f)) {
-                instance = GSON.fromJson(r, StructureLocatorConfig.class);
-            } catch (IOException e) {
+            try (FileReader r = new FileReader(f);){
+                instance = (StructureLocatorConfig)GSON.fromJson(r, StructureLocatorConfig.class);
+            }
+            catch (IOException e) {
                 instance = new StructureLocatorConfig();
             }
         } else {
             instance = new StructureLocatorConfig();
-            save();
+            StructureLocatorConfig.save();
         }
-        if (instance == null) instance = new StructureLocatorConfig();
+        if (instance == null) {
+            instance = new StructureLocatorConfig();
+        }
     }
 
     public static void save() {
-        if (instance == null) return;
-        try (FileWriter w = new FileWriter(getConfigFile())) {
+        if (instance == null) {
+            return;
+        }
+        try (FileWriter w = new FileWriter(StructureLocatorConfig.getConfigFile());){
             GSON.toJson(instance, w);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void setEnabled(boolean v) { this.enabled = v; save(); }
+    public void setEnabled(boolean v) {
+        this.enabled = v;
+        StructureLocatorConfig.save();
+    }
 }
+

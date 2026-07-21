@@ -1,51 +1,72 @@
-package fku.org.example.fku.features.criticals; /* water */
+package fku.org.example.fku.features.criticals;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.features.criticals.CriticalsConfigScreen;
+import fku.org.example.fku.features.criticals.CriticalsFeature;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import fku.org.example.fku.client.gui.components.ToggleComponent;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * 刀刀暴击开关组件（左键开关，右键配置界面）
- */
-public class CriticalsComponent extends ToggleComponent {
-
+public class CriticalsComponent
+extends ToggleComponent {
     @Override
-    protected String getFeatureName() { return "刀刀暴击"; }
+    protected String getFeatureName() {
+        return "\u5200\u5200\u66b4\u51fb";
+    }
 
     public CriticalsComponent(int x, int y, int width, int height) {
-        super(x, y, width, height, "刀刀暴击");
+        super(x, y, width, height, "\u5200\u5200\u66b4\u51fb");
     }
 
     @Override
-    protected boolean isEnabled() { return CriticalsFeature.isEnabled(); }
+    protected boolean isEnabled() {
+        return CriticalsFeature.isEnabled();
+    }
 
     @Override
-    protected void toggle() { CriticalsFeature.toggleEnabled(); }
+    protected void toggle() {
+        CriticalsFeature.toggleEnabled();
+    }
 
     @Override
-    protected void saveConfig() {}
+    protected void saveConfig() {
+    }
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible) return;
-        if (renderHotkeyWait(g)) return;
-        boolean en = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, en);
-        String display = hotkeyAppend(label + ": " + (en ? "开" : "关"));
+        if (!this.visible) {
+            return;
+        }
+        if (this.renderHotkeyWait(g)) {
+            return;
+        }
+        boolean en = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, en);
+        String display = this.hotkeyAppend(this.label + ": " + (en ? "\u5f00" : "\u5173"));
         int c = en ? GuiStyleConfig.getInstance().getTextColor() : 0xAAAAAA;
-        g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, c);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, display, this.x + 5, this.y + (this.height - 8) / 2, c);
+        g.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2, 0x888888);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (isHovered(mx, my)) {
-            if (button == 0) { toggle(); saveConfig(); return true; }
-            else if (button == 1) { Minecraft.getInstance().setScreen(new CriticalsConfigScreen()); return true; }
-            else if (button == 2) { return handleMiddleClick(mx, my, button); }
+        if (this.isHovered(mx, my)) {
+            if (button == 0) {
+                this.toggle();
+                this.saveConfig();
+                return true;
+            }
+            if (button == 1) {
+                Minecraft.getInstance().setScreen((Screen)new CriticalsConfigScreen());
+                return true;
+            }
+            if (button == 2) {
+                return this.handleMiddleClick(mx, my, button);
+            }
         }
         return false;
     }
 }
+

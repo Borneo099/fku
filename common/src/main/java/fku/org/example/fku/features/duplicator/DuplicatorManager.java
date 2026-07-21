@@ -1,14 +1,20 @@
 package fku.org.example.fku.features.duplicator;
 
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.duplicator.DuplicatorConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import static net.minecraft.core.Direction.DOWN;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -17,118 +23,116 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class DuplicatorManager {
-
     private static final DuplicatorManager INSTANCE = new DuplicatorManager();
-
     private Phase phase = Phase.IDLE;
     private int tickCounter = 0;
     private boolean eventsRegistered;
     private int consecutiveFails = 0;
 
-    private enum Phase {
-        IDLE, ARMING, HOLDING, DUPING, COOLDOWN
+    private DuplicatorManager() {
     }
 
-    private DuplicatorManager() {}
-
-    public static DuplicatorManager getInstance() { return INSTANCE; }
+    public static DuplicatorManager getInstance() {
+        return INSTANCE;
+    }
 
     public static void registerEventHandlers() {
-        if (!INSTANCE.eventsRegistered) {
+        if (!DuplicatorManager.INSTANCE.eventsRegistered) {
             MinecraftForge.EVENT_BUS.register(INSTANCE);
-            INSTANCE.eventsRegistered = true;
-            Fku.LOGGER.info("[Duplicator] 事件处理器已注册");
+            DuplicatorManager.INSTANCE.eventsRegistered = true;
+            Fku.LOGGER.info("[Duplicator] \u4e8b\u4ef6\u5904\u7406\u5668\u5df2\u6ce8\u518c");
         }
     }
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
-        tick();
+        if (event.phase != TickEvent.Phase.START) {
+            return;
+        }
+        this.tick();
     }
 
     @SubscribeEvent
     public void onPlayerDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
-        reset();
+        this.reset();
     }
 
+    /*
+     * Unable to fully structure code
+     */
     private void tick() {
-        Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        if (player == null || mc.level == null) return;
-
-        DuplicatorConfig cfg = getConfig();
-        if (!cfg.enableTrident) {
-            phase = Phase.IDLE;
+        mc = Minecraft.getInstance();
+        player = mc.player;
+        if (player == null || mc.f_91073_ == null) {
             return;
         }
-
-        switch (phase) {
-            case IDLE : tickCounter = 0; phase = Phase.ARMING; break;
-
-            case ARMING : {
-                int slot = findBestWeaponSlot(player);
+        cfg = this.getConfig();
+        if (!cfg.enableTrident) {
+            this.phase = Phase.IDLE;
+            return;
+        }
+        switch (1.$SwitchMap$fku$org$example$fku$features$duplicator$DuplicatorManager$Phase[this.phase.ordinal()]) {
+            case 1: {
+                this.tickCounter = 0;
+                this.phase = Phase.ARMING;
+                break;
+            }
+            case 2: {
+                slot = this.findBestWeaponSlot(player);
                 if (slot == -1) {
-                    tickCounter++;
-                    if (tickCounter >= 20) { phase = Phase.IDLE; tickCounter = 0; }
+                    ++this.tickCounter;
+                    if (this.tickCounter < 20) break;
+                    this.phase = Phase.IDLE;
+                    this.tickCounter = 0;
                     break;
                 }
                 if (slot != 0) {
-                    mc.gameMode.handleInventoryMouseClick(
-                            player.containerMenu.containerId,
-                            36 + slot, 0, ClickType.SWAP, player);
+                    mc.f_91072_.m_171799_(player.f_36096_.f_38840_, 36 + slot, 0, ClickType.SWAP, (Player)player);
                 }
-                mc.gameMode.useItem(player, InteractionHand.MAIN_HAND);
-                phase = Phase.HOLDING;
-                tickCounter = 0;
-                Fku.LOGGER.debug("[Duplicator] 开始蓄力 slot={}", slot);
-            } break;
-
-            case HOLDING : {
-                tickCounter++;
-                if (tickCounter >= cfg.holdDuration) {
-                    phase = Phase.DUPING;
-                    tickCounter = 0;
-                }
-            } break;
-
-            case DUPING : {
+                mc.f_91072_.m_233721_((Player)player, InteractionHand.MAIN_HAND);
+                this.phase = Phase.HOLDING;
+                this.tickCounter = 0;
+                Fku.LOGGER.debug("[Duplicator] \u5f00\u59cb\u84c4\u529b slot={}", slot);
+                break;
+            }
+            case 3: {
+                ++this.tickCounter;
+                if (this.tickCounter < cfg.holdDuration) break;
+                this.phase = Phase.DUPING;
+                this.tickCounter = 0;
+                break;
+            }
+            case 4: {
                 try {
-                    mc.gameMode.handleInventoryMouseClick(
-                            player.containerMenu.containerId,
-                            3, 0, ClickType.SWAP, player);
-
+                    mc.f_91072_.m_171799_(player.f_36096_.f_38840_, 3, 0, ClickType.SWAP, (Player)player);
                     if (cfg.dropTridents) {
-                        mc.gameMode.handleInventoryMouseClick(
-                                player.containerMenu.containerId,
-                                44, 0, ClickType.THROW, player);
+                        mc.f_91072_.m_171799_(player.f_36096_.f_38840_, 44, 0, ClickType.THROW, (Player)player);
                     }
-
-                    mc.getConnection().send(new ServerboundPlayerActionPacket(
-                            ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM,
-                            BlockPos.ZERO, DOWN, 0));
-
-                    consecutiveFails = 0;
-                    Fku.LOGGER.debug("[Duplicator] 复制完成");
-                } catch (Exception e) {
-                    consecutiveFails++;
-                    Fku.LOGGER.error("[Duplicator] 复制异常: {}", e.getMessage());
-                    if (consecutiveFails >= 3) {
-                        player.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal(
-                                        "§c[三叉戟复制] 连续失败3次"), true);
-                        phase = Phase.IDLE;
-                        break;
-                    }
+                    mc.m_91403_().m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM, BlockPos.f_121853_, Direction.DOWN, 0));
+                    this.consecutiveFails = 0;
+                    Fku.LOGGER.debug("[Duplicator] \u590d\u5236\u5b8c\u6210");
                 }
-                phase = Phase.COOLDOWN;
-                tickCounter = 0;
-            } break;
+                catch (Exception e) {
+                    ++this.consecutiveFails;
+                    Fku.LOGGER.error("[Duplicator] \u590d\u5236\u5f02\u5e38: {}", e.getMessage());
+                    if (this.consecutiveFails < 3) ** GOTO lbl52
+                    player.m_5661_(Component.literal((String)"\u00a7c[\u4e09\u53c9\u621f\u590d\u5236] \u8fde\u7eed\u5931\u8d253\u6b21"), true);
+                    this.phase = Phase.IDLE;
+                    break;
+                }
+lbl52:
+                // 2 sources
 
-            case COOLDOWN : {
-                tickCounter++;
-                if (tickCounter >= cfg.dupeDelay) { phase = Phase.IDLE; tickCounter = 0; }
-            } break;
+                this.phase = Phase.COOLDOWN;
+                this.tickCounter = 0;
+                break;
+            }
+            case 5: {
+                ++this.tickCounter;
+                if (this.tickCounter < cfg.dupeDelay) break;
+                this.phase = Phase.IDLE;
+                this.tickCounter = 0;
+            }
         }
     }
 
@@ -136,38 +140,45 @@ public class DuplicatorManager {
         int bestSlot = -1;
         int bestDurability = Integer.MAX_VALUE;
         boolean hasRiptideWarned = false;
-
-        for (int i = 0; i < 9; i++) {
-            var stack = player.getInventory().getItem(i);
-            if (stack.isEmpty()) continue;
-            if (!(stack.getItem() instanceof TridentItem)) continue;
-
-            int riptide = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.RIPTIDE, stack);
+        for (int i = 0; i < 9; ++i) {
+            ItemStack stack = player.m_150109_().m_8020_(i);
+            if (stack.m_41619_() || !(stack.m_41720_() instanceof TridentItem)) continue;
+            int riptide = EnchantmentHelper.getTagEnchantmentLevel((Enchantment)Enchantments.f_44957_, (ItemStack)stack);
             if (riptide > 0) {
-                if (!hasRiptideWarned) {
-                    hasRiptideWarned = true;
-                    player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal(
-                                    "§e[三叉戟复制] 激流附魔跳过"), true);
-                }
+                if (hasRiptideWarned) continue;
+                hasRiptideWarned = true;
+                player.m_5661_(Component.literal((String)"\u00a7e[\u4e09\u53c9\u621f\u590d\u5236] \u6fc0\u6d41\u9644\u9b54\u8df3\u8fc7"), true);
                 continue;
             }
-            int dur = stack.getMaxDamage() - stack.getDamageValue();
-            if (dur < bestDurability) {
-                bestDurability = dur;
-                bestSlot = i;
-            }
+            int dur = stack.m_41776_() - stack.m_41773_();
+            if (dur >= bestDurability) continue;
+            bestDurability = dur;
+            bestSlot = i;
         }
         return bestSlot;
     }
 
-    private DuplicatorConfig getConfig() { return DuplicatorConfig.getInstance(); }
-
-    public void reset() {
-        phase = Phase.IDLE;
-        tickCounter = 0;
-        consecutiveFails = 0;
+    private DuplicatorConfig getConfig() {
+        return DuplicatorConfig.getInstance();
     }
 
-    public boolean isRunning() { return phase != Phase.IDLE; }
+    public void reset() {
+        this.phase = Phase.IDLE;
+        this.tickCounter = 0;
+        this.consecutiveFails = 0;
+    }
+
+    public boolean isRunning() {
+        return this.phase != Phase.IDLE;
+    }
+
+    private static enum Phase {
+        IDLE,
+        ARMING,
+        HOLDING,
+        DUPING,
+        COOLDOWN;
+
+    }
 }
+

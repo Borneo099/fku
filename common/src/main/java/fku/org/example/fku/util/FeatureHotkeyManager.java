@@ -2,120 +2,195 @@ package fku.org.example.fku.util;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
+import java.lang.invoke.LambdaMetafactory;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
 
-/**
- * 全局功能热键管理器
- * <p>
- * 无内置配置的功能 → 存储在 feature_hotkeys.json
- * 有内置配置的功能（如 TpAura、Loot、SelfDamage）→ 代理到其自身的 Config 类
- */
 public class FeatureHotkeyManager {
-
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static FeatureHotkeyManager instance;
-    private Map<String, HotkeyEntry> hotkeys = new HashMap<>();
+    private Map<String, HotkeyEntry> hotkeys = new HashMap<String, HotkeyEntry>();
+    private final transient Map<String, LinkedConfig> linkedConfigs = new HashMap<String, LinkedConfig>();
 
-    /** 关联到外部 Config 的代理（transient → GSON 跳过，只由 linkConfig() 设置） */
-    private transient final Map<String, LinkedConfig> linkedConfigs = new HashMap<>();
-
-    private static class HotkeyEntry {
-        int key = -1;
-        String name = "";
+    private FeatureHotkeyManager() {
     }
 
-    /** 外部 Config 代理描述 */
-    public record LinkedConfig(IntSupplier keyGetter, IntConsumer keySetter,
-                                Supplier<String> nameGetter, java.util.function.Consumer<String> nameSetter,
-                                Runnable saver) {}
-
-    private FeatureHotkeyManager() {}
-
-    /** 注册一个代理：该功能的热键由外部 Config 管理 */
     public static void linkConfig(String featureName, LinkedConfig cfg) {
-        getInstance().linkedConfigs.put(featureName, cfg);
+        FeatureHotkeyManager.getInstance().linkedConfigs.put(featureName, cfg);
     }
 
     private static File getConfigFile() {
-        File dir = new File(getGameDir(), "fku");
-        if (!dir.exists()) dir.mkdirs();
+        File dir = new File(FeatureHotkeyManager.getGameDir(), "fku");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
         return new File(dir, "feature_hotkeys.json");
     }
 
     private static File getGameDir() {
         try {
-            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc != null) return mc.gameDirectory;
-        } catch (Exception ignored) {}
-        return Paths.get(".").toAbsolutePath().normalize().toFile();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                return mc.gameDirectory;
+            }
+        }
+        catch (Exception exception) {
+            // ignored
+        }
+        return Paths.get(".", new String[0]).toAbsolutePath().normalize().toFile();
     }
 
     public static FeatureHotkeyManager getInstance() {
-        if (instance == null) { instance = new FeatureHotkeyManager(); instance.load(); }
+        if (instance == null) {
+            instance = new FeatureHotkeyManager();
+            instance.load();
+        }
         return instance;
     }
 
     private void load() {
-        File f = getConfigFile();
+        File f = FeatureHotkeyManager.getConfigFile();
         if (f.exists()) {
-            try (FileReader r = new FileReader(f)) {
-                FeatureHotkeyManager loaded = GSON.fromJson(r, FeatureHotkeyManager.class);
-                if (loaded != null) this.hotkeys = loaded.hotkeys;
-            } catch (IOException ignored) {}
+            try (FileReader r = new FileReader(f);){
+                FeatureHotkeyManager loaded = (FeatureHotkeyManager)GSON.fromJson(r, FeatureHotkeyManager.class);
+                if (loaded != null) {
+                    this.hotkeys = loaded.hotkeys;
+                }
+            }
+            catch (IOException iOException) {
+                // ignored
+            }
         }
     }
 
     public void save() {
-        try (FileWriter w = new FileWriter(getConfigFile())) { GSON.toJson(this, w); }
-        catch (IOException e) { e.printStackTrace(); }
+        try (FileWriter w = new FileWriter(FeatureHotkeyManager.getConfigFile());){
+            GSON.toJson(this, w);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    /** 获取某个功能的热键配置 */
     public IHotkeyInterface getHotkey(String featureName) {
-        LinkedConfig linked = linkedConfigs.get(featureName);
-        if (linked != null) return new LinkedHotkey(linked);
+        LinkedConfig linked = this.linkedConfigs.get(featureName);
+        if (linked != null) {
+            return new LinkedHotkey(linked);
+        }
         return new IHotkey(featureName);
     }
 
-    // ───────── 内置存储热键 ─────────
-
-    public class IHotkey implements IHotkeyInterface {
-        private final String featureName;
-        IHotkey(String name) { this.featureName = name; }
-        public int getHotkeyKey() { HotkeyEntry e = hotkeys.get(featureName); return e != null ? e.key : -1; }
-        public String getHotkeyName() { HotkeyEntry e = hotkeys.get(featureName); return e != null ? e.name : ""; }
-        public void setHotkeyKey(int key) { hotkeys.computeIfAbsent(featureName, k -> new HotkeyEntry()).key = key; }
-        public void setHotkeyName(String name) { hotkeys.computeIfAbsent(featureName, k -> new HotkeyEntry()).name = name; }
-        public void saveConfig() { save(); }
+    public record LinkedConfig(IntSupplier keyGetter, IntConsumer keySetter, Supplier<String> nameGetter, Consumer<String> nameSetter, Runnable saver) {
     }
 
-    // ───────── 代理到外部 Config ─────────
-
-    public class LinkedHotkey implements IHotkeyInterface {
+    public class LinkedHotkey
+    implements IHotkeyInterface {
         private final LinkedConfig cfg;
-        LinkedHotkey(LinkedConfig cfg) { this.cfg = cfg; }
-        public int getHotkeyKey() { return cfg.keyGetter().getAsInt(); }
-        public String getHotkeyName() { return cfg.nameGetter().get(); }
-        public void setHotkeyKey(int key) { cfg.keySetter().accept(key); }
-        public void setHotkeyName(String name) { cfg.nameSetter().accept(name); }
-        public void saveConfig() { cfg.saver().run(); }
+
+        LinkedHotkey(LinkedConfig cfg) {
+            this.cfg = cfg;
+        }
+
+        @Override
+        public int getHotkeyKey() {
+            return this.cfg.keyGetter().getAsInt();
+        }
+
+        @Override
+        public String getHotkeyName() {
+            return this.cfg.nameGetter().get();
+        }
+
+        @Override
+        public void setHotkeyKey(int key) {
+            this.cfg.keySetter().accept(key);
+        }
+
+        @Override
+        public void setHotkeyName(String name) {
+            this.cfg.nameSetter().accept(name);
+        }
+
+        @Override
+        public void saveConfig() {
+            this.cfg.saver().run();
+        }
     }
 
-    public interface IHotkeyInterface {
-        int getHotkeyKey();
-        String getHotkeyName();
-        void setHotkeyKey(int key);
-        void setHotkeyName(String name);
-        void saveConfig();
+    public class IHotkey
+    implements IHotkeyInterface {
+        private final String featureName;
+
+        IHotkey(String name) {
+            this.featureName = name;
+        }
+
+        @Override
+        public int getHotkeyKey() {
+            HotkeyEntry e = FeatureHotkeyManager.this.hotkeys.get(this.featureName);
+            return e != null ? e.key : -1;
+        }
+
+        @Override
+        public String getHotkeyName() {
+            HotkeyEntry e = FeatureHotkeyManager.this.hotkeys.get(this.featureName);
+            return e != null ? e.name : "";
+        }
+
+        @Override
+        public void setHotkeyKey(int key) {
+            FeatureHotkeyManager.this.hotkeys.computeIfAbsent((String)this.featureName, (Function<String, HotkeyEntry>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)Ljava/lang/Object;, lambda$setHotkeyKey$0(java.lang.String ), (Ljava/lang/String;)Lfku/org/example/fku/util/FeatureHotkeyManager$HotkeyEntry;)()).key = key;
+        }
+
+        @Override
+        public void setHotkeyName(String name) {
+            FeatureHotkeyManager.this.hotkeys.computeIfAbsent((String)this.featureName, (Function<String, HotkeyEntry>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)Ljava/lang/Object;, lambda$setHotkeyName$1(java.lang.String ), (Ljava/lang/String;)Lfku/org/example/fku/util/FeatureHotkeyManager$HotkeyEntry;)()).name = name;
+        }
+
+        @Override
+        public void saveConfig() {
+            FeatureHotkeyManager.this.save();
+        }
+
+        private static /* synthetic */ HotkeyEntry lambda$setHotkeyName$1(String k) {
+            return new HotkeyEntry();
+        }
+
+        private static /* synthetic */ HotkeyEntry lambda$setHotkeyKey$0(String k) {
+            return new HotkeyEntry();
+        }
+    }
+
+    public static interface IHotkeyInterface {
+        public int getHotkeyKey();
+
+        public String getHotkeyName();
+
+        public void setHotkeyKey(int var1);
+
+        public void setHotkeyName(String var1);
+
+        public void saveConfig();
+    }
+
+    private static class HotkeyEntry {
+        int key = -1;
+        String name = "";
+
+        private HotkeyEntry() {
+        }
     }
 }
+

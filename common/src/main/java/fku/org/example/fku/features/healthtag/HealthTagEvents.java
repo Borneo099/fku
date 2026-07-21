@@ -1,5 +1,7 @@
-package fku.org.example.fku.features.healthtag; /* water */
+package fku.org.example.fku.features.healthtag;
 
+import fku.org.example.fku.features.healthtag.HealthTagManager;
+import fku.org.example.fku.features.healthtag.HealthTagRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -9,9 +11,8 @@ import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE, value={Dist.CLIENT})
 public class HealthTagEvents {
-
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
@@ -21,20 +22,20 @@ public class HealthTagEvents {
 
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
-        if (event.getEntity().level().isClientSide) {
+        if (event.getEntity().m_9236_().f_46443_) {
             HealthTagManager.onAttack(event.getTarget());
         }
     }
 
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post event) {
-        if (HealthTagManager.isEditing()) return;
-        
+        if (HealthTagManager.isEditing()) {
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
-        double mouseX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getWidth();
-        double mouseY = mc.mouseHandler.ypos() * (double) mc.getWindow().getGuiScaledHeight() / (double) mc.getWindow().getHeight();
-        
-        HealthTagRenderer.render(event.getGuiGraphics(), (int) mouseX, (int) mouseY, event.getPartialTick());
+        double mouseX = mc.f_91067_.m_91589_() * mc.getWindow().m_85445_() / mc.getWindow().getWidth();
+        double mouseY = mc.f_91067_.m_91594_() * mc.getWindow().m_85446_() / mc.getWindow().getHeight();
+        HealthTagRenderer.render(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
     }
 
     @SubscribeEvent
@@ -61,3 +62,4 @@ public class HealthTagEvents {
         HealthTagRenderer.onMouseReleased(event.getMouseX(), event.getMouseY(), event.getButton());
     }
 }
+

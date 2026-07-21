@@ -1,16 +1,8 @@
-package fku.org.example.fku.features.bedrockbreaker; /* water */
+package fku.org.example.fku.features.bedrockbreaker;
 
+import fku.org.example.fku.features.bedrockbreaker.Rotation;
 import net.minecraft.core.Direction;
 
-/**
- * 方块放置方式 —— 严格参考 CheatUtils BlockPlacingMethod 枚举
- * (https://github.com/Zergatul/cheatutils/blob/1.21.11/common/java/com/zergatul/cheatutils/blocks/BlockPlacingMethod.java)
- *
- * 每种放置方式定义了：
- * - 目标旋转角度（getTargetRotation）
- * - 目标朝向（getTargetDirection）
- * - 允许的相邻面方向（getAllowedDirections）
- */
 public enum BlockPlacingMethod {
     FACING_TOP,
     FACING_BOTTOM,
@@ -20,39 +12,31 @@ public enum BlockPlacingMethod {
     FACING_WEST,
     FROM_HORIZONTAL;
 
-    /**
-     * 根据 Direction 返回对应的放置方式
-     */
+
     public static BlockPlacingMethod facing(Direction direction) {
         return switch (direction) {
-            case UP -> FACING_TOP;
-            case DOWN -> FACING_BOTTOM;
-            case NORTH -> FACING_NORTH;
-            case SOUTH -> FACING_SOUTH;
-            case EAST -> FACING_EAST;
-            case WEST -> FACING_WEST;
+            default -> throw new IncompatibleClassChangeError();
+            case Direction.UP -> FACING_TOP;
+            case Direction.DOWN -> FACING_BOTTOM;
+            case Direction.NORTH -> FACING_NORTH;
+            case Direction.SOUTH -> FACING_SOUTH;
+            case Direction.EAST -> FACING_EAST;
+            case Direction.WEST -> FACING_WEST;
         };
     }
 
-    /**
-     * 获取目标旋转角度（pitch, yaw）
-     * NaN 表示该分量不需要改变
-     */
     public Rotation getTargetRotation() {
         return switch (this) {
-            case FACING_TOP -> new Rotation(90, Float.NaN);
-            case FACING_BOTTOM -> new Rotation(-90, Float.NaN);
-            case FACING_NORTH -> new Rotation(0, 0);
-            case FACING_SOUTH -> new Rotation(0, -180);
-            case FACING_EAST -> new Rotation(0, 90);
-            case FACING_WEST -> new Rotation(0, -90);
+            case FACING_TOP -> new Rotation(90.0f, Float.NaN);
+            case FACING_BOTTOM -> new Rotation(-90.0f, Float.NaN);
+            case FACING_NORTH -> new Rotation(0.0f, 0.0f);
+            case FACING_SOUTH -> new Rotation(0.0f, -180.0f);
+            case FACING_EAST -> new Rotation(0.0f, 90.0f);
+            case FACING_WEST -> new Rotation(0.0f, -90.0f);
             default -> null;
         };
     }
 
-    /**
-     * 获取目标朝向（用于 Rotation.findClosest 计算最接近的旋转）
-     */
     public Direction getTargetDirection() {
         return switch (this) {
             case FACING_TOP -> Direction.DOWN;
@@ -65,10 +49,8 @@ public enum BlockPlacingMethod {
         };
     }
 
-    /**
-     * 获取允许搜索的相邻面方向
-     */
     public Direction[] getAllowedDirections() {
-        return Direction.values(); // 默认所有方向
+        return Direction.values();
     }
 }
+

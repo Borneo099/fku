@@ -1,129 +1,134 @@
-package fku.org.example.fku.features.quickswitch; /* water */
+package fku.org.example.fku.features.quickswitch;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.quickswitch.QuickSwitchConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * QuickSwitch 配置界面 — 退出时统一保存，避免每字符读写文件
- */
-public class QuickSwitchConfigScreen extends Screen {
-
-    private static final int W = 300, H = 220;
-    private int cx, cy;
-
+public class QuickSwitchConfigScreen
+extends Screen {
+    private static final int W = 300;
+    private static final int H = 220;
+    private int cx;
+    private int cy;
     private EditBox customItemsInput;
     private EditBox rttDelayBox;
-    private Button modeBtn, visualBtn, saveBtn;
+    private Button modeBtn;
+    private Button visualBtn;
+    private Button saveBtn;
 
     public QuickSwitchConfigScreen() {
-        super(Component.literal("鬼手秒切配置"));
+        super(Component.literal((String)"\u9b3c\u624b\u79d2\u5207\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-        cx = (width - W) / 2;
-        cy = (height - H) / 2;
-        var cfg = QuickSwitchConfig.getInstance();
-
-        // ── 模式选择 ──
-        modeBtn = Button.builder(Component.literal("模式: " + modeLabel(cfg.mode)), b -> {
-            cfg.mode = cycleMode(cfg.mode);
+        this.cx = (this.width - 300) / 2;
+        this.cy = (this.height - 220) / 2;
+        QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
+        this.modeBtn = Button.builder(Component.literal((String)("\u6a21\u5f0f: " + QuickSwitchConfigScreen.modeLabel(cfg.mode))), b -> {
+            cfg.mode = QuickSwitchConfigScreen.cycleMode(cfg.mode);
             cfg.save();
-            b.setMessage(Component.literal("模式: " + modeLabel(cfg.mode)));
-        }).bounds(cx + 10, cy + 30, 130, 18).build();
-        addRenderableWidget(modeBtn);
-
-        // ── 视觉反馈 ──
-        visualBtn = Button.builder(Component.literal("视觉反馈: " + (cfg.visualFeedback ? "开" : "关")), b -> {
+            b.setMessage(Component.literal((String)("\u6a21\u5f0f: " + QuickSwitchConfigScreen.modeLabel(cfg.mode))));
+        }).bounds(this.cx + 10, this.cy + 30, 130, 18).build();
+        this.addRenderableWidget(this.modeBtn);
+        this.visualBtn = Button.builder(Component.literal((String)("\u89c6\u89c9\u53cd\u9988: " + (cfg.visualFeedback ? "\u5f00" : "\u5173"))), b -> {
             cfg.visualFeedback = !cfg.visualFeedback;
             cfg.save();
-            b.setMessage(Component.literal("视觉反馈: " + (cfg.visualFeedback ? "开" : "关")));
-        }).bounds(cx + 150, cy + 30, 130, 18).build();
-        addRenderableWidget(visualBtn);
-
-        // ── 自定义物品列表（保存只在退出时触发，避免连续 IO） ──
-        customItemsInput = new EditBox(font, cx + 10, cy + 75, W - 20, 16, Component.literal("物品列表"));
-        customItemsInput.setMaxLength(100000);
-        customItemsInput.setValue(cfg.customItems);
-        addRenderableWidget(customItemsInput);
-
-        // ── RTT延迟（输入框自定义，0-2000ms） ──
-        rttDelayBox = new EditBox(font, cx + 10, cy + 110, 100, 16, Component.literal("延迟(ms)"));
-        rttDelayBox.setMaxLength(5);
-        rttDelayBox.setValue(String.valueOf(cfg.rttDelay));
-        rttDelayBox.setFilter(s -> s.matches("\\d*"));
-        addRenderableWidget(rttDelayBox);
-
-        // ── 优先级槽位（文字提示，不提供编辑） ──
-        addRenderableWidget(Button.builder(Component.literal("优先级槽位: " + intArrStr(cfg.prioritySlots)), b -> {}).bounds(cx + 120, cy + 110, 160, 16).build());
-
-        // ── 保存并返回 ──
-        saveBtn = Button.builder(Component.literal("§a保存并返回"), b -> {
-            saveAndClose();
-        }).bounds(cx + W / 2 - 40, cy + H - 24, 80, 16).build();
-        addRenderableWidget(saveBtn);
+            b.setMessage(Component.literal((String)("\u89c6\u89c9\u53cd\u9988: " + (cfg.visualFeedback ? "\u5f00" : "\u5173"))));
+        }).bounds(this.cx + 150, this.cy + 30, 130, 18).build();
+        this.addRenderableWidget(this.visualBtn);
+        this.customItemsInput = new EditBox(this.font, this.cx + 10, this.cy + 75, 280, 16, Component.literal((String)"\u7269\u54c1\u5217\u8868"));
+        this.customItemsInput.m_94199_(100000);
+        this.customItemsInput.m_94144_(cfg.customItems);
+        this.addRenderableWidget(this.customItemsInput);
+        this.rttDelayBox = new EditBox(this.font, this.cx + 10, this.cy + 110, 100, 16, Component.literal((String)"\u5ef6\u8fdf(ms)"));
+        this.rttDelayBox.m_94199_(5);
+        this.rttDelayBox.m_94144_(String.valueOf(cfg.rttDelay));
+        this.rttDelayBox.m_94153_(s -> s.matches("\\d*"));
+        this.addRenderableWidget(this.rttDelayBox);
+        this.addRenderableWidget(Button.builder(Component.literal((String)("\u4f18\u5148\u7ea7\u69fd\u4f4d: " + QuickSwitchConfigScreen.intArrStr(cfg.prioritySlots))), b -> {}).bounds(this.cx + 120, this.cy + 110, 160, 16).build());
+        this.saveBtn = Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> this.saveAndClose()).bounds(this.cx + 150 - 40, this.cy + 220 - 24, 80, 16).build();
+        this.addRenderableWidget(this.saveBtn);
     }
 
     private void saveAndClose() {
-        var cfg = QuickSwitchConfig.getInstance();
-        cfg.customItems = customItemsInput.getValue();
+        QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
+        cfg.customItems = this.customItemsInput.m_94155_();
         try {
-            int v = Integer.parseInt(rttDelayBox.getValue().trim());
-            cfg.rttDelay = (v < 0) ? 0 : (v > 2000 ? 2000 : v);
-        } catch (NumberFormatException ignored) {}
+            int v = Integer.parseInt(this.rttDelayBox.m_94155_().trim());
+            cfg.rttDelay = v < 0 ? 0 : (v > 2000 ? 2000 : v);
+        }
+        catch (NumberFormatException numberFormatException) {
+        }
         cfg.save();
         this.minecraft.setScreen(null);
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
-        var cfg = QuickSwitchConfig.getInstance();
-
-        GuiRenderHelper.drawPanelBackground(g, cx, cy, W, H, false);
-        g.drawString(font, "§l§bQuickSwitch 鬼手秒切", cx + 10, cy + 10, 0xFFFFFF);
-
+        this.fillGradient(g);
+        QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
+        GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 300, 220, false);
+        g.drawString(this.font, "\u00a7l\u00a7bQuickSwitch \u9b3c\u624b\u79d2\u5207", this.cx + 10, this.cy + 10, 0xFFFFFF);
         String modeDesc = switch (cfg.mode) {
-            case "SMART" -> "智能: 附魔评分最高武器";
-            case "CUSTOM" -> "自定义: 按列表顺序切换";
-            default -> "关闭: 功能未启用";
+            case "SMART" -> "\u667a\u80fd: \u9644\u9b54\u8bc4\u5206\u6700\u9ad8\u6b66\u5668";
+            case "CUSTOM" -> "\u81ea\u5b9a\u4e49: \u6309\u5217\u8868\u987a\u5e8f\u5207\u6362";
+            default -> "\u5173\u95ed: \u529f\u80fd\u672a\u542f\u7528";
         };
-        g.drawString(font, "§7" + modeDesc, cx + 10, cy + 54, 0x888888);
-        g.drawString(font, "§7物品列表(逗号分隔):", cx + 10, cy + 98, 0xAAAAAA);
-        g.drawString(font, "§7延迟(ms, 0-2000):", cx + 10, cy + 128, 0xAAAAAA);
-        g.drawString(font, "§7§o点击「保存并返回」或按 ESC 退出并保存", cx + 10, cy + H - 14, 0x666666);
-
+        g.drawString(this.font, "\u00a77" + modeDesc, this.cx + 10, this.cy + 54, 0x888888);
+        g.drawString(this.font, "\u00a77\u7269\u54c1\u5217\u8868(\u9017\u53f7\u5206\u9694):", this.cx + 10, this.cy + 98, 0xAAAAAA);
+        g.drawString(this.font, "\u00a77\u5ef6\u8fdf(ms, 0-2000):", this.cx + 10, this.cy + 128, 0xAAAAAA);
+        g.drawString(this.font, "\u00a77\u00a7o\u70b9\u51fb\u300c\u4fdd\u5b58\u5e76\u8fd4\u56de\u300d\u6216\u6309 ESC \u9000\u51fa\u5e76\u4fdd\u5b58", this.cx + 10, this.cy + 220 - 14, 0x666666);
         super.render(g, mx, my, pt);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) { saveAndClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) {
+            this.saveAndClose();
+            return true;
+        }
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
 
-    @Override
-    public void onClose() { saveAndClose(); super.onClose(); }
+    public void onClose() {
+        this.saveAndClose();
+        super.onClose();
+    }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
     private static String modeLabel(String m) {
-        return switch (m) { case "SMART" -> "智能"; case "CUSTOM" -> "自定义"; default -> "关闭"; };
+        return switch (m) {
+            case "SMART" -> "\u667a\u80fd";
+            case "CUSTOM" -> "\u81ea\u5b9a\u4e49";
+            default -> "\u5173\u95ed";
+        };
     }
+
     private static String cycleMode(String m) {
-        return switch (m) { case "OFF" -> "SMART"; case "SMART" -> "CUSTOM"; default -> "OFF"; };
+        return switch (m) {
+            case "OFF" -> "SMART";
+            case "SMART" -> "CUSTOM";
+            default -> "OFF";
+        };
     }
+
     private static String intArrStr(int[] arr) {
-        if (arr == null || arr.length == 0) return "无";
-        var sb = new StringBuilder();
-        for (int v : arr) sb.append(v).append(",");
+        if (arr == null || arr.length == 0) {
+            return "\u65e0";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int v : arr) {
+            sb.append(v).append(",");
+        }
         return sb.substring(0, sb.length() - 1);
     }
 }
+

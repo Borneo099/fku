@@ -1,6 +1,12 @@
-package fku.org.example.fku.features.displaymodel; /* water */
+package fku.org.example.fku.features.displaymodel;
 
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.displaymodel.DisplayModelConfig;
+import fku.org.example.fku.features.displaymodel.DisplayModelManager;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,52 +21,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * 实体模型展示 GUI（纯 UI）
- *
- * 职责：
- * - 多行指令输入（+/- 按钮增删行）
- * - 配置选项（放置延迟、生成间隔、实体间距、放置坐标 X/Y/Z）
- * - 多行队列执行：第一行→第二行→...，坐标统一使用固定玩家坐标
- * - 实时显示 Manager 进度
- *
- * UI 布局（动态高度）：
- *   [标题行]
- *   [提示文字]
- *   [+][指令输入框1]       ← 固定带加号
- *   [-][指令输入框2]       ← 点加号新增，带减号
- *   ...
- *   配置选项:
- *   放置延迟(ms): [___]   生成间隔(ms): [___]   实体间距(格): [___]
- *   可视距离: [___] (0=默认)
- *   放置坐标:  X [___]  Y [___]  Z [___]
- *   [保存配置]     [召唤模型]     [中止]
- *
- * 设计思想：
- * - UI 与 Manager 完全分离，Screen 只管布局和事件委托
- * - 配置保存仅通过"保存配置"按钮触发
- */
-public class DisplayModelScreen extends Screen {
-
+public class DisplayModelScreen
+extends Screen {
     private static final int WIDTH = 480;
-    /** 基础高度（不含指令行） */
     private static final int BASE_HEIGHT = 222;
-    /** 每行指令高度 */
     private static final int ROW_HEIGHT = 24;
-
-    // ============ 多行指令输入 ============
-    private final List<CommandRow> commandRows = new ArrayList<>();
-    private static class CommandRow {
-        EditBox input;
-        Button toggleBtn;  // "+" 或 "-"
-        String savedValue = ""; // 用于重建时恢复内容
-    }
-
-    // ============ 配置输入框 ============
+    private final List<CommandRow> commandRows = new ArrayList<CommandRow>();
     private EditBox placeDelayInput;
     private EditBox generationDelayInput;
     private EditBox entitySpacingInput;
@@ -68,8 +34,6 @@ public class DisplayModelScreen extends Screen {
     private EditBox placeYInput;
     private EditBox placeZInput;
     private EditBox viewRangeInput;
-
-    // ============ 按钮 ============
     private Button summonButton;
     private Button saveButton;
     private Button cancelButton;
@@ -78,565 +42,382 @@ public class DisplayModelScreen extends Screen {
     private Button clearPosButton;
     private Button savePresetButton;
     private Button loadPresetButton;
-
-    // ============ 状态 ============
     private String statusMessage = "";
     private int statusColor = 0xFFFFFF;
-
     private final DisplayModelConfig config;
     private final DisplayModelManager manager;
-
-    /** 追踪所有由本 Screen 创建的控件，用于重建时清理 */
-    private final List<GuiEventListener> myChildren = new ArrayList<>();
-    private final List<Renderable> myRenderables = new ArrayList<>();
-
-    /** 标记需要在下个 tick 重建布局 */
+    private final List<GuiEventListener> myChildren = new ArrayList<GuiEventListener>();
+    private final List<Renderable> myRenderables = new ArrayList<Renderable>();
     private boolean rebuildScheduled = false;
-    /** 当前面板总高度，用于GUI位置保存 */
-    private int totalHeight = BASE_HEIGHT;
+    private int totalHeight = 222;
 
     public DisplayModelScreen() {
-        super(Component.literal("实体模型展示"));
+        super(Component.literal((String)"\u5b9e\u4f53\u6a21\u578b\u5c55\u793a"));
         this.config = DisplayModelConfig.getInstance();
         this.manager = DisplayModelManager.getInstance();
-        manager.setOnStatusUpdate(this::updateFromManager);
+        this.manager.setOnStatusUpdate(this::updateFromManager);
     }
 
-    // ====================================================================
-    //  init — 初始化第一行指令 + 完整 UI
-    // ====================================================================
-    @Override
     protected void init() {
         super.init();
-
-        // ★ 从配置文件恢复指令行
-        commandRows.clear();
-        if (config.commandLines != null && !config.commandLines.isEmpty()) {
-            for (String line : config.commandLines) {
+        this.commandRows.clear();
+        if (this.config.commandLines != null && !this.config.commandLines.isEmpty()) {
+            for (String line : this.config.commandLines) {
                 CommandRow row = new CommandRow();
-                row.savedValue = line; // rebuildLayout 会用 savedCmds 恢复
-                commandRows.add(row);
+                row.savedValue = line;
+                this.commandRows.add(row);
             }
         }
-        // 确保至少一行
-        if (commandRows.isEmpty()) {
-            commandRows.add(new CommandRow());
+        if (this.commandRows.isEmpty()) {
+            this.commandRows.add(new CommandRow());
         }
-
-        rebuildLayout();
-        updateFromManager();
+        this.rebuildLayout();
+        this.updateFromManager();
     }
 
-    // ====================================================================
-    //  myAddWidget / myAddRenderableWidget — 追踪式添加控件
-    // ====================================================================
-    private <T extends GuiEventListener & Renderable & NarratableEntry> T myAddRenderableWidget(T widget) {
-        myChildren.add(widget);
-        myRenderables.add(widget);
-        return addRenderableWidget(widget);
+    private <T extends GuiEventListener & Renderable> T myAddRenderableWidget(T widget) {
+        this.myChildren.add(widget);
+        this.myRenderables.add(widget);
+        return (T)this.addRenderableWidget(widget);
     }
 
     private <T extends GuiEventListener & NarratableEntry> T myAddWidget(T widget) {
-        myChildren.add(widget);
-        return addWidget(widget);
+        this.myChildren.add(widget);
+        return (T)this.m_7787_(widget);
     }
 
-    // ====================================================================
-    //  rebuildLayout — 清除旧控件 + 重建全部
-    //
-    //  由于 children 是 private，用追踪列表来移除旧控件。
-    //  使用 Minecraft.getInstance().tell() 延迟到 tick 中调用，
-    //  避免在 mouseClicked 循环中修改 children 导致 CME。
-    // ====================================================================
     private void rebuildLayout() {
-        if (commandRows == null || commandRows.isEmpty()) return;
-
-        // 保存指令行内容
-        List<String> savedCmds = new ArrayList<>();
-        for (CommandRow row : commandRows) {
-            // ★ 优先取 input.getValue()，如果 input 还没创建则取 savedValue（预设载入时）
-            String val = (row.input != null) ? row.input.getValue() : row.savedValue;
+        if (this.commandRows == null || this.commandRows.isEmpty()) {
+            return;
+        }
+        ArrayList<String> savedCmds = new ArrayList<String>();
+        for (CommandRow row : this.commandRows) {
+            String val = row.input != null ? row.input.m_94155_() : row.savedValue;
             savedCmds.add(val != null ? val : "");
         }
-
-        // 清除旧控件
-        for (GuiEventListener w : myChildren) {
-            removeWidget(w);
+        for (GuiEventListener w : this.myChildren) {
+            this.m_169411_(w);
         }
-        for (Renderable r : myRenderables) {
-            renderables.remove(r);
+        for (Renderable r : this.myRenderables) {
+            this.f_169369_.remove(r);
         }
-        myChildren.clear();
-        myRenderables.clear();
-
-        int x = (width - WIDTH) / 2;
-        if (config.guiX >= 0 && config.guiY >= 0) {
-            x = config.guiX;
+        this.myChildren.clear();
+        this.myRenderables.clear();
+        int x = (this.width - 480) / 2;
+        if (this.config.guiX >= 0 && this.config.guiY >= 0) {
+            x = this.config.guiX;
         }
-        this.totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
-        int y = (height - this.totalHeight) / 2;
-        if (config.guiY >= 0) {
-            y = config.guiY;
+        this.totalHeight = 222 + (this.commandRows.size() - 1) * 24;
+        int y = (this.height - this.totalHeight) / 2;
+        if (this.config.guiY >= 0) {
+            y = this.config.guiY;
         }
-        int currentY = y + 44; // 与 render 同步：第一个指令行位置
-
-        // ── 指令输入行 ──
-        for (int i = 0; i < commandRows.size(); i++) {
-            CommandRow row = commandRows.get(i);
-            boolean isFirst = (i == 0);
-            String savedVal = i < savedCmds.size() ? savedCmds.get(i) : "";
-            final int rowIndex = i;
-
-            // 切换按钮（+ 或 -）
-            String btnLabel = isFirst ? "§a+" : "§c-";
-            row.toggleBtn = Button.builder(Component.literal(btnLabel), btn -> {
+        int currentY = y + 44;
+        for (int i = 0; i < this.commandRows.size(); ++i) {
+            CommandRow row = this.commandRows.get(i);
+            boolean isFirst = i == 0;
+            String savedVal = i < savedCmds.size() ? (String)savedCmds.get(i) : "";
+            int rowIndex = i;
+            String btnLabel = isFirst ? "\u00a7a+" : "\u00a7c-";
+            row.toggleBtn = Button.builder(Component.literal((String)btnLabel), btn -> {
                 if (isFirst) {
-                    commandRows.add(new CommandRow());
+                    this.commandRows.add(new CommandRow());
                 } else {
-                    commandRows.remove(rowIndex);
+                    this.commandRows.remove(rowIndex);
                 }
-                Minecraft.getInstance().tell(this::rebuildLayout);
+                Minecraft.getInstance().m_6937_(this::rebuildLayout);
             }).bounds(x + 10, currentY, 18, 18).build();
-            myAddRenderableWidget(row.toggleBtn);
-
-            // 指令输入框
-            row.input = new EditBox(font, x + 32, currentY, WIDTH - 44, 18, Component.literal(""));
-            row.input.setMaxLength(32767);
-            row.input.setValue(savedVal);
-            myAddWidget(row.input);
-
-            currentY += ROW_HEIGHT;
+            this.myAddRenderableWidget(row.toggleBtn);
+            row.input = new EditBox(this.font, x + 32, currentY, 436, 18, Component.literal((String)""));
+            row.input.m_94199_(Short.MAX_VALUE);
+            row.input.m_94144_(savedVal);
+            this.myAddWidget(row.input);
+            currentY += 24;
         }
-
-        // ── 与 render 同步：指令区结束后加间距，分割线在 currentY-4 处 ──
-        currentY += 14; // render: gap after cmd rows
-        // "配置选项:" label 由 render 绘制，无需 widget
-        currentY += 13; // render: 从 label 到第一行输入区的偏移
-
-        // ── 配置输入区 - 第一行：放置延迟 / 生成间隔 / 实体间距 ──
-        int inputY = currentY + 1; // render draws labels at currentY+1
-
-        placeDelayInput = createConfigInput(x + 90, inputY, 60,
-                String.valueOf((int) config.placeDelay), true, "\\d*");
-        myAddWidget(placeDelayInput);
-
-        generationDelayInput = createConfigInput(x + 240, inputY, 60,
-                String.valueOf((int) config.generationDelay), true, "\\d*");
-        myAddWidget(generationDelayInput);
-
-        entitySpacingInput = createConfigInput(x + 380, inputY, 55,
-                String.valueOf(config.entitySpacing), true, "\\d*\\.?\\d*");
-        myAddWidget(entitySpacingInput);
-
-        // ── 配置输入区 - 第二行：可视距离 ──
+        currentY += 14;
+        int inputY = (currentY += 13) + 1;
+        this.placeDelayInput = this.createConfigInput(x + 90, inputY, 60, String.valueOf(this.config.placeDelay), true, "\\d*");
+        this.myAddWidget(this.placeDelayInput);
+        this.generationDelayInput = this.createConfigInput(x + 240, inputY, 60, String.valueOf(this.config.generationDelay), true, "\\d*");
+        this.myAddWidget(this.generationDelayInput);
+        this.entitySpacingInput = this.createConfigInput(x + 380, inputY, 55, String.valueOf(this.config.entitySpacing), true, "\\d*\\.?\\d*");
+        this.myAddWidget(this.entitySpacingInput);
         int viewRangeY = inputY + 22;
-
-        viewRangeInput = createConfigInput(x + 80, viewRangeY, 60,
-                config.viewRange > 0 ? String.valueOf(config.viewRange) : "", false, "\\d*\\.?\\d*");
-        myAddWidget(viewRangeInput);
-
-        // ── 配置输入区 - 第三行：放置坐标 ──
-        int coordY = inputY + 44; // 两行偏移
-
-        placeXInput = createConfigInput(x + 80, coordY, 55,
-                config.placeX != 0 ? String.valueOf(config.placeX) : "", false, "-?\\d*\\.?\\d*");
-        myAddWidget(placeXInput);
-
-        placeYInput = createConfigInput(x + 165, coordY, 55,
-                config.placeY != 0 ? String.valueOf(config.placeY) : "", false, "-?\\d*\\.?\\d*");
-        myAddWidget(placeYInput);
-
-        placeZInput = createConfigInput(x + 250, coordY, 55,
-                config.placeZ != 0 ? String.valueOf(config.placeZ) : "", false, "-?\\d*\\.?\\d*");
-        myAddWidget(placeZInput);
-
-        // ── 坐标辅助按钮 ──
+        this.viewRangeInput = this.createConfigInput(x + 80, viewRangeY, 60, this.config.viewRange > 0.0 ? String.valueOf(this.config.viewRange) : "", false, "\\d*\\.?\\d*");
+        this.myAddWidget(this.viewRangeInput);
+        int coordY = inputY + 44;
+        this.placeXInput = this.createConfigInput(x + 80, coordY, 55, this.config.placeX != 0.0 ? String.valueOf(this.config.placeX) : "", false, "-?\\d*\\.?\\d*");
+        this.myAddWidget(this.placeXInput);
+        this.placeYInput = this.createConfigInput(x + 165, coordY, 55, this.config.placeY != 0.0 ? String.valueOf(this.config.placeY) : "", false, "-?\\d*\\.?\\d*");
+        this.myAddWidget(this.placeYInput);
+        this.placeZInput = this.createConfigInput(x + 250, coordY, 55, this.config.placeZ != 0.0 ? String.valueOf(this.config.placeZ) : "", false, "-?\\d*\\.?\\d*");
+        this.myAddWidget(this.placeZInput);
         int btnCoordY = coordY - 1;
-
-        writePosButton = Button.builder(Component.literal("写入玩家坐标"), btn -> {
+        this.writePosButton = Button.builder(Component.literal((String)"\u5199\u5165\u73a9\u5bb6\u5750\u6807"), btn -> {
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer p = mc.player;
             if (p != null) {
-                BlockPos bp = p.blockPosition();
-                placeXInput.setValue(String.valueOf(bp.getX()));
-                placeYInput.setValue(String.valueOf(bp.getY()));
-                placeZInput.setValue(String.valueOf(bp.getZ()));
+                BlockPos bp = p.m_20183_();
+                this.placeXInput.m_94144_(String.valueOf(bp.m_123341_()));
+                this.placeYInput.m_94144_(String.valueOf(bp.m_123342_()));
+                this.placeZInput.m_94144_(String.valueOf(bp.m_123343_()));
             }
         }).bounds(x + 313, btnCoordY, 80, 16).build();
-        myAddRenderableWidget(writePosButton);
-
-        clearPosButton = Button.builder(Component.literal("清空坐标"), btn -> {
-            placeXInput.setValue("");
-            placeYInput.setValue("");
-            placeZInput.setValue("");
+        this.myAddRenderableWidget(this.writePosButton);
+        this.clearPosButton = Button.builder(Component.literal((String)"\u6e05\u7a7a\u5750\u6807"), btn -> {
+            this.placeXInput.m_94144_("");
+            this.placeYInput.m_94144_("");
+            this.placeZInput.m_94144_("");
         }).bounds(x + 398, btnCoordY, 55, 16).build();
-        myAddRenderableWidget(clearPosButton);
-
-        // ── 底部按钮（预设按钮 + 原4按钮，6按钮分2行） ──
-        int btnY1 = y + totalHeight - 54;
-        int btnY2 = y + totalHeight - 30;
+        this.myAddRenderableWidget(this.clearPosButton);
+        int btnY1 = y + this.totalHeight - 54;
+        int btnY2 = y + this.totalHeight - 30;
         int btnW = 72;
-        int gap6 = (WIDTH - 6 * btnW) / 7;
+        int gap6 = (480 - 6 * btnW) / 7;
         int bX = x + gap6;
-
-        // 第一行：打开模型网站 / 保存预设 / 载入预设
-        openWebsiteButton = Button.builder(Component.literal("打开模型网站"),
-                btn -> Util.getPlatform().openUri(URI.create("https://block-display.com/"))
-        ).bounds(bX, btnY1, btnW, 20).build();
-        myAddRenderableWidget(openWebsiteButton);
-
-        savePresetButton = Button.builder(Component.literal("§a保存预设"), btn -> savePreset())
-                .bounds(bX + (btnW + gap6), btnY1, btnW, 20).build();
-        myAddRenderableWidget(savePresetButton);
-
-        loadPresetButton = Button.builder(Component.literal("§b载入预设"), btn -> loadPreset())
-                .bounds(bX + 2 * (btnW + gap6), btnY1, btnW, 20).build();
-        myAddRenderableWidget(loadPresetButton);
-
-        // 第二行：保存配置 / 召唤模型 / 中止
-        saveButton = Button.builder(Component.literal("保存配置"), btn -> saveInputsToConfig())
-                .bounds(bX, btnY2, btnW, 20).build();
-        myAddRenderableWidget(saveButton);
-
-        summonButton = Button.builder(Component.literal("召唤模型"), btn -> startSummon())
-                .bounds(bX + (btnW + gap6), btnY2, btnW, 20).build();
-        myAddRenderableWidget(summonButton);
-
-        cancelButton = Button.builder(Component.literal("中止"), btn -> {
-                    manager.stop();
-                    updateFromManager();
-                })
-                .bounds(bX + 2 * (btnW + gap6), btnY2, btnW, 20).build();
-        cancelButton.active = false;
-        myAddRenderableWidget(cancelButton);
+        this.openWebsiteButton = Button.builder(Component.literal((String)"\u6253\u5f00\u6a21\u578b\u7f51\u7ad9"), btn -> Util.m_137581_().m_137648_(URI.create("https://block-display.com/"))).bounds(bX, btnY1, btnW, 20).build();
+        this.myAddRenderableWidget(this.openWebsiteButton);
+        this.savePresetButton = Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u9884\u8bbe"), btn -> this.savePreset()).bounds(bX + (btnW + gap6), btnY1, btnW, 20).build();
+        this.myAddRenderableWidget(this.savePresetButton);
+        this.loadPresetButton = Button.builder(Component.literal((String)"\u00a7b\u8f7d\u5165\u9884\u8bbe"), btn -> this.loadPreset()).bounds(bX + 2 * (btnW + gap6), btnY1, btnW, 20).build();
+        this.myAddRenderableWidget(this.loadPresetButton);
+        this.saveButton = Button.builder(Component.literal((String)"\u4fdd\u5b58\u914d\u7f6e"), btn -> this.saveInputsToConfig()).bounds(bX, btnY2, btnW, 20).build();
+        this.myAddRenderableWidget(this.saveButton);
+        this.summonButton = Button.builder(Component.literal((String)"\u53ec\u5524\u6a21\u578b"), btn -> this.startSummon()).bounds(bX + (btnW + gap6), btnY2, btnW, 20).build();
+        this.myAddRenderableWidget(this.summonButton);
+        this.cancelButton = Button.builder(Component.literal((String)"\u4e2d\u6b62"), btn -> {
+            this.manager.stop();
+            this.updateFromManager();
+        }).bounds(bX + 2 * (btnW + gap6), btnY2, btnW, 20).build();
+        this.cancelButton.f_93623_ = false;
+        this.myAddRenderableWidget(this.cancelButton);
     }
 
-    /** 保存为预设 */
     private void savePreset() {
-        List<String> cmds = collectCommands();
-        if (cmds.isEmpty()) { setStatusMessage("§c至少输入一行指令", 0xFF5555); return; }
+        List<String> cmds = this.collectCommands();
+        if (cmds.isEmpty()) {
+            this.setStatusMessage("\u00a7c\u81f3\u5c11\u8f93\u5165\u4e00\u884c\u6307\u4ee4", 0xFF5555);
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new PresetSaveScreen(cmds, name -> {
+        mc.setScreen((Screen)new PresetSaveScreen(cmds, name -> {
             DisplayModelConfig.savePreset(name, cmds);
-            setStatusMessage("§a预设已保存: " + name, 0x55FF55);
-            mc.setScreen(this);
+            this.setStatusMessage("\u00a7a\u9884\u8bbe\u5df2\u4fdd\u5b58: " + name, 0x55FF55);
+            mc.setScreen((Screen)this);
         }));
     }
 
-    /** 载入预设 */
     private void loadPreset() {
         String[] presets = DisplayModelConfig.listPresets();
-        if (presets.length == 0) { setStatusMessage("§e没有已保存的预设", 0xFFFF55); return; }
+        if (presets.length == 0) {
+            this.setStatusMessage("\u00a7e\u6ca1\u6709\u5df2\u4fdd\u5b58\u7684\u9884\u8bbe", 0xFFFF55);
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
-        mc.setScreen(new PresetLoadScreen(presets, name -> {
+        mc.setScreen((Screen)new PresetLoadScreen(presets, name -> {
             List<String> cmds = DisplayModelConfig.loadPreset(name);
             if (!cmds.isEmpty()) {
-                // ★ 写入 config.commandLines，这样回到 DisplayModelScreen 时 init() 会从中恢复
-                config.commandLines = new ArrayList<>(cmds);
-                config.save();
-                setStatusMessage("§a已载入预设: " + name + "（" + cmds.size() + " 条指令）", 0x55FF55);
+                this.config.commandLines = new ArrayList<String>(cmds);
+                DisplayModelScreen displayModelScreen = this;
+                displayModelScreen.config.save();
+                this.setStatusMessage("\u00a7a\u5df2\u8f7d\u5165\u9884\u8bbe: " + name + "\uff08" + cmds.size() + " \u6761\u6307\u4ee4\uff09", 0x55FF55);
             }
-            mc.setScreen(this);
+            mc.setScreen((Screen)this);
         }));
     }
 
-    /** 收集当前所有指令 */
     private List<String> collectCommands() {
-        List<String> cmds = new ArrayList<>();
-        for (CommandRow row : commandRows) {
-            String cmd = row.input != null ? row.input.getValue().trim() : "";
-            if (!cmd.isEmpty()) cmds.add(cmd);
+        ArrayList<String> cmds = new ArrayList<String>();
+        for (CommandRow row : this.commandRows) {
+            String cmd = row.input != null ? row.input.m_94155_().trim() : "";
+            if (cmd.isEmpty()) continue;
+            cmds.add(cmd);
         }
         return cmds;
     }
 
-    /** 创建配置输入框的辅助方法 */
-    private EditBox createConfigInput(int x, int y, int width, String value,
-                                      boolean intOnly, String filter) {
-        EditBox box = new EditBox(font, x, y, width, 14, Component.literal(""));
-        box.setValue(value);
-        box.setMaxLength(intOnly ? 5 : 10);
-        box.setFilter(s -> s.matches(filter));
+    private EditBox createConfigInput(int x, int y, int width, String value, boolean intOnly, String filter) {
+        EditBox box = new EditBox(this.font, x, y, width, 14, Component.literal((String)""));
+        box.m_94144_(value);
+        box.m_94199_(intOnly ? 5 : 10);
+        box.m_94153_(s -> s.matches(filter));
         return box;
     }
 
-    // ====================================================================
-    //  tick
-    // ====================================================================
-    @Override
-    public void tick() {
-        super.tick();
-        for (CommandRow row : commandRows) {
-            if (row.input != null) row.input.tick();
+    public void m_86600_() {
+        super.m_86600_();
+        for (CommandRow row : this.commandRows) {
+            if (row.input == null) continue;
+            row.input.m_94120_();
         }
-        if (placeDelayInput != null) placeDelayInput.tick();
-        if (generationDelayInput != null) generationDelayInput.tick();
-        if (entitySpacingInput != null) entitySpacingInput.tick();
-        if (placeXInput != null) placeXInput.tick();
-        if (placeYInput != null) placeYInput.tick();
-        if (placeZInput != null) placeZInput.tick();
-        if (viewRangeInput != null) viewRangeInput.tick();
-
-        updateFromManager();
+        if (this.placeDelayInput != null) {
+            this.placeDelayInput.m_94120_();
+        }
+        if (this.generationDelayInput != null) {
+            this.generationDelayInput.m_94120_();
+        }
+        if (this.entitySpacingInput != null) {
+            this.entitySpacingInput.m_94120_();
+        }
+        if (this.placeXInput != null) {
+            this.placeXInput.m_94120_();
+        }
+        if (this.placeYInput != null) {
+            this.placeYInput.m_94120_();
+        }
+        if (this.placeZInput != null) {
+            this.placeZInput.m_94120_();
+        }
+        if (this.viewRangeInput != null) {
+            this.viewRangeInput.m_94120_();
+        }
+        this.updateFromManager();
     }
 
-    // ====================================================================
-    //  updateFromManager
-    // ====================================================================
     private void updateFromManager() {
-        if (manager.isRunning()) {
-            String msg = manager.getStatusMessage();
+        if (this.manager.isRunning()) {
+            String msg = this.manager.getStatusMessage();
             if (msg != null && !msg.isEmpty()) {
                 this.statusMessage = msg;
-                this.statusColor = msg.startsWith("§c") ? 0xFF5555 : 0x55FF55;
+                int n = this.statusColor = msg.startsWith("\u00a7c") ? 0xFF5555 : 0x55FF55;
             }
-            if (summonButton != null) {
-                summonButton.setMessage(Component.literal(
-                        "放置中 " + manager.getCurrentIndex() + "/" + manager.getTotalCount()));
-                summonButton.active = false;
+            if (this.summonButton != null) {
+                this.summonButton.setMessage(Component.literal((String)("\u653e\u7f6e\u4e2d " + this.manager.getCurrentIndex() + "/" + this.manager.getTotalCount())));
+                this.summonButton.f_93623_ = false;
             }
-            if (cancelButton != null) cancelButton.active = true;
+            if (this.cancelButton != null) {
+                this.cancelButton.f_93623_ = true;
+            }
         } else {
-            if (summonButton != null) {
-                summonButton.setMessage(Component.literal("召唤模型"));
-                summonButton.active = true;
+            if (this.summonButton != null) {
+                this.summonButton.setMessage(Component.literal((String)"\u53ec\u5524\u6a21\u578b"));
+                this.summonButton.f_93623_ = true;
             }
-            if (cancelButton != null) cancelButton.active = false;
+            if (this.cancelButton != null) {
+                this.cancelButton.f_93623_ = false;
+            }
         }
     }
 
-    // ====================================================================
-    //  startSummon
-    // ====================================================================
     private void startSummon() {
-        if (manager.isRunning()) {
-            setStatusMessage("§e放置正在进行中...", 0xFFFF55);
+        if (this.manager.isRunning()) {
+            this.setStatusMessage("\u00a7e\u653e\u7f6e\u6b63\u5728\u8fdb\u884c\u4e2d.", 0xFFFF55);
             return;
         }
-
-        List<String> cmds = new ArrayList<>();
-        for (CommandRow row : commandRows) {
-            String cmd = row.input.getValue().trim();
-            if (!cmd.isEmpty()) cmds.add(cmd);
+        ArrayList<String> cmds = new ArrayList<String>();
+        for (CommandRow row : this.commandRows) {
+            String cmd = row.input.m_94155_().trim();
+            if (cmd.isEmpty()) continue;
+            cmds.add(cmd);
         }
         if (cmds.isEmpty()) {
-            setStatusMessage("§c请至少输入一行 /summon 指令", 0xFF5555);
+            this.setStatusMessage("\u00a7c\u8bf7\u81f3\u5c11\u8f93\u5165\u4e00\u884c /summon \u6307\u4ee4", 0xFF5555);
             return;
         }
-
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
-        if (player == null) return;
-        if (!player.isCreative()) {
-            setStatusMessage("§c需要创造模式", 0xFF5555);
+        if (player == null) {
             return;
         }
-
-        int placeDelayMs = parseIntOrDefault(placeDelayInput, 50);
-        int generationDelayMs = parseIntOrDefault(generationDelayInput, 50);
-        double spacing = parseDoubleClamped(entitySpacingInput, 0.5, 0, 10);
-
-        double px = parseDoubleOrDefault(placeXInput, 0);
-        double py = parseDoubleOrDefault(placeYInput, 0);
-        double pz = parseDoubleOrDefault(placeZInput, 0);
-        double vr = parseDoubleOrDefault(viewRangeInput, 0);
-
-        BlockPos fixedPos = (px == 0 && py == 0 && pz == 0)
-                ? player.blockPosition()
-                : BlockPos.containing(px, py, pz);
-
-        List<DisplayModelManager.CommandEntry> queue = new ArrayList<>();
+        if (!player.m_7500_()) {
+            this.setStatusMessage("\u00a7c\u9700\u8981\u521b\u9020\u6a21\u5f0f", 0xFF5555);
+            return;
+        }
+        int placeDelayMs = DisplayModelScreen.parseIntOrDefault(this.placeDelayInput, 50);
+        int generationDelayMs = DisplayModelScreen.parseIntOrDefault(this.generationDelayInput, 50);
+        double spacing = DisplayModelScreen.parseDoubleClamped(this.entitySpacingInput, 0.5, 0.0, 10.0);
+        double px = DisplayModelScreen.parseDoubleOrDefault(this.placeXInput, 0.0);
+        double py = DisplayModelScreen.parseDoubleOrDefault(this.placeYInput, 0.0);
+        double pz = DisplayModelScreen.parseDoubleOrDefault(this.placeZInput, 0.0);
+        double vr = DisplayModelScreen.parseDoubleOrDefault(this.viewRangeInput, 0.0);
+        BlockPos fixedPos = px == 0.0 && py == 0.0 && pz == 0.0 ? player.m_20183_() : BlockPos.m_274561_(px, py, pz);
+        ArrayList<DisplayModelManager.CommandEntry> queue = new ArrayList<DisplayModelManager.CommandEntry>();
         for (String cmd : cmds) {
             queue.add(new DisplayModelManager.CommandEntry(cmd));
         }
-
-        manager.start(queue, generationDelayMs, placeDelayMs, spacing, fixedPos, vr);
-        if (manager.isRunning()) {
-            setStatusMessage("§a开始放置，" + cmds.size() + " 行指令...", 0x55FF55);
-            summonButton.setMessage(Component.literal("放置中..."));
-            summonButton.active = false;
+        this.manager.start(queue, generationDelayMs, placeDelayMs, spacing, fixedPos, vr);
+        if (this.manager.isRunning()) {
+            this.setStatusMessage("\u00a7a\u5f00\u59cb\u653e\u7f6e\uff0c" + cmds.size() + " \u884c\u6307\u4ee4.", 0x55FF55);
+            this.summonButton.setMessage(Component.literal((String)"\u653e\u7f6e\u4e2d."));
+            this.summonButton.f_93623_ = false;
         }
     }
 
-    // ====================================================================
-    //  saveInputsToConfig
-    // ====================================================================
-    /** 保存输入到配置（含指令行、GUI位置、所有参数） */
     private void saveInputsToConfig() {
-        tryParseInt(placeDelayInput, v -> config.setPlaceDelay(v));
-        tryParseInt(generationDelayInput, v -> config.setGenerationDelay(v));
-        tryParseDouble(entitySpacingInput, v -> config.setEntitySpacing(Math.max(0, Math.min(10, v))));
-        tryParseDouble(placeXInput, config::setPlaceX);
-        tryParseDouble(placeYInput, config::setPlaceY);
-        tryParseDouble(placeZInput, config::setPlaceZ);
-        tryParseDouble(viewRangeInput, v -> config.setViewRange(Math.max(0, v)));
-
-        // ★ 保存指令行
-        config.commandLines = collectCommands();
-        config.save();
-
-        // ★ 保存GUI位置
-        config.guiX = (width - WIDTH) / 2;
-        config.guiY = (height - totalHeight) / 2;
-        config.save();
-
-        setStatusMessage("§a配置已保存（含指令行）", 0x55FF55);
-        Fku.LOGGER.info("[DisplayModel] 配置已保存");
+        DisplayModelScreen.tryParseInt(this.placeDelayInput, v -> this.config.setPlaceDelay(v));
+        DisplayModelScreen.tryParseInt(this.generationDelayInput, v -> this.config.setGenerationDelay(v));
+        DisplayModelScreen.tryParseDouble(this.entitySpacingInput, v -> this.config.setEntitySpacing(Math.max(0.0, Math.min(10.0, v))));
+        DisplayModelScreen.tryParseDouble(this.placeXInput, this.config::setPlaceX);
+        DisplayModelScreen.tryParseDouble(this.placeYInput, this.config::setPlaceY);
+        DisplayModelScreen.tryParseDouble(this.placeZInput, this.config::setPlaceZ);
+        DisplayModelScreen.tryParseDouble(this.viewRangeInput, v -> this.config.setViewRange(Math.max(0.0, v)));
+        this.config.commandLines = this.collectCommands();
+        DisplayModelScreen displayModelScreen = this;
+        displayModelScreen.config.save();
+        this.config.guiX = (this.width - 480) / 2;
+        this.config.guiY = (this.height - this.totalHeight) / 2;
+        DisplayModelScreen displayModelScreen2 = this;
+        displayModelScreen2.config.save();
+        this.setStatusMessage("\u00a7a\u914d\u7f6e\u5df2\u4fdd\u5b58\uff08\u542b\u6307\u4ee4\u884c\uff09", 0x55FF55);
+        Fku.LOGGER.info("[DisplayModel] \u914d\u7f6e\u5df2\u4fdd\u5b58");
     }
 
-    @Override
     public void onClose() {
-        // 关闭时自动保存GUI位置
-        int totalHeight = BASE_HEIGHT + (commandRows.size() - 1) * ROW_HEIGHT;
-        config.guiX = (width - WIDTH) / 2;
-        config.guiY = (height - totalHeight) / 2;
-        config.commandLines = collectCommands();
-        config.save();
+        int totalHeight = 222 + (this.commandRows.size() - 1) * 24;
+        this.config.guiX = (this.width - 480) / 2;
+        this.config.guiY = (this.height - totalHeight) / 2;
+        this.config.commandLines = this.collectCommands();
+        DisplayModelScreen displayModelScreen = this;
+        displayModelScreen.config.save();
         super.onClose();
     }
 
-    // ══════════════════════════════════════
-    //  预设选择界面（简易 Screen）
-    // ══════════════════════════════════════
-
-    /** 预设保存界面 */
-    private static class PresetSaveScreen extends Screen {
-        private final List<String> commands;
-        private final java.util.function.Consumer<String> callback;
-        private EditBox nameInput;
-
-        PresetSaveScreen(List<String> commands, java.util.function.Consumer<String> callback) {
-            super(Component.literal("保存预设"));
-            this.commands = commands;
-            this.callback = callback;
-        }
-
-        @Override
-        protected void init() {
-            int cx = width / 2, cy = height / 2;
-            addRenderableWidget(Button.builder(Component.literal("§c取消"), b -> onClose())
-                    .bounds(cx - 75, cy + 30, 70, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("§a保存"), b -> {
-                        String name = nameInput.getValue().trim();
-                        if (!name.isEmpty()) callback.accept(name);
-                    }).bounds(cx + 5, cy + 30, 70, 20).build());
-            nameInput = new EditBox(font, cx - 70, cy - 10, 140, 18, Component.literal("预设名"));
-            nameInput.setMaxLength(64);
-            addWidget(nameInput);
-        }
-
-        @Override
-        public void render(GuiGraphics g, int mx, int my, float pt) {
-            renderBackground(g);
-            g.drawString(font, "§l输入预设名称:", width / 2 - 50, height / 2 - 30, 0xFFFFFF);
-            g.drawString(font, "§7共 " + commands.size() + " 条指令", width / 2 - 40, height / 2 + 12, 0x888888);
-            nameInput.render(g, mx, my, pt);
-            super.render(g, mx, my, pt);
-        }
-        @Override public boolean keyPressed(int k, int sc, int mod) {
-            if (k == 256) { onClose(); return true; }
-            if ((k == 257 || k == 335) && nameInput.isFocused()) {
-                String name = nameInput.getValue().trim();
-                if (!name.isEmpty()) callback.accept(name);
-                return true;
-            }
-            if (nameInput.isFocused()) return nameInput.keyPressed(k, sc, mod);
-            return super.keyPressed(k, sc, mod);
-        }
-        @Override public boolean isPauseScreen() { return false; }
-    }
-
-    /** 预设加载界面 */
-    private static class PresetLoadScreen extends Screen {
-        private final String[] presets;
-        private final java.util.function.Consumer<String> callback;
-        private int scrollOffset = 0;
-
-        PresetLoadScreen(String[] presets, java.util.function.Consumer<String> callback) {
-            super(Component.literal("载入预设"));
-            this.presets = presets;
-            this.callback = callback;
-        }
-
-        @Override
-        protected void init() {
-            int cx = width / 2, cy = height / 2;
-            int btnW = 120;
-            int maxVis = Math.min(presets.length, 8);
-            int startY = cy - maxVis * 12;
-            for (int i = 0; i < maxVis; i++) {
-                int idx = i + scrollOffset;
-                if (idx >= presets.length) break;
-                final String name = presets[idx];
-                addRenderableWidget(Button.builder(Component.literal(name),
-                        b -> callback.accept(name)
-                ).bounds(cx - btnW / 2, startY + i * 22, btnW, 20).build());
-            }
-            addRenderableWidget(Button.builder(Component.literal("§c关闭"), b -> onClose())
-                    .bounds(cx - 30, startY + maxVis * 22 + 8, 60, 20).build());
-        }
-
-        @Override
-        public void render(GuiGraphics g, int mx, int my, float pt) {
-            renderBackground(g);
-            g.drawString(font, "§l选择预设:", width / 2 - 40, height / 2 - (Math.min(presets.length, 8) * 22 / 2) - 20, 0xFFFFFF);
-            super.render(g, mx, my, pt);
-        }
-        @Override public boolean isPauseScreen() { return false; }
-        @Override public boolean mouseScrolled(double mx, double my, double delta) {
-            scrollOffset = (int) Math.max(0, Math.min(presets.length - 1, scrollOffset - delta));
-            rebuildWidgets();
-            return true;
-        }
-    }
-
-    // ════════ 渲染底部按钮 ════════
-
-    // ====================================================================
-    //  辅助
-    // ====================================================================
-    @FunctionalInterface
-    private interface IntConsumer { void accept(int v); }
-    @FunctionalInterface
-    private interface DoubleConsumer { void accept(double v); }
-
     private static void tryParseInt(EditBox input, IntConsumer consumer) {
         try {
-            String val = input.getValue().trim();
-            if (!val.isEmpty()) consumer.accept(Integer.parseInt(val));
-        } catch (NumberFormatException ignored) {}
+            String val = input.m_94155_().trim();
+            if (!val.isEmpty()) {
+                consumer.accept(Integer.parseInt(val));
+            }
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
     }
 
     private static void tryParseDouble(EditBox input, DoubleConsumer consumer) {
         try {
-            String val = input.getValue().trim();
-            if (!val.isEmpty()) consumer.accept(Double.parseDouble(val));
-        } catch (NumberFormatException ignored) {}
+            String val = input.m_94155_().trim();
+            if (!val.isEmpty()) {
+                consumer.accept(Double.parseDouble(val));
+            }
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
     }
 
-    /** 解析整数输入框，解析失败返回默认值 */
     private static int parseIntOrDefault(EditBox input, int defaultValue) {
         try {
-            String val = input.getValue().trim();
+            String val = input.m_94155_().trim();
             return val.isEmpty() ? defaultValue : Integer.parseInt(val);
-        } catch (NumberFormatException ignored) {
+        }
+        catch (NumberFormatException ignored) {
             return defaultValue;
         }
     }
 
-    /** 解析浮点数输入框，解析失败返回默认值 */
     private static double parseDoubleOrDefault(EditBox input, double defaultValue) {
         try {
-            String val = input.getValue().trim();
+            String val = input.m_94155_().trim();
             return val.isEmpty() ? defaultValue : Double.parseDouble(val);
-        } catch (NumberFormatException ignored) {
+        }
+        catch (NumberFormatException ignored) {
             return defaultValue;
         }
     }
 
-    /** 解析浮点数并限制在 [min, max] 范围内，解析失败返回默认值 */
     private static double parseDoubleClamped(EditBox input, double defaultValue, double min, double max) {
-        double val = parseDoubleOrDefault(input, defaultValue);
+        double val = DisplayModelScreen.parseDoubleOrDefault(input, defaultValue);
         return Math.max(min, Math.min(max, val));
     }
 
@@ -645,91 +426,183 @@ public class DisplayModelScreen extends Screen {
         this.statusColor = color;
     }
 
-    // ====================================================================
-    //  render
-    // ====================================================================
-    @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics);
-
-        int x = (width - WIDTH) / 2;
-        if (config.guiX >= 0) x = config.guiX;
-        int y = (height - this.totalHeight) / 2;
-        if (config.guiY >= 0) y = config.guiY;
-
-        // ── 背景面板 ──
-        guiGraphics.fill(x - 2, y - 2, x + WIDTH + 2, y + totalHeight + 2, 0xCC222222);
-        guiGraphics.renderOutline(x - 2, y - 2, WIDTH + 4, totalHeight + 4, 0xFF555555);
-
-        // ── 标题行 ──
-        guiGraphics.drawString(font, "§l实体模型展示", x + 10, y + 8, 0xFFFFFF);
-        guiGraphics.drawString(font, "粘贴 /summon 指令（含 Passengers）:", x + 10, y + 24, 0x888888);
-
-        // ── 分割线（标题与指令区之间） ──
-        guiGraphics.fill(x + 10, y + 38, x + WIDTH - 10, y + 39, 0xFF444444);
-
-        // ── 指令行 ──
+        this.fillGradient(guiGraphics);
+        int x = (this.width - 480) / 2;
+        if (this.config.guiX >= 0) {
+            x = this.config.guiX;
+        }
+        int y = (this.height - this.totalHeight) / 2;
+        if (this.config.guiY >= 0) {
+            y = this.config.guiY;
+        }
+        guiGraphics.m_280509_(x - 2, y - 2, x + 480 + 2, y + this.totalHeight + 2, -870178270);
+        guiGraphics.m_280637_(x - 2, y - 2, 484, this.totalHeight + 4, -11184811);
+        guiGraphics.drawString(this.font, "\u00a7l\u5b9e\u4f53\u6a21\u578b\u5c55\u793a", x + 10, y + 8, 0xFFFFFF);
+        guiGraphics.drawString(this.font, "\u7c98\u8d34 /summon \u6307\u4ee4\uff08\u542b Passengers\uff09:", x + 10, y + 24, 0x888888);
+        guiGraphics.m_280509_(x + 10, y + 38, x + 480 - 10, y + 39, -12303292);
         int currentY = y + 44;
-        for (CommandRow row : commandRows) {
+        for (CommandRow row : this.commandRows) {
             row.toggleBtn.render(guiGraphics, mouseX, mouseY, partialTick);
             row.input.render(guiGraphics, mouseX, mouseY, partialTick);
-            if (row.input.getValue().isEmpty() && !row.input.isFocused()) {
-                guiGraphics.drawString(font, "§7/summon minecraft:block_display ~-0.5 ~-0.5 ~-0.5 {...}",
-                        x + 36, row.input.getY() + 2, 0x444444);
+            if (row.input.m_94155_().isEmpty() && !row.input.m_93696_()) {
+                guiGraphics.drawString(this.font, "\u00a77/summon minecraft:block_display ~-0.5 ~-0.5 ~-0.5 {.}", x + 36, row.input.m_252907_() + 2, 0x444444);
             }
-            currentY += ROW_HEIGHT;
+            currentY += 24;
         }
-        currentY += 14;
-
-        // ── 分割线（指令区与配置区之间） ──
-        guiGraphics.fill(x + 10, currentY - 4, x + WIDTH - 10, currentY - 3, 0xFF444444);
-
-        // ── 配置区 ──
-        guiGraphics.drawString(font, "§7配置选项:", x + 10, currentY, 0x888888);
-        currentY += 13;
-
-        // 第一行：放置延迟 / 生成间隔 / 实体间距
-        guiGraphics.drawString(font, "放置延迟(ms):", x + 10, currentY + 1, 0xAAAAAA);
-        placeDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "生成间隔(ms):", x + 165, currentY + 1, 0xAAAAAA);
-        generationDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "实体间距(格):", x + 320, currentY + 1, 0xAAAAAA);
-        entitySpacingInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        currentY += 22;
-
-        // 第二行：可视距离
-        guiGraphics.drawString(font, "可视距离:", x + 10, currentY + 1, 0xAAAAAA);
-        viewRangeInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "§7(0=默认)", x + 145, currentY + 1, 0x666666);
-        currentY += 22;
-
-        // 第三行：放置坐标 + 辅助按钮
-        guiGraphics.drawString(font, "放置坐标:", x + 10, currentY + 1, 0xAAAAAA);
-        guiGraphics.drawString(font, "X", x + 72, currentY + 1, 0x888888);
-        placeXInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "Y", x + 152, currentY + 1, 0x888888);
-        placeYInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        guiGraphics.drawString(font, "Z", x + 232, currentY + 1, 0x888888);
-        placeZInput.render(guiGraphics, mouseX, mouseY, partialTick);
-        writePosButton.render(guiGraphics, mouseX, mouseY, partialTick);
-        clearPosButton.render(guiGraphics, mouseX, mouseY, partialTick);
-
-        // ── 底部状态栏（按钮上方） ──
-        if (!statusMessage.isEmpty()) {
-            guiGraphics.drawString(font, statusMessage, x + 15, y + totalHeight - 62, statusColor);
+        guiGraphics.m_280509_(x + 10, (currentY += 14) - 4, x + 480 - 10, currentY - 3, -12303292);
+        guiGraphics.drawString(this.font, "\u00a77\u914d\u7f6e\u9009\u9879:", x + 10, currentY, 0x888888);
+        guiGraphics.drawString(this.font, "\u653e\u7f6e\u5ef6\u8fdf(ms):", x + 10, (currentY += 13) + 1, 0xAAAAAA);
+        this.placeDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawString(this.font, "\u751f\u6210\u95f4\u9694(ms):", x + 165, currentY + 1, 0xAAAAAA);
+        this.generationDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawString(this.font, "\u5b9e\u4f53\u95f4\u8ddd(\u683c):", x + 320, currentY + 1, 0xAAAAAA);
+        this.entitySpacingInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawString(this.font, "\u53ef\u89c6\u8ddd\u79bb:", x + 10, (currentY += 22) + 1, 0xAAAAAA);
+        this.viewRangeInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawString(this.font, "\u00a77(0=\u9ed8\u8ba4)", x + 145, currentY + 1, 0x666666);
+        guiGraphics.drawString(this.font, "\u653e\u7f6e\u5750\u6807:", x + 10, (currentY += 22) + 1, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "X", x + 72, currentY + 1, 0x888888);
+        this.placeXInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawString(this.font, "Y", x + 152, currentY + 1, 0x888888);
+        this.placeYInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawString(this.font, "Z", x + 232, currentY + 1, 0x888888);
+        this.placeZInput.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.writePosButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.clearPosButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        if (!this.statusMessage.isEmpty()) {
+            guiGraphics.drawString(this.font, this.statusMessage, x + 15, y + this.totalHeight - 62, this.statusColor);
         }
-
-        // ── 底部按钮（6按钮2行） ──
-        openWebsiteButton.render(guiGraphics, mouseX, mouseY, partialTick);
-        savePresetButton.render(guiGraphics, mouseX, mouseY, partialTick);
-        loadPresetButton.render(guiGraphics, mouseX, mouseY, partialTick);
-        saveButton.render(guiGraphics, mouseX, mouseY, partialTick);
-        summonButton.render(guiGraphics, mouseX, mouseY, partialTick);
-        cancelButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.openWebsiteButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.savePresetButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.loadPresetButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.saveButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.summonButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.cancelButton.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
     public boolean isPauseScreen() {
         return false;
     }
+
+    private static class CommandRow {
+        EditBox input;
+        Button toggleBtn;
+        String savedValue = "";
+
+        private CommandRow() {
+        }
+    }
+
+    private static class PresetSaveScreen
+    extends Screen {
+        private final List<String> commands;
+        private final Consumer<String> callback;
+        private EditBox nameInput;
+
+        PresetSaveScreen(List<String> commands, Consumer<String> callback) {
+            super(Component.literal((String)"\u4fdd\u5b58\u9884\u8bbe"));
+            this.commands = commands;
+            this.callback = callback;
+        }
+
+        protected void init() {
+            int cx = this.width / 2;
+            int cy = this.height / 2;
+            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u53d6\u6d88"), b -> this.onClose()).bounds(cx - 75, cy + 30, 70, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58"), b -> {
+                String name = this.nameInput.m_94155_().trim();
+                if (!name.isEmpty()) {
+                    this.callback.accept(name);
+                }
+            }).bounds(cx + 5, cy + 30, 70, 20).build());
+            this.nameInput = new EditBox(this.font, cx - 70, cy - 10, 140, 18, Component.literal((String)"\u9884\u8bbe\u540d"));
+            this.nameInput.m_94199_(64);
+            this.m_7787_(this.nameInput);
+        }
+
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            this.fillGradient(g);
+            g.drawString(this.font, "\u00a7l\u8f93\u5165\u9884\u8bbe\u540d\u79f0:", this.width / 2 - 50, this.height / 2 - 30, 0xFFFFFF);
+            g.drawString(this.font, "\u00a77\u5171 " + this.commands.size() + " \u6761\u6307\u4ee4", this.width / 2 - 40, this.height / 2 + 12, 0x888888);
+            this.nameInput.render(g, mx, my, pt);
+            super.render(g, mx, my, pt);
+        }
+
+        public boolean m_7933_(int k, int sc, int mod) {
+            if (k == 256) {
+                this.onClose();
+                return true;
+            }
+            if ((k == 257 || k == 335) && this.nameInput.m_93696_()) {
+                String name = this.nameInput.m_94155_().trim();
+                if (!name.isEmpty()) {
+                    this.callback.accept(name);
+                }
+                return true;
+            }
+            if (this.nameInput.m_93696_()) {
+                return this.nameInput.m_7933_(k, sc, mod);
+            }
+            return super.m_7933_(k, sc, mod);
+        }
+
+        public boolean isPauseScreen() {
+            return false;
+        }
+    }
+
+    private static class PresetLoadScreen
+    extends Screen {
+        private final String[] presets;
+        private final Consumer<String> callback;
+        private int scrollOffset = 0;
+
+        PresetLoadScreen(String[] presets, Consumer<String> callback) {
+            super(Component.literal((String)"\u8f7d\u5165\u9884\u8bbe"));
+            this.presets = presets;
+            this.callback = callback;
+        }
+
+        protected void init() {
+            int idx;
+            int cx = this.width / 2;
+            int cy = this.height / 2;
+            int btnW = 120;
+            int maxVis = Math.min(this.presets.length, 8);
+            int startY = cy - maxVis * 12;
+            for (int i = 0; i < maxVis && (idx = i + this.scrollOffset) < this.presets.length; ++i) {
+                String name = this.presets[idx];
+                this.addRenderableWidget(Button.builder(Component.literal((String)name), b -> this.callback.accept(name)).bounds(cx - btnW / 2, startY + i * 22, btnW, 20).build());
+            }
+            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u5173\u95ed"), b -> this.onClose()).bounds(cx - 30, startY + maxVis * 22 + 8, 60, 20).build());
+        }
+
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            this.fillGradient(g);
+            g.drawString(this.font, "\u00a7l\u9009\u62e9\u9884\u8bbe:", this.width / 2 - 40, this.height / 2 - Math.min(this.presets.length, 8) * 22 / 2 - 20, 0xFFFFFF);
+            super.render(g, mx, my, pt);
+        }
+
+        public boolean isPauseScreen() {
+            return false;
+        }
+
+        public boolean m_6050_(double mx, double my, double delta) {
+            this.scrollOffset = Math.max(0.0, Math.min((this.presets.length - 1), this.scrollOffset - delta));
+            this.rebuildWidgets();
+            return true;
+        }
+    }
+
+    @FunctionalInterface
+    private static interface IntConsumer {
+        public void accept(int var1);
+    }
+
+    @FunctionalInterface
+    private static interface DoubleConsumer {
+        public void accept(double var1);
+    }
 }
+

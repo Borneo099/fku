@@ -1,19 +1,20 @@
-package fku.org.example.fku.features.healthtag; /* water */
+package fku.org.example.fku.features.healthtag;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.components.ToggleComponent;
 import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.features.healthtag.HealthTagConfig;
+import fku.org.example.fku.features.healthtag.HealthTagConfigScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import fku.org.example.fku.client.gui.components.ToggleComponent;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * HealthTag开关组件
- * 左键切换开关，右键打开配置菜单
- */
-public class HealthTagComponent extends ToggleComponent {
-
+public class HealthTagComponent
+extends ToggleComponent {
     @Override
-    protected String getFeatureName() { return "血量显示"; }
+    protected String getFeatureName() {
+        return "\u8840\u91cf\u663e\u793a";
+    }
 
     public HealthTagComponent(int x, int y, int width, int height) {
         super(x, y, width, height, "HealthTag");
@@ -36,31 +37,38 @@ public class HealthTagComponent extends ToggleComponent {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        if (!visible) return;
-        if (renderHotkeyWait(g)) return;
+        if (!this.visible) {
+            return;
+        }
+        if (this.renderHotkeyWait(g)) {
+            return;
+        }
         GuiStyleConfig config = GuiStyleConfig.getInstance();
-        boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
+        boolean enabled = this.isEnabled();
+        GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, enabled);
+        String displayStr = this.hotkeyAppend(this.label + ": " + (enabled ? "ON" : "OFF"));
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
-        g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2, textColor);
+        g.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2, 0x888888);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovered(mouseX, mouseY)) {
+        if (this.isHovered(mouseX, mouseY)) {
             if (button == 0) {
-                toggle();
-                saveConfig();
+                this.toggle();
+                this.saveConfig();
                 return true;
-            } else if (button == 1) {
-                Minecraft.getInstance().setScreen(new HealthTagConfigScreen());
+            }
+            if (button == 1) {
+                Minecraft.getInstance().setScreen((Screen)new HealthTagConfigScreen());
                 return true;
-            } else if (button == 2) {
-                return handleMiddleClick(mouseX, mouseY, button);
+            }
+            if (button == 2) {
+                return this.handleMiddleClick(mouseX, mouseY, button);
             }
         }
         return false;
     }
 }
+

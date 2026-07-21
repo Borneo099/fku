@@ -1,153 +1,157 @@
-package fku.org.example.fku.features.crashmonitor; /* water */
+package fku.org.example.fku.features.crashmonitor;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-/**
- * 游戏崩溃监控器 — 加载阶段检测崩溃原因，生成报告到 fku/crash_reports/
- *
- * 原理：
- * 1. 启动时写入 .crash_lock 锁文件 + .crash_stage 阶段追踪文件
- * 2. 每个加载阶段更新阶段名（如 "注册配置"、"初始化功能"、"客户端设置"）
- * 3. 设置默认未捕获异常处理器 + JVM 关闭钩子
- * 4. 正常完成时删除锁文件
- * 5. 下次启动时检查锁文件是否存在 → 存在说明上次崩溃了
- * 6. 崩溃时生成详细报告（系统信息、最后阶段、异常栈）
- *
- * 用法：
- *   CrashMonitor.init(baseDir);       // 最早调用，baseDir = fku 配置目录
- *   CrashMonitor.startPhase("名称");  // 每个阶段开始
- *   CrashMonitor.endPhase("名称");    // 每个阶段结束
- *   CrashMonitor.markLaunchComplete();// 启动完成时调用
- */
 public class CrashMonitor {
-
     private static final SimpleDateFormat DATE_FMT = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss");
     private static final SimpleDateFormat LOG_FMT = new SimpleDateFormat("HH:mm:ss");
-
     private static File reportDir;
     private static File lockFile;
     private static File stageFile;
-    private static String currentStage = "未启动";
-    private static boolean cleanShutdown = false;
-    private static boolean initialized = false;
+    private static String currentStage;
+    private static boolean cleanShutdown;
+    private static boolean initialized;
 
-    /**
-     * 初始化崩溃监控器（应在 mod 构造器中最早调用）
-     * @param fkuDirectory fku 配置目录（如 new File(mc.gameDirectory, "fku")）
-     */
     public static void init(File fkuDirectory) {
-        if (initialized) return;
+        if (initialized) {
+            return;
+        }
         initialized = true;
-
         try {
-            if (!fkuDirectory.exists()) fkuDirectory.mkdirs();
-
-            reportDir = new File(fkuDirectory, "crash_reports");
-            if (!reportDir.exists()) reportDir.mkdirs();
-
+            if (!fkuDirectory.exists()) {
+                fkuDirectory.mkdirs();
+            }
+            if (!(reportDir = new File(fkuDirectory, "crash_reports")).exists()) {
+                reportDir.mkdirs();
+            }
             lockFile = new File(fkuDirectory, ".crash_lock");
             stageFile = new File(fkuDirectory, ".crash_stage");
-
-            // ── 检测上次是否崩溃 ──
-            checkPreviousCrash();
-
-            // ── 写锁文件 ──
-            writeLockFile();
-
-            // ── 注册默认未捕获异常处理器 ──
+            CrashMonitor.checkPreviousCrash();
+            CrashMonitor.writeLockFile();
             Thread.UncaughtExceptionHandler defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
             Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-                generateCrashReport("未捕获异常", "线程: " + thread.getName(), throwable);
+                CrashMonitor.generateCrashReport("\u672a\u6355\u83b7\u5f02\u5e38", "\u7ebf\u7a0b: " + thread.getName(), throwable);
                 if (defaultHandler != null) {
                     defaultHandler.uncaughtException(thread, throwable);
                 }
             });
-
-            // ── 注册 JVM 关闭钩子（检测非正常退出） ──
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 if (!cleanShutdown && lockFile != null && lockFile.exists()) {
-                    generateCrashReport("JVM关闭 - 疑似崩溃", "最后阶段: " + currentStage, null);
+                    CrashMonitor.generateCrashReport("JVM\u5173\u95ed - \u7591\u4f3c\u5d29\u6e83", "\u6700\u540e\u9636\u6bb5: " + currentStage, null);
                 }
             }, "FKU Crash Monitor"));
-
-            log("初始化完成，报告目录: " + reportDir.getAbsolutePath());
-
-        } catch (Exception e) {
+            CrashMonitor.log("\u521d\u59cb\u5316\u5b8c\u6210\uff0c\u62a5\u544a\u76ee\u5f55: " + reportDir.getAbsolutePath());
+        }
+        catch (Exception e) {
             try {
                 File fallback = new File("fku_crash_monitor_error.txt");
-                try (PrintWriter pw = new PrintWriter(fallback)) { e.printStackTrace(pw); }
-            } catch (Exception ignored) {}
+                try (PrintWriter pw = new PrintWriter(fallback);){
+                    e.printStackTrace(pw);
+                }
+            }
+            catch (Exception exception) {
+                // ignored
+            }
         }
     }
 
-    /** 设置当前加载阶段（每步更新 stageFile + 立即刷盘） */
     public static void setStage(String stage) {
         currentStage = stage;
-        if (stageFile == null) return;
-        try { Files.writeString(stageFile.toPath(), stage); } catch (IOException ignored) {}
+        if (stageFile == null) {
+            return;
+        }
+        try {
+            Files.writeString(stageFile.toPath(), (CharSequence)stage, new OpenOption[0]);
+        }
+        catch (IOException iOException) {
+            // ignored
+        }
     }
 
-    /** 标记某阶段开始 */
     public static void startPhase(String phaseName) {
-        setStage("进行中: " + phaseName);
+        CrashMonitor.setStage("\u8fdb\u884c\u4e2d: " + phaseName);
     }
 
-    /** 标记某阶段完成 */
     public static void endPhase(String phaseName) {
-        log("[OK] " + phaseName + " 完成");
+        CrashMonitor.log("[OK] " + phaseName + " \u5b8c\u6210");
     }
 
-    /** 正常启动完成 → 删除锁文件 */
     public static void markLaunchComplete() {
         cleanShutdown = true;
-        deleteLockFile();
-        setStage("启动完成");
+        CrashMonitor.deleteLockFile();
+        CrashMonitor.setStage("\u542f\u52a8\u5b8c\u6210");
     }
 
-    /** 记录信息到监控日志 */
-    public static void logInfo(String msg) { log("[信息] " + msg); }
-    /** 记录警告到监控日志 */
-    public static void logWarn(String msg) { log("[警告] " + msg); }
+    public static void logInfo(String msg) {
+        CrashMonitor.log("[\u4fe1\u606f] " + msg);
+    }
 
-    // ═══════════ 内部方法 ═══════════
+    public static void logWarn(String msg) {
+        CrashMonitor.log("[\u8b66\u544a] " + msg);
+    }
 
     private static void checkPreviousCrash() {
         if (lockFile != null && lockFile.exists()) {
-            String lastStage = "未知";
+            String lastStage = "\u672a\u77e5";
             if (stageFile != null && stageFile.exists()) {
-                try { lastStage = Files.readString(stageFile.toPath()); } catch (IOException ignored) {}
+                try {
+                    lastStage = Files.readString(stageFile.toPath());
+                }
+                catch (IOException iOException) {
+                    // ignored
+                }
             }
-            generateCrashReport("上次启动崩溃", "崩溃前最后阶段: " + lastStage, null);
+            CrashMonitor.generateCrashReport("\u4e0a\u6b21\u542f\u52a8\u5d29\u6e83", "\u5d29\u6e83\u524d\u6700\u540e\u9636\u6bb5: " + lastStage, null);
         }
     }
 
     private static void writeLockFile() {
-        if (lockFile == null) return;
+        if (lockFile == null) {
+            return;
+        }
         try {
-            Files.writeString(lockFile.toPath(), "DO NOT DELETE - FKU crash monitor lock\nStarted: " + DATE_FMT.format(new Date()));
-        } catch (IOException ignored) {}
+            Files.writeString(lockFile.toPath(), (CharSequence)("DO NOT DELETE - FKU crash monitor lock\nStarted: " + DATE_FMT.format(new Date())), new OpenOption[0]);
+        }
+        catch (IOException iOException) {
+            // ignored
+        }
     }
 
     private static void deleteLockFile() {
-        try { if (lockFile != null && lockFile.exists()) Files.delete(lockFile.toPath()); } catch (IOException ignored) {}
-        try { if (stageFile != null && stageFile.exists()) Files.delete(stageFile.toPath()); } catch (IOException ignored) {}
+        try {
+            if (lockFile != null && lockFile.exists()) {
+                Files.delete(lockFile.toPath());
+            }
+        }
+        catch (IOException iOException) {
+            // ignored
+        }
+        try {
+            if (stageFile != null && stageFile.exists()) {
+                Files.delete(stageFile.toPath());
+            }
+        }
+        catch (IOException iOException) {
+            // ignored
+        }
     }
 
-    /** 生成崩溃报告 */
     private static synchronized void generateCrashReport(String reason, String detail, Throwable throwable) {
         try {
-            if (reportDir == null) return;
+            if (reportDir == null) {
+                return;
+            }
             String timestamp = DATE_FMT.format(new Date());
             File reportFile = new File(reportDir, "crash-" + timestamp + ".txt");
-
-            try (PrintWriter pw = new PrintWriter(reportFile)) {
+            try (PrintWriter pw = new PrintWriter(reportFile);){
                 pw.println("==============================================");
                 pw.println("  FKU \u5d29\u6e83\u76d1\u63a7\u62a5\u544a");
                 pw.println("==============================================");
@@ -161,34 +165,27 @@ public class CrashMonitor {
                 pw.println("\u64cd\u4f5c\u7cfb\u7edf: " + System.getProperty("os.name", "\u672a\u77e5") + " " + System.getProperty("os.version", ""));
                 pw.println("\u7cfb\u7edf\u67b6\u6784: " + System.getProperty("os.arch", "\u672a\u77e5"));
                 pw.println("\u53ef\u7528\u5904\u7406\u5668: " + Runtime.getRuntime().availableProcessors());
-                pw.println("\u6700\u5927\u5185\u5b58: " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB");
+                pw.println("\u6700\u5927\u5185\u5b58: " + Runtime.getRuntime().maxMemory() / 1024L / 1024L + " MB");
                 pw.println("\u7528\u6237\u76ee\u5f55: " + System.getProperty("user.home", "\u672a\u77e5"));
                 pw.println();
                 pw.println("--- FKU \u72b6\u6001 ---");
                 pw.println("\u6700\u540e\u9636\u6bb5: " + currentStage);
                 pw.println("\u5e72\u51c0\u5173\u95ed: " + cleanShutdown);
                 pw.println();
-
                 if (throwable != null) {
                     pw.println("--- \u5f02\u5e38\u6808 ---");
                     StringWriter sw = new StringWriter();
                     throwable.printStackTrace(new PrintWriter(sw));
                     pw.println(sw);
                     pw.println();
-
-                    // \u6839\u56e0\u94fe
-                    Throwable cause = throwable;
                     int level = 0;
-                    while (cause.getCause() != null && cause != cause.getCause() && level < 10) {
-                        cause = cause.getCause();
-                        level++;
-                        pw.println("--- \u6839\u56e0 (level " + level + ") ---");
+                    for (Throwable cause = throwable; cause.getCause() != null && cause != cause.getCause() && level < 10; cause = cause.getCause()) {
+                        pw.println("--- \u6839\u56e0 (level " + ++level + ") ---");
                         sw = new StringWriter();
                         cause.printStackTrace(new PrintWriter(sw));
                         pw.println(sw);
                     }
                 }
-
                 pw.println("--- \u542f\u52a8\u4fe1\u606f ---");
                 pw.println("\u6700\u540e\u52a0\u8f7d\u9636\u6bb5: " + currentStage);
                 pw.println();
@@ -197,10 +194,9 @@ public class CrashMonitor {
                 pw.println("  \u6587\u4ef6\u4f4d\u7f6e: " + reportFile.getAbsolutePath());
                 pw.println("==============================================");
             }
-
             System.err.println("[FKU CrashMonitor] \u5d29\u6e83\u62a5\u544a\u5df2\u751f\u6210: " + reportFile.getAbsolutePath());
-
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             System.err.println("[FKU CrashMonitor] \u751f\u6210\u5d29\u6e83\u62a5\u544a\u5931\u8d25: " + e.getMessage());
         }
     }
@@ -211,9 +207,18 @@ public class CrashMonitor {
         try {
             if (lockFile != null) {
                 File logFile = new File(lockFile.getParentFile(), "crash_monitor.log");
-                Files.writeString(logFile.toPath(), line + System.lineSeparator(),
-                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                Files.writeString(logFile.toPath(), (CharSequence)(line + System.lineSeparator()), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             }
-        } catch (IOException ignored) {}
+        }
+        catch (IOException iOException) {
+            // ignored
+        }
+    }
+
+    static {
+        currentStage = "\u672a\u542f\u52a8";
+        cleanShutdown = false;
+        initialized = false;
     }
 }
+

@@ -1,0 +1,9 @@
+{
+    "blend": {
+        "func": "add",
+        "srcrgb": "src_alpha",
+        "dstrgb": "one_minus_src_alpha"
+    },
+    "vertex": "fku:liquid_glass",
+    "fragment": "fku:liquid_glass"
+}

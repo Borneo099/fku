@@ -6,64 +6,68 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Paths;
+import net.minecraft.client.Minecraft;
 
 public class MovementConfig {
-    private static File getConfigFile() {
-        File configDir = new File(getGameDirectory(), "fku");
-        if (!configDir.exists()) {
-            configDir.mkdirs();
-        }
-        return new File(configDir, "movement.json");
-    }
-    
-    private static File getGameDirectory() {
-        try {
-            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc != null) return mc.gameDirectory;
-        } catch (Exception ignored) {}
-        return Paths.get(".").toAbsolutePath().normalize().toFile();
-    }
-    
-    // 添加调试日志，打印配置路径
-    private static void debugConfigPath() {
-        File configFile = getConfigFile();
-        System.out.println("[FKU] MovementConfig path: " + configFile.getAbsolutePath());
-    }
-    
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
     public boolean noJumpDelayEnabled = false;
     public boolean arrowDmgFlyEnabled = false;
     public boolean yPosOverlayEnabled = false;
     public int guiX = 250;
     public int guiY = 100;
-
     private static MovementConfig instance;
+
+    private static File getConfigFile() {
+        File configDir = new File(MovementConfig.getGameDirectory(), "fku");
+        if (!configDir.exists()) {
+            configDir.mkdirs();
+        }
+        return new File(configDir, "movement.json");
+    }
+
+    private static File getGameDirectory() {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                return mc.gameDirectory;
+            }
+        }
+        catch (Exception exception) {
+            // ignored
+        }
+        return Paths.get(".", new String[0]).toAbsolutePath().normalize().toFile();
+    }
+
+    private static void debugConfigPath() {
+        File configFile = MovementConfig.getConfigFile();
+        System.out.println("[FKU] MovementConfig path: " + configFile.getAbsolutePath());
+    }
 
     public static MovementConfig getInstance() {
         if (instance == null) {
-            load();
+            MovementConfig.load();
         }
         return instance;
     }
 
     public static void load() {
-        File configFile = getConfigFile();
-        debugConfigPath();
-        
+        File configFile = MovementConfig.getConfigFile();
+        MovementConfig.debugConfigPath();
         if (configFile.exists()) {
-            try (FileReader reader = new FileReader(configFile)) {
-                instance = GSON.fromJson(reader, MovementConfig.class);
+            try (FileReader reader = new FileReader(configFile);){
+                instance = (MovementConfig)GSON.fromJson(reader, MovementConfig.class);
                 System.out.println("[FKU] MovementConfig loaded successfully");
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 System.out.println("[FKU] Failed to load MovementConfig, creating new instance");
                 instance = new MovementConfig();
             }
         } else {
             System.out.println("[FKU] MovementConfig file not found, creating new instance");
             instance = new MovementConfig();
-            save();
+            MovementConfig.save();
         }
     }
 
@@ -72,39 +76,39 @@ public class MovementConfig {
             System.out.println("[FKU] MovementConfig instance is null, cannot save");
             return;
         }
-        
-        File configFile = getConfigFile();
-        try (FileWriter writer = new FileWriter(configFile)) {
+        File configFile = MovementConfig.getConfigFile();
+        try (FileWriter writer = new FileWriter(configFile);){
             GSON.toJson(instance, writer);
             System.out.println("[FKU] MovementConfig saved to: " + configFile.getAbsolutePath());
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
-    
-    // 确保配置被修改后自动保存
+
     public void setNoJumpDelayEnabled(boolean value) {
         this.noJumpDelayEnabled = value;
-        save();
+        MovementConfig.save();
     }
-    
+
     public void setArrowDmgFlyEnabled(boolean value) {
         this.arrowDmgFlyEnabled = value;
-        save();
+        MovementConfig.save();
     }
-    
+
     public void setYPosOverlayEnabled(boolean value) {
         this.yPosOverlayEnabled = value;
-        save();
+        MovementConfig.save();
     }
-    
+
     public void setGuiX(int value) {
         this.guiX = value;
-        save();
+        MovementConfig.save();
     }
-    
+
     public void setGuiY(int value) {
         this.guiY = value;
-        save();
+        MovementConfig.save();
     }
 }
+

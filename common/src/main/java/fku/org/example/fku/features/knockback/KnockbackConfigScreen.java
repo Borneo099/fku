@@ -1,353 +1,271 @@
-package fku.org.example.fku.features.knockback; /* water */
+package fku.org.example.fku.features.knockback;
 
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.knockback.KnockbackConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * 自由击退配置界面
- *
- * ★ 职责：
- *   提供完整的自由击退配置修改界面，遵循 ClickGUI 风格。
- *   所有修改即时保存到 KnockbackConfig 并持久化到 config/fku/knockback.json。
- *
- * ★ 参考：
- *   BedrockBreakerScreen 的布局模式（标签+输入框+按钮分层）
- *
- * 配置项：
- *   - 模式选择（推离/拉回/悬崖/自定义）
- *   - 自定义角度（CUSTOM 模式）
- *   - 悬崖搜索半径（CLIFF 模式）
- *   - 平滑旋转开关
- *   - 平滑步数
- *   - 旋转延迟（0~5 Tick）
- *   - 激进模式开关
- */
-public class KnockbackConfigScreen extends Screen {
-
+public class KnockbackConfigScreen
+extends Screen {
     private static final int WIDTH = 290;
     private static final int HEIGHT = 300;
-
-    // 行Y偏移基准
     private static final int ROW_MODE_LABEL = 30;
     private static final int ROW_MODE_BTN = 44;
-    private static final int ROW_CUSTOM = 72;       // CUSTOM 模式：标签72, 输入框86
-    private static final int ROW_CLIFF = 106;       // CLIFF 模式：标签106, 输入框120
+    private static final int ROW_CUSTOM = 72;
+    private static final int ROW_CLIFF = 106;
     private static final int ROW_SMOOTH_TOGGLE = 140;
-    private static final int ROW_SMOOTH_STEPS = 168; // 标签168, 输入框182
-    private static final int ROW_DELAY = 202;        // 标签202, 输入框216
+    private static final int ROW_SMOOTH_STEPS = 168;
+    private static final int ROW_DELAY = 202;
     private static final int ROW_AGGRESSIVE = 236;
     private static final int ROW_BUTTON = 270;
-
-    // 引用配置（直接读写，即时保存）
     private final KnockbackConfig cfg = KnockbackConfig.getInstance();
-
-    // 模式按钮
     private Button modeButton;
-    private final String[] modes = {"PUSHBACK", "PULLBACK", "CLIFF", "CUSTOM"};
-    private final String[] modeLabels = {"推离", "拉回", "悬崖", "自定义"};
-
-    // 输入框（条件显示）
+    private final String[] modes = new String[]{"PUSHBACK", "PULLBACK", "CLIFF", "CUSTOM"};
+    private final String[] modeLabels = new String[]{"\u63a8\u79bb", "\u62c9\u56de", "\u60ac\u5d16", "\u81ea\u5b9a\u4e49"};
     private EditBox customYawInput;
     private EditBox cliffRadiusInput;
     private EditBox smoothStepsInput;
     private EditBox delayInput;
-
-    // 平滑开关按钮
     private Button smoothToggleButton;
-    // 激进模式按钮
     private Button aggressiveButton;
+    private int scrollOffset = 0;
 
     public KnockbackConfigScreen() {
-        super(Component.literal("自由击退配置"));
+        super(Component.literal((String)"\u81ea\u7531\u51fb\u9000\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         super.init();
-        int cx = (width - WIDTH) / 2;
-
-        // ── 行1：模式选择 ──
-        String currentModeLabel = getModeLabel(cfg.mode);
-        modeButton = Button.builder(
-                Component.literal("模式: " + currentModeLabel),
-                btn -> {
-                    // 循环切换模式
-                    int idx = 0;
-                    for (int i = 0; i < modes.length; i++) {
-                        if (modes[i].equals(cfg.mode)) { idx = (i + 1) % modes.length; break; }
-                    }
-                    cfg.setMode(modes[idx]);
-                    btn.setMessage(Component.literal("模式: " + getModeLabel(modes[idx])));
-                    // 刷新输入框可见性
-                    rebuildWidgets();
-                }
-        ).bounds(cx + 10, cy(ROW_MODE_BTN), 120, 18).build();
-        addRenderableWidget(modeButton);
-
-        // ── 行2：自定义角度（CUSTOM 模式可见）──
-        customYawInput = new EditBox(font, cx + 80, cy(ROW_CUSTOM + 14), 60, 14, Component.literal(""));
-        customYawInput.setValue(String.format("%.0f", cfg.customYaw));
-        customYawInput.setMaxLength(6);
-        customYawInput.setFilter(s -> s.matches("-?\\d*\\.?\\d*"));
-        customYawInput.setVisible("CUSTOM".equals(cfg.mode));
-        addRenderableWidget(customYawInput);
-
-        // ── 行3：悬崖搜索半径（CLIFF 模式可见）──
-        cliffRadiusInput = new EditBox(font, cx + 80, cy(ROW_CLIFF + 14), 40, 14, Component.literal(""));
-        cliffRadiusInput.setValue(String.valueOf(cfg.cliffSearchRadius));
-        cliffRadiusInput.setMaxLength(2);
-        cliffRadiusInput.setFilter(s -> s.matches("\\d*"));
-        cliffRadiusInput.setVisible("CLIFF".equals(cfg.mode));
-        addRenderableWidget(cliffRadiusInput);
-
-        // ── 行4：平滑旋转开关 ──
-        smoothToggleButton = Button.builder(
-                Component.literal("平滑旋转: " + (cfg.smoothRotation ? "开" : "关")),
-                btn -> {
-                    cfg.setSmoothRotation(!cfg.smoothRotation);
-                    btn.setMessage(Component.literal("平滑旋转: " + (cfg.smoothRotation ? "开" : "关")));
-                    rebuildWidgets();
-                }
-        ).bounds(cx + 10, cy(ROW_SMOOTH_TOGGLE), 110, 18).build();
-        addRenderableWidget(smoothToggleButton);
-
-        // ── 行5：平滑步数（平滑旋转开启时可见）──
-        smoothStepsInput = new EditBox(font, cx + 80, cy(ROW_SMOOTH_STEPS + 14), 40, 14, Component.literal(""));
-        smoothStepsInput.setValue(String.valueOf(cfg.smoothSteps));
-        smoothStepsInput.setMaxLength(2);
-        smoothStepsInput.setFilter(s -> s.matches("\\d*"));
-        smoothStepsInput.setVisible(cfg.smoothRotation);
-        addRenderableWidget(smoothStepsInput);
-
-        // ── 行6：旋转延迟 ──
-        delayInput = new EditBox(font, cx + 80, cy(ROW_DELAY + 14), 40, 14, Component.literal(""));
-        delayInput.setValue(String.valueOf(cfg.rotationDelay));
-        delayInput.setMaxLength(1);
-        delayInput.setFilter(s -> s.isEmpty() || s.matches("[0-5]"));
-        addRenderableWidget(delayInput);
-
-        // ── 行7：激进模式 ──
-        aggressiveButton = Button.builder(
-                Component.literal("激进模式: " + (cfg.aggressiveMode ? "开" : "关")),
-                btn -> {
-                    cfg.setAggressiveMode(!cfg.aggressiveMode);
-                    btn.setMessage(Component.literal("激进模式: " + (cfg.aggressiveMode ? "开" : "关")));
-                }
-        ).bounds(cx + 10, cy(ROW_AGGRESSIVE), 110, 18).build();
-        addRenderableWidget(aggressiveButton);
-
-        // ── 行8：底部按钮 ──
-        addRenderableWidget(Button.builder(
-                Component.literal("保存"),
-                btn -> saveConfig()
-        ).bounds(cx + 70, cy(ROW_BUTTON), 60, 18).build());
-
-        addRenderableWidget(Button.builder(
-                Component.literal("完成"),
-                btn -> {
-                    saveConfig();
-                    Minecraft.getInstance().setScreen(new ClickGuiScreen());
-                }
-        ).bounds(cx + 150, cy(ROW_BUTTON), 60, 18).build());
+        int cx = (this.width - 290) / 2;
+        String currentModeLabel = this.getModeLabel(this.cfg.mode);
+        this.modeButton = Button.builder(Component.literal((String)("\u6a21\u5f0f: " + currentModeLabel)), btn -> {
+            int idx = 0;
+            for (int i = 0; i < this.modes.length; ++i) {
+                if (!this.modes[i].equals(this.cfg.mode)) continue;
+                idx = (i + 1) % this.modes.length;
+                break;
+            }
+            this.cfg.setMode(this.modes[idx]);
+            btn.setMessage(Component.literal((String)("\u6a21\u5f0f: " + this.getModeLabel(this.modes[idx]))));
+            this.rebuildWidgets();
+        }).bounds(cx + 10, this.cy(44), 120, 18).build();
+        this.addRenderableWidget(this.modeButton);
+        this.customYawInput = new EditBox(this.font, cx + 80, this.cy(86), 60, 14, Component.literal((String)""));
+        this.customYawInput.m_94144_(String.format("%.0f", this.cfg.customYaw)));
+        this.customYawInput.m_94199_(6);
+        this.customYawInput.m_94153_(s -> s.matches("-?\\d*\\.?\\d*"));
+        this.customYawInput.m_94194_("CUSTOM".equals(this.cfg.mode));
+        this.addRenderableWidget(this.customYawInput);
+        this.cliffRadiusInput = new EditBox(this.font, cx + 80, this.cy(120), 40, 14, Component.literal((String)""));
+        this.cliffRadiusInput.m_94144_(String.valueOf(this.cfg.cliffSearchRadius));
+        this.cliffRadiusInput.m_94199_(2);
+        this.cliffRadiusInput.m_94153_(s -> s.matches("\\d*"));
+        this.cliffRadiusInput.m_94194_("CLIFF".equals(this.cfg.mode));
+        this.addRenderableWidget(this.cliffRadiusInput);
+        this.smoothToggleButton = Button.builder(Component.literal((String)("\u5e73\u6ed1\u65cb\u8f6c: " + (this.cfg.smoothRotation ? "\u5f00" : "\u5173"))), btn -> {
+            this.cfg.setSmoothRotation(!this.cfg.smoothRotation);
+            btn.setMessage(Component.literal((String)("\u5e73\u6ed1\u65cb\u8f6c: " + (this.cfg.smoothRotation ? "\u5f00" : "\u5173"))));
+            this.rebuildWidgets();
+        }).bounds(cx + 10, this.cy(140), 110, 18).build();
+        this.addRenderableWidget(this.smoothToggleButton);
+        this.smoothStepsInput = new EditBox(this.font, cx + 80, this.cy(182), 40, 14, Component.literal((String)""));
+        this.smoothStepsInput.m_94144_(String.valueOf(this.cfg.smoothSteps));
+        this.smoothStepsInput.m_94199_(2);
+        this.smoothStepsInput.m_94153_(s -> s.matches("\\d*"));
+        this.smoothStepsInput.m_94194_(this.cfg.smoothRotation);
+        this.addRenderableWidget(this.smoothStepsInput);
+        this.delayInput = new EditBox(this.font, cx + 80, this.cy(216), 40, 14, Component.literal((String)""));
+        this.delayInput.m_94144_(String.valueOf(this.cfg.rotationDelay));
+        this.delayInput.m_94199_(1);
+        this.delayInput.m_94153_(s -> s.isEmpty() || s.matches("[0-5]"));
+        this.addRenderableWidget(this.delayInput);
+        this.aggressiveButton = Button.builder(Component.literal((String)("\u6fc0\u8fdb\u6a21\u5f0f: " + (this.cfg.aggressiveMode ? "\u5f00" : "\u5173"))), btn -> {
+            this.cfg.setAggressiveMode(!this.cfg.aggressiveMode);
+            btn.setMessage(Component.literal((String)("\u6fc0\u8fdb\u6a21\u5f0f: " + (this.cfg.aggressiveMode ? "\u5f00" : "\u5173"))));
+        }).bounds(cx + 10, this.cy(236), 110, 18).build();
+        this.addRenderableWidget(this.aggressiveButton);
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 70, this.cy(270), 60, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> {
+            this.saveConfig();
+            Minecraft.getInstance().setScreen(new ClickGuiScreen());
+        }).bounds(cx + 150, this.cy(270), 60, 18).build());
     }
 
-    /** 获取模式的中文标签 */
     private String getModeLabel(String mode) {
-        for (int i = 0; i < modes.length; i++) {
-            if (modes[i].equals(mode)) return modeLabels[i];
+        for (int i = 0; i < this.modes.length; ++i) {
+            if (!this.modes[i].equals(mode)) continue;
+            return this.modeLabels[i];
         }
         return mode;
     }
 
-    /** 从输入框读取值并保存到配置 */
     private void saveConfig() {
-        // 自定义角度
         try {
-            float yaw = Float.parseFloat(customYawInput.getValue());
-            yaw = Math.max(-180, Math.min(180, yaw));
-            cfg.setCustomYaw(yaw);
-        } catch (Exception ignored) {}
-
-        // 悬崖搜索半径
+            float yaw = Float.parseFloat(this.customYawInput.m_94155_());
+            yaw = Math.max(-180.0f, Math.min(180.0f, yaw));
+            this.cfg.setCustomYaw(yaw);
+        }
+        catch (Exception yaw) {
+            // ignored
+        }
         try {
-            int radius = Integer.parseInt(cliffRadiusInput.getValue());
+            int radius = Integer.parseInt(this.cliffRadiusInput.m_94155_());
             radius = Math.max(1, Math.min(20, radius));
-            cfg.setCliffSearchRadius(radius);
-        } catch (Exception ignored) {}
-
-        // 平滑步数
+            this.cfg.setCliffSearchRadius(radius);
+        }
+        catch (Exception radius) {
+            // ignored
+        }
         try {
-            int steps = Integer.parseInt(smoothStepsInput.getValue());
+            int steps = Integer.parseInt(this.smoothStepsInput.m_94155_());
             steps = Math.max(2, Math.min(10, steps));
-            cfg.setSmoothSteps(steps);
-        } catch (Exception ignored) {}
-
-        // 旋转延迟
+            this.cfg.setSmoothSteps(steps);
+        }
+        catch (Exception steps) {
+            // ignored
+        }
         try {
-            int delay = Integer.parseInt(delayInput.getValue());
+            int delay = Integer.parseInt(this.delayInput.m_94155_());
             delay = Math.max(0, Math.min(5, delay));
-            cfg.setRotationDelay(delay);
-        } catch (Exception ignored) {}
-
-        // 强制保存
+            this.cfg.setRotationDelay(delay);
+        }
+        catch (Exception exception) {
+            // ignored
+        }
         KnockbackConfig.save();
     }
 
-    /** 滚轮滚动偏移 */
-    private int scrollOffset = 0;
-
-    /** 计算相对于面板顶部的 Y 坐标 */
     private int cy(int rowOffset) {
-        return (height - HEIGHT) / 2 + rowOffset - scrollOffset;
+        return (this.height - 300) / 2 + rowOffset - this.scrollOffset;
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        int cx = (width - WIDTH) / 2, cy2 = (height - HEIGHT) / 2;
-        if (mouseX >= cx && mouseX <= cx + WIDTH && mouseY >= cy2 && mouseY <= cy2 + HEIGHT) {
-            scrollOffset = Math.max(0, scrollOffset - (int)(delta * 20));
-            init();
+    public boolean m_6050_(double mouseX, double mouseY, double delta) {
+        int cx = (this.width - 290) / 2;
+        int cy2 = (this.height - 300) / 2;
+        if (mouseX >= cx && mouseX <= (cx + 290) && mouseY >= cy2 && mouseY <= (cy2 + 300)) {
+            this.scrollOffset = Math.max(0, this.scrollOffset - (delta * 20.0));
+            this.init();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.m_6050_(mouseX, mouseY, delta);
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
-        int cx = (width - WIDTH) / 2;
-        int cy = cy(0);
-
-        // ── 面板背景 ──
-        GuiRenderHelper.drawPanelBackground(g, cx, cy(0), WIDTH, HEIGHT, false);
-        g.enableScissor(cx + 2, cy + 20, cx + WIDTH - 2, cy + HEIGHT - 30);
-        g.drawString(font, "自由击退配置", cx + 10, cy(8), 0xFFFFFF);
-
-        boolean isCustom = "CUSTOM".equals(cfg.mode);
-        boolean isCliff = "CLIFF".equals(cfg.mode);
-
-        // ── 模式 ──
-        g.drawString(font, "§7| 击退方向模式", cx + 135, cy(ROW_MODE_BTN + 2), 0x666666);
-
-        // ── 自定义角度 ──
+        this.fillGradient(g);
+        int cx = (this.width - 290) / 2;
+        int cy = this.cy(0);
+        GuiRenderHelper.drawPanelBackground(g, cx, this.cy(0), 290, 300, false);
+        g.m_280588_(cx + 2, cy + 20, cx + 290 - 2, cy + 300 - 30);
+        g.drawString(this.font, "\u81ea\u7531\u51fb\u9000\u914d\u7f6e", cx + 10, this.cy(8), 0xFFFFFF);
+        boolean isCustom = "CUSTOM".equals(this.cfg.mode);
+        boolean isCliff = "CLIFF".equals(this.cfg.mode);
+        g.drawString(this.font, "\u00a77| \u51fb\u9000\u65b9\u5411\u6a21\u5f0f", cx + 135, this.cy(46), 0x666666);
         if (isCustom) {
-            g.drawString(font, "自定义角度:", cx + 10, cy(ROW_CUSTOM), 0xAAAAAA);
-            g.drawString(font, "§7(-180~180°)", cx + 142, cy(ROW_CUSTOM + 14), 0x666666);
+            g.drawString(this.font, "\u81ea\u5b9a\u4e49\u89d2\u5ea6:", cx + 10, this.cy(72), 0xAAAAAA);
+            g.drawString(this.font, "\u00a77(-180~180\u00b0)", cx + 142, this.cy(86), 0x666666);
         }
-
-        // ── 悬崖半径 ──
         if (isCliff) {
-            g.drawString(font, "搜索半径:", cx + 10, cy(ROW_CLIFF), 0xAAAAAA);
-            g.drawString(font, "§7(1~20 方块)", cx + 122, cy(ROW_CLIFF + 14), 0x666666);
+            g.drawString(this.font, "\u641c\u7d22\u534a\u5f84:", cx + 10, this.cy(106), 0xAAAAAA);
+            g.drawString(this.font, "\u00a77(1~20 \u65b9\u5757)", cx + 122, this.cy(120), 0x666666);
         }
-
-        // ── 平滑步数 ──
-        if (cfg.smoothRotation) {
-            g.drawString(font, "平滑步数:", cx + 10, cy(ROW_SMOOTH_STEPS), 0xAAAAAA);
-            g.drawString(font, "§7(2~10)", cx + 122, cy(ROW_SMOOTH_STEPS + 14), 0x666666);
+        if (this.cfg.smoothRotation) {
+            g.drawString(this.font, "\u5e73\u6ed1\u6b65\u6570:", cx + 10, this.cy(168), 0xAAAAAA);
+            g.drawString(this.font, "\u00a77(2~10)", cx + 122, this.cy(182), 0x666666);
         }
-
-        // ── 旋转延迟 ──
-        g.drawString(font, "旋转延迟:", cx + 10, cy(ROW_DELAY), 0xAAAAAA);
-        g.drawString(font, "§7(Tick, 0~5)", cx + 122, cy(ROW_DELAY + 14), 0x666666);
-        g.drawString(font, "§7攻击后延迟多少 Tick 恢复原始旋转", cx + 10, cy(ROW_DELAY + 28), 0x666666);
-
-        // ── 激进模式 ──
-        g.drawString(font, "§7| 强制发送旋转包（无视旋转检测）", cx + 125, cy(ROW_AGGRESSIVE + 2), 0x666666);
-
-        // ── 模式说明 ──
-        String modeHint = switch (cfg.mode) {
-            case "PUSHBACK" -> "§7将目标推离玩家";
-            case "PULLBACK" -> "§7将目标拉向玩家";
-            case "CLIFF" -> "§7将目标击退向最近的悬崖方向";
-            case "CUSTOM" -> "§7基于玩家视角偏移指定角度击退（如90°=右侧击退）";
+        g.drawString(this.font, "\u65cb\u8f6c\u5ef6\u8fdf:", cx + 10, this.cy(202), 0xAAAAAA);
+        g.drawString(this.font, "\u00a77(Tick, 0~5)", cx + 122, this.cy(216), 0x666666);
+        g.drawString(this.font, "\u00a77\u653b\u51fb\u540e\u5ef6\u8fdf\u591a\u5c11 Tick \u6062\u590d\u539f\u59cb\u65cb\u8f6c", cx + 10, this.cy(230), 0x666666);
+        g.drawString(this.font, "\u00a77| \u5f3a\u5236\u53d1\u9001\u65cb\u8f6c\u5305\uff08\u65e0\u89c6\u65cb\u8f6c\u68c0\u6d4b\uff09", cx + 125, this.cy(238), 0x666666);
+        String modeHint = switch (this.cfg.mode) {
+            case "PUSHBACK" -> "\u00a77\u5c06\u76ee\u6807\u63a8\u79bb\u73a9\u5bb6";
+            case "PULLBACK" -> "\u00a77\u5c06\u76ee\u6807\u62c9\u5411\u73a9\u5bb6";
+            case "CLIFF" -> "\u00a77\u5c06\u76ee\u6807\u51fb\u9000\u5411\u6700\u8fd1\u7684\u60ac\u5d16\u65b9\u5411";
+            case "CUSTOM" -> "\u00a77\u57fa\u4e8e\u73a9\u5bb6\u89c6\u89d2\u504f\u79fb\u6307\u5b9a\u89d2\u5ea6\u51fb\u9000\uff08\u598290\u00b0=\u53f3\u4fa7\u51fb\u9000\uff09";
             default -> "";
         };
-        g.drawString(font, modeHint, cx + 10, cy(ROW_MODE_LABEL), 0x888888);
-
-        g.disableScissor();
+        g.drawString(this.font, modeHint, cx + 10, this.cy(30), 0x888888);
+        g.m_280618_();
         super.render(g, mouseX, mouseY, partialTick);
     }
 
-    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // ★ 先让 EditBox 尝试处理点击（获得焦点）
-        if (customYawInput.mouseClicked(mouseX, mouseY, button)) {
-            setEditBoxFocus(customYawInput);
+        if (this.customYawInput.mouseClicked(mouseX, mouseY, button)) {
+            this.setEditBoxFocus(this.customYawInput);
             return true;
         }
-        if (cliffRadiusInput.mouseClicked(mouseX, mouseY, button)) {
-            setEditBoxFocus(cliffRadiusInput);
+        if (this.cliffRadiusInput.mouseClicked(mouseX, mouseY, button)) {
+            this.setEditBoxFocus(this.cliffRadiusInput);
             return true;
         }
-        if (smoothStepsInput.mouseClicked(mouseX, mouseY, button)) {
-            setEditBoxFocus(smoothStepsInput);
+        if (this.smoothStepsInput.mouseClicked(mouseX, mouseY, button)) {
+            this.setEditBoxFocus(this.smoothStepsInput);
             return true;
         }
-        if (delayInput.mouseClicked(mouseX, mouseY, button)) {
-            setEditBoxFocus(delayInput);
+        if (this.delayInput.mouseClicked(mouseX, mouseY, button)) {
+            this.setEditBoxFocus(this.delayInput);
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    /** 设置单个输入框聚焦，其余失焦 */
     private void setEditBoxFocus(EditBox focused) {
-        customYawInput.setFocused(false);
-        cliffRadiusInput.setFocused(false);
-        smoothStepsInput.setFocused(false);
-        delayInput.setFocused(false);
-        focused.setFocused(true);
+        this.customYawInput.m_93692_(false);
+        this.cliffRadiusInput.m_93692_(false);
+        this.smoothStepsInput.m_93692_(false);
+        this.delayInput.m_93692_(false);
+        focused.m_93692_(true);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // ★ 有焦点的输入框优先处理按键
-        if (customYawInput.isFocused() && customYawInput.keyPressed(keyCode, scanCode, modifiers))
-            return true;
-        if (cliffRadiusInput.isFocused() && cliffRadiusInput.keyPressed(keyCode, scanCode, modifiers))
-            return true;
-        if (smoothStepsInput.isFocused() && smoothStepsInput.keyPressed(keyCode, scanCode, modifiers))
-            return true;
-        if (delayInput.isFocused() && delayInput.keyPressed(keyCode, scanCode, modifiers))
-            return true;
-        // ESC 关闭
-        if (keyCode == 256) {
-            onClose();
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (this.customYawInput.m_93696_() && this.customYawInput.m_7933_(keyCode, scanCode, modifiers)) {
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        if (this.cliffRadiusInput.m_93696_() && this.cliffRadiusInput.m_7933_(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (this.smoothStepsInput.m_93696_() && this.smoothStepsInput.m_7933_(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (this.delayInput.m_93696_() && this.delayInput.m_7933_(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (keyCode == 256) {
+            this.onClose();
+            return true;
+        }
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
 
-    @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        // ★ 字符输入委托给有焦点的输入框
-        if (customYawInput.isFocused() && customYawInput.charTyped(codePoint, modifiers))
+    public boolean m_5534_(char codePoint, int modifiers) {
+        if (this.customYawInput.m_93696_() && this.customYawInput.m_5534_(codePoint, modifiers)) {
             return true;
-        if (cliffRadiusInput.isFocused() && cliffRadiusInput.charTyped(codePoint, modifiers))
+        }
+        if (this.cliffRadiusInput.m_93696_() && this.cliffRadiusInput.m_5534_(codePoint, modifiers)) {
             return true;
-        if (smoothStepsInput.isFocused() && smoothStepsInput.charTyped(codePoint, modifiers))
+        }
+        if (this.smoothStepsInput.m_93696_() && this.smoothStepsInput.m_5534_(codePoint, modifiers)) {
             return true;
-        if (delayInput.isFocused() && delayInput.charTyped(codePoint, modifiers))
+        }
+        if (this.delayInput.m_93696_() && this.delayInput.m_5534_(codePoint, modifiers)) {
             return true;
-        return super.charTyped(codePoint, modifiers);
+        }
+        return super.m_5534_(codePoint, modifiers);
     }
 
-    @Override
     public boolean isPauseScreen() {
         return false;
     }
 
-    @Override
     public void onClose() {
-        saveConfig();
+        this.saveConfig();
         this.minecraft.setScreen(new ClickGuiScreen());
     }
 }
+

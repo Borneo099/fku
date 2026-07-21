@@ -1,80 +1,61 @@
-package fku.org.example.fku.features.autodrop; /* water */
+package fku.org.example.fku.features.autodrop;
 
+import fku.org.example.fku.features.autodrop.AutoDropConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.registries.ForgeRegistries;
 
-@Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid="fku", bus=Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoDropHandler {
     private static int tickCounter = 0;
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         AutoDropConfig config = AutoDropConfig.getInstance();
-        if (!config.enabled) return;
-
-        tickCounter++;
+        if (!config.enabled) {
+            return;
+        }
         int interval = Math.max(1, Math.min(20, config.scanInterval));
-        if (tickCounter % interval != 0) return;
-
+        if (++tickCounter % interval != 0) {
+            return;
+        }
         Player player = event.player;
-        if (!(player instanceof LocalPlayer)) return;
-
-        LocalPlayer localPlayer = (LocalPlayer) player;
+        if (!(player instanceof LocalPlayer)) {
+            return;
+        }
+        LocalPlayer localPlayer = (LocalPlayer)player;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.gameMode == null) return;
-
-        // 无论背包是否打开，使用当前 player.containerMenu 处理
-        // 如果没有打开任何 GUI，containerMenu 默认就是 inventoryMenu
-        net.minecraft.world.inventory.AbstractContainerMenu menu = localPlayer.containerMenu;
-
-        // 如果鼠标上正拖着物品，先不处理，避免逻辑混乱
-        if (!menu.getCarried().isEmpty()) return;
-
-        // 遍历当前容器的所有槽位
-        for (int i = 0; i < menu.slots.size(); i++) {
-            Slot slot = menu.slots.get(i);
-            
-            // 只处理属于玩家背包的槽位
-            if (slot.container != localPlayer.getInventory()) continue;
-
-            ItemStack stack = slot.getItem();
-            if (stack.isEmpty()) continue;
-
-            // 只处理主背包和快捷栏 (0-35)，跳过装备栏和副手
-            int playerSlotIndex = slot.getSlotIndex();
-            if (playerSlotIndex < 0 || playerSlotIndex > 35) continue;
-
-            String itemId = getItemId(stack);
-            if (config.isBlacklisted(itemId)) {
-                // 使用 handleInventoryMouseClick 是同步服务端的唯一正确方式
-                // containerId: 当前容器 ID
-                // slotId: 在当前 menu 中的槽位索引 (i)
-                // mouseButton: 1 表示丢弃整组 (Ctrl+Q 效果)，0 表示丢弃单个 (Q 效果)
-                // clickType: THROW 专门用于丢弃操作
-                mc.gameMode.handleInventoryMouseClick(
-                    menu.containerId,
-                    i,
-                    1, 
-                    ClickType.THROW,
-                    localPlayer
-                );
-                
-                // 每次 tick 只处理一个槽位，防止发包过快被服务端拦截，也给服务端同步留出时间
-                return;
-            }
+        if (mc.f_91072_ == null) {
+            return;
+        }
+        AbstractContainerMenu menu = localPlayer.f_36096_;
+        if (!menu.m_142621_().m_41619_()) {
+            return;
+        }
+        for (int i = 0; i < menu.f_38839_.size(); ++i) {
+            String itemId;
+            int playerSlotIndex;
+            ItemStack stack;
+            Slot slot = (Slot)menu.f_38839_.get(i);
+            if (slot.f_40218_ != localPlayer.m_150109_() || (stack = slot.m_7993_()).m_41619_() || (playerSlotIndex = slot.getSlotIndex()) < 0 || playerSlotIndex > 35 || !config.isBlacklisted(itemId = AutoDropHandler.getItemId(stack))) continue;
+            mc.f_91072_.m_171799_(menu.f_38840_, i, 1, ClickType.THROW, (Player)localPlayer);
+            return;
         }
     }
 
     public static String getItemId(ItemStack stack) {
-        return net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
+        return ForgeRegistries.ITEMS.getKey(stack.m_41720_()).toString();
     }
 }
+

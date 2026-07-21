@@ -1,103 +1,102 @@
-package fku.org.example.fku.features.nofall; /* water */
+package fku.org.example.fku.features.nofall;
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
-import net.minecraft.client.Minecraft;
+import fku.org.example.fku.features.nofall.NoFallConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * 防摔配置界面
- */
-public class NoFallConfigScreen extends Screen {
-
+public class NoFallConfigScreen
+extends Screen {
     private static final int WIDTH = 260;
     private static final int HEIGHT = 140;
-
     private EditBox minDistInput;
-    private Button immuneBtn, onlyFlyBtn;
+    private Button immuneBtn;
+    private Button onlyFlyBtn;
 
     public NoFallConfigScreen() {
-        super(Component.literal("防摔配置"));
+        super(Component.literal((String)"\u9632\u6454\u914d\u7f6e"));
     }
 
-    @Override
     protected void init() {
         NoFallConfig cfg = NoFallConfig.getInstance();
-        int cx = (width - WIDTH) / 2;
-        int cy = (height - HEIGHT) / 2;
-
-        // 最小触发高度
-        addRenderableWidget(Button.builder(Component.literal("触发高度:"), b -> {}).bounds(cx + 5, cy + 10, 70, 18).build());
-        minDistInput = new EditBox(font, cx + 80, cy + 10, 50, 16, Component.literal(""));
-        minDistInput.setValue(String.valueOf(cfg.minFallDistance));
-        minDistInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
-        addWidget(minDistInput);
-
-        // 完全免疫
-        immuneBtn = addRenderableWidget(Button.builder(
-            Component.literal("完全免疫: " + (cfg.immune ? "§a开" : "§c关")),
-            btn -> { cfg.setImmune(!cfg.immune); btn.setMessage(Component.literal("完全免疫: " + (cfg.immune ? "§a开" : "§c关"))); }
-        ).bounds(cx + 10, cy + 40, 140, 18).build());
-
-        // 仅飞行保护
-        onlyFlyBtn = addRenderableWidget(Button.builder(
-            Component.literal("仅飞行: " + (cfg.onlyWhenFlying ? "§a开" : "§c关")),
-            btn -> { cfg.setOnlyWhenFlying(!cfg.onlyWhenFlying); btn.setMessage(Component.literal("仅飞行: " + (cfg.onlyWhenFlying ? "§a开" : "§c关"))); }
-        ).bounds(cx + 10, cy + 65, 140, 18).build());
-
-        // 返回
-        addRenderableWidget(Button.builder(
-            Component.literal("§a返回"),
-            btn -> saveAndClose()
-        ).bounds(cx + WIDTH / 2 - 30, cy + HEIGHT - 30, 60, 18).build());
+        int cx = (this.width - 260) / 2;
+        int cy = (this.height - 140) / 2;
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u89e6\u53d1\u9ad8\u5ea6:"), b -> {}).bounds(cx + 5, cy + 10, 70, 18).build());
+        this.minDistInput = new EditBox(this.font, cx + 80, cy + 10, 50, 16, Component.literal((String)""));
+        this.minDistInput.m_94144_(String.valueOf(cfg.minFallDistance));
+        this.minDistInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.m_7787_(this.minDistInput);
+        this.immuneBtn = (Button)this.addRenderableWidget(Button.builder(Component.literal((String)("\u5b8c\u5168\u514d\u75ab: " + (cfg.immune ? "\u00a7a\u5f00" : "\u00a7c\u5173"))), btn -> {
+            cfg.setImmune(!cfg.immune);
+            btn.setMessage(Component.literal((String)("\u5b8c\u5168\u514d\u75ab: " + (cfg.immune ? "\u00a7a\u5f00" : "\u00a7c\u5173"))));
+        }).bounds(cx + 10, cy + 40, 140, 18).build());
+        this.onlyFlyBtn = (Button)this.addRenderableWidget(Button.builder(Component.literal((String)("\u4ec5\u98de\u884c: " + (cfg.onlyWhenFlying ? "\u00a7a\u5f00" : "\u00a7c\u5173"))), btn -> {
+            cfg.setOnlyWhenFlying(!cfg.onlyWhenFlying);
+            btn.setMessage(Component.literal((String)("\u4ec5\u98de\u884c: " + (cfg.onlyWhenFlying ? "\u00a7a\u5f00" : "\u00a7c\u5173"))));
+        }).bounds(cx + 10, cy + 65, 140, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u8fd4\u56de"), btn -> this.saveAndClose()).bounds(cx + 130 - 30, cy + 140 - 30, 60, 18).build());
     }
 
-    @Override
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        renderBackground(g);
-        int cx = (width - WIDTH) / 2;
-        int cy = (height - HEIGHT) / 2;
-        GuiRenderHelper.drawPanelBackground(g, cx, cy, WIDTH, HEIGHT, false);
+        this.fillGradient(g);
+        int cx = (this.width - 260) / 2;
+        int cy = (this.height - 140) / 2;
+        GuiRenderHelper.drawPanelBackground(g, cx, cy, 260, 140, false);
         super.render(g, mx, my, pt);
-        if (minDistInput != null) minDistInput.render(g, mx, my, pt);
-        g.drawString(font, "格（低于此不保护）", cx + 135, cy + 12, 0x666666);
+        if (this.minDistInput != null) {
+            this.minDistInput.render(g, mx, my, pt);
+        }
+        g.drawString(this.font, "\u683c\uff08\u4f4e\u4e8e\u6b64\u4e0d\u4fdd\u62a4\uff09", cx + 135, cy + 12, 0x666666);
     }
 
-    @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (minDistInput != null) minDistInput.mouseClicked(mx, my, button);
+        if (this.minDistInput != null) {
+            this.minDistInput.mouseClicked(mx, my, button);
+        }
         return super.mouseClicked(mx, my, button);
     }
 
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (minDistInput != null && minDistInput.isFocused()) return minDistInput.keyPressed(keyCode, scanCode, modifiers);
-        if (keyCode == 256) { saveAndClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+        if (this.minDistInput != null && this.minDistInput.m_93696_()) {
+            return this.minDistInput.m_7933_(keyCode, scanCode, modifiers);
+        }
+        if (keyCode == 256) {
+            this.saveAndClose();
+            return true;
+        }
+        return super.m_7933_(keyCode, scanCode, modifiers);
     }
 
-    @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        if (minDistInput != null && minDistInput.isFocused()) return minDistInput.charTyped(codePoint, modifiers);
-        return super.charTyped(codePoint, modifiers);
+    public boolean m_5534_(char codePoint, int modifiers) {
+        if (this.minDistInput != null && this.minDistInput.m_93696_()) {
+            return this.minDistInput.m_5534_(codePoint, modifiers);
+        }
+        return super.m_5534_(codePoint, modifiers);
     }
 
-    @Override
-    public void onClose() { saveAndClose(); }
+    public void onClose() {
+        this.saveAndClose();
+    }
 
     private void saveAndClose() {
         NoFallConfig cfg = NoFallConfig.getInstance();
         try {
-            double d = Double.parseDouble(minDistInput.getValue().trim());
+            double d = Double.parseDouble(this.minDistInput.m_94155_().trim());
             cfg.setMinFallDistance(d);
-        } catch (NumberFormatException ignored) {}
+        }
+        catch (NumberFormatException numberFormatException) {
+            // ignored
+        }
         this.minecraft.setScreen(null);
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 }
+

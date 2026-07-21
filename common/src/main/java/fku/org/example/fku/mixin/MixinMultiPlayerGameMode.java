@@ -1,6 +1,7 @@
-package fku.org.example.fku.mixin; /* water */
+package fku.org.example.fku.mixin;
 
 import fku.org.example.fku.features.arrowdmg.ArrowDmgFeature;
+import fku.org.example.fku.features.killicon.KillIconFeature;
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.knockback.KnockbackConfig;
 import fku.org.example.fku.features.knockback.KnockbackDirectionCalculator;
@@ -16,29 +17,37 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @OnlyIn(Dist.CLIENT)
-@Mixin(MultiPlayerGameMode.class)
+@Mixin(value={MultiPlayerGameMode.class})
 public abstract class MixinMultiPlayerGameMode {
-
-    @Inject(method = "attack", at = @At("HEAD"))
+    /*
+     * Unable to fully structure code
+     */
+    @Inject(method={"attack"}, at={@At(value="HEAD")})
     public void onAttackHead(Player player, Entity target, CallbackInfo ci) {
-        KnockbackConfig config = KnockbackConfig.getInstance();
-        if (config.enabled && target instanceof LivingEntity livingTarget) {
-            float targetYaw = KnockbackDirectionCalculator.calculateYaw(player, livingTarget, config.mode);
+        config = KnockbackConfig.getInstance();
+        if (config.enabled && target instanceof LivingEntity) {
+            livingTarget = (LivingEntity)target;
+            targetYaw = KnockbackDirectionCalculator.calculateYaw((LivingEntity)player, livingTarget, config.mode);
             FakeRotationManager.setPending(livingTarget, targetYaw);
         }
-        // ★ 击杀图标：标记是否为爆头攻击（视线在目标头部）
-        fku.org.example.fku.features.killicon.KillIconFeature.markHeadshot(
-            target instanceof LivingEntity lt && player.getEyeY() >= lt.getY() + lt.getBbHeight() * 0.85);
+        if (!(target instanceof LivingEntity)) ** GOTO lbl-1000
+        lt = (LivingEntity)target;
+        if (player.m_20188_() >= lt.getY() + lt.getBbHeight() * 0.85) {
+            v0 = true;
+        } else lbl-1000:
+        // 2 sources
+
+        {
+            v0 = false;
+        }
+        KillIconFeature.markHeadshot(v0);
     }
 
-    /**
-     * ★ ArrowDmg 手动释放（连射关闭时）：拦截原包 → VClip + 瞄准 + RELEASE
-     *   连射开启时由 ClientTick 处理，此处不拦截
-     */
-    @Inject(method = "releaseUsingItem", at = @At("HEAD"), cancellable = true)
+    @Inject(method={"releaseUsingItem"}, at={@At(value="HEAD")}, cancellable=true)
     public void onReleaseUsingItem(CallbackInfo ci) {
         if (ArrowDmgFeature.handleManualRelease()) {
             ci.cancel();
         }
     }
 }
+
