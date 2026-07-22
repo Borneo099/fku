@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value={Connection.class})
 public abstract class MixinConnectionAttackInterceptor {
     @Shadow
-    private Channel f_129468_;
+    private Channel channel;
     @Unique
     private static boolean fku$sendingPending = false;
 
@@ -44,7 +44,7 @@ public abstract class MixinConnectionAttackInterceptor {
         }
         fku$sendingPending = true;
         try {
-            Channel ch = this.f_129468_;
+            Channel ch = this.channel;
             if (ch != null && ch.isOpen()) {
                 if (hasRotation) {
                     int burstCount = 2 + ThreadLocalRandom.current().nextInt(2);

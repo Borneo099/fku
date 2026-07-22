@@ -24,7 +24,7 @@ public class YPosOverlay {
         config.setYPosOverlayEnabled(!config.yPosOverlayEnabled);
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)("YPos \u663e\u793a: " + (config.yPosOverlayEnabled ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed"))), true);
+            mc.player.displayClientMessage(Component.literal(("YPos \u663e\u793a: " + (config.yPosOverlayEnabled ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed"))), true);
         }
     }
 
@@ -40,10 +40,10 @@ public class YPosOverlay {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.f_91073_ == null) {
+        if (mc.player == null || mc.level == null) {
             return;
         }
-        if (mc.f_91073_.m_46467_() != lastUpdateTick && (lastUpdateTick = mc.f_91073_.m_46467_()) % 5L == 0L) {
+        if (mc.level.getGameTime() != lastUpdateTick && (lastUpdateTick = mc.level.getGameTime()) % 5L == 0L) {
             cachedTarget = YPosOverlay.findTargetEntity(mc);
         }
         if (cachedTarget == null) {
@@ -57,32 +57,33 @@ public class YPosOverlay {
             text = "Y: " + String.format("%.1f", targetY);
             color = 0xFFFFFF;
         }
-        int screenWidth = mc.getWindow().m_85445_();
-        int screenHeight = mc.getWindow().m_85446_();
+        int screenWidth = mc.getWindow().getGuiScaledWidth();
+        int screenHeight = mc.getWindow().getGuiScaledHeight();
         int centerX = screenWidth / 2;
         int centerY = screenHeight / 2;
-        int textX = centerX - mc.font.m_92895_(text) / 2;
+        int textX = centerX - mc.font.width(text) / 2;
         int textY = centerY + 15;
         event.getGuiGraphics().drawString(mc.font, text, textX, textY, color);
     }
 
     private static Entity findTargetEntity(Minecraft mc) {
-        Entity camera = mc.m_91288_();
+        Entity camera = mc.getCameraEntity();
         if (camera == null) {
             return null;
         }
-        Vec3 eyePos = camera.m_20299_(1.0f);
-        Vec3 lookVec = camera.m_20252_(1.0f);
+        Vec3 eyePos = camera.getEyePosition(1.0f);
+        Vec3 lookVec = camera.getViewVector(1.0f);
         Vec3 endPoint = eyePos.add(lookVec.scale(256.0));
-        AABB searchArea = camera.m_20191_().m_82400_(256.0);
-        List entities = mc.f_91073_.m_6249_(camera, searchArea, e -> e != camera && e.m_6084_() && !e.m_5833_());
+        AABB searchArea = camera.getBoundingBox().inflate(256.0);
+        List entities = mc.level.getEntities(camera, searchArea, e -> e != camera && e.isAlive() && !e.isSpectator());
         Entity best = null;
         double bestDist = 65536.0;
-        for (Entity entity : entities) {
+        for (Object entityObj : entities) {
+            Entity entity = (Entity)entityObj;
             double distSq;
-            AABB hitbox = entity.m_20191_().m_82400_(entity.m_6143_());
-            Optional hit = hitbox.m_82371_(eyePos, endPoint);
-            if (!hit.isPresent() || !((distSq = eyePos.m_82557_((Vec3)hit.get())) < bestDist)) continue;
+            AABB hitbox = entity.getBoundingBox().inflate(entity.getPickRadius());
+            Optional hit = hitbox.clip(eyePos, endPoint);
+            if (!hit.isPresent() || !((distSq = eyePos.distanceToSqr((Vec3)hit.get())) < bestDist)) continue;
             bestDist = distSq;
             best = entity;
         }

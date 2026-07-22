@@ -73,7 +73,7 @@ public class KillFXFeature {
         if (!cfg.enabled || !cfg.onlyTargeted) {
             return;
         }
-        attackedTargets.put(event.getTarget().m_19879_(), System.currentTimeMillis());
+        attackedTargets.put(event.getTarget().getId(), System.currentTimeMillis());
     }
 
     @SubscribeEvent
@@ -114,18 +114,18 @@ public class KillFXFeature {
 
     private static void detectDeaths(KillFXConfig cfg, long now) {
         Minecraft mc = KillFXFeature.getMc();
-        if (mc == null || mc.f_91073_ == null) {
+        if (mc == null || mc.level == null) {
             return;
         }
         int deaths = 0;
-        for (Entity entity : mc.f_91073_.m_104735_()) {
+        for (Entity entity : mc.level.entitiesForRendering()) {
             float health;
             if (!(entity instanceof LivingEntity)) continue;
             LivingEntity living = (LivingEntity) entity;
             if (entity == mc.player) continue;
-            int id = living.m_19879_();
+            int id = living.getId();
             try {
-                health = living.m_21223_();
+                health = living.getHealth();
             }
             catch (Exception e) {
                 continue;
@@ -147,7 +147,7 @@ public class KillFXFeature {
                 renderQueue.add(living);
             }
             if (health > 0.0f) {
-                lastHealthMap.put(id, health));
+                lastHealthMap.put(id, health);
                 continue;
             }
             lastHealthMap.remove(id);
@@ -157,7 +157,7 @@ public class KillFXFeature {
     private static void renderQueued(KillFXConfig cfg) {
         LivingEntity entity;
         Minecraft mc = KillFXFeature.getMc();
-        if (mc == null || mc.f_91073_ == null) {
+        if (mc == null || mc.level == null) {
             return;
         }
         int rendered = 0;
@@ -168,11 +168,11 @@ public class KillFXFeature {
                 if (!cfg.useShader || cfg.shaderType.equals("\u65e0")) continue;
                 KillFXShaderManager.ShaderType shaderType = KillFXFeature.shaderTypeFromChinese(cfg.shaderType);
                 String extra = "";
-                float intensity = cfg.shaderIntensity;
+                float intensity = (float)cfg.shaderIntensity;
                 switch (shaderType) {
                     case CRYSTAL: {
                         extra = String.format("%s,%s,%.1f,%.1f,%.1f,%s", KillFXFeature.mapCrystalStyle(cfg.crystalStyle), cfg.crystalTintColor, cfg.crystalRadius, cfg.crystalGlowIntensity, cfg.crystalRotationSpeed, cfg.crystalPulse);
-                        intensity = cfg.crystalGlowIntensity;
+                        intensity = (float)cfg.crystalGlowIntensity;
                         break;
                     }
                     case BLACKHOLE: {
@@ -202,7 +202,7 @@ public class KillFXFeature {
     private static void renderEffects(LivingEntity entity, KillFXConfig cfg) {
         ClientLevel level;
         Minecraft mc = KillFXFeature.getMc();
-        ClientLevel clientLevel = level = mc != null ? mc.f_91073_ : null;
+        ClientLevel clientLevel = level = mc != null ? mc.level : null;
         if (level == null || entity == null) {
             return;
         }
@@ -215,24 +215,24 @@ public class KillFXFeature {
             for (int i = 0; i < amount; ++i) {
                 LightningBolt bolt;
                 try {
-                    bolt = (LightningBolt)EntityType.f_20465_.m_20615_((Level)level);
+                    bolt = (LightningBolt)EntityType.LIGHTNING_BOLT.create((Level)level);
                 }
                 catch (Exception e) {
                     continue;
                 }
                 if (bolt == null) continue;
                 try {
-                    bolt.m_6034_(x, y, z);
-                    KillFXFeature.safeSetInt(bolt, 6, "life", "field_7185", "f_20860_");
-                    KillFXFeature.safeSetInt(bolt, 6, "flashes", "field_7183", "f_20861_");
-                    KillFXFeature.safeSetBool(bolt, true, "visualOnly", "field_20862_", "f_20862_");
-                    level.m_104627_(bolt.m_19879_(), (Entity)bolt);
+                    bolt.setPos(x, y, z);
+                    KillFXFeature.safeSetInt(bolt, 6, "life", "field_7185", "life");
+                    KillFXFeature.safeSetInt(bolt, 6, "flashes", "field_7183", "flashes");
+                    KillFXFeature.safeSetBool(bolt, true, "visualOnly", "field_20862_", "visualOnly");
+                    level.putNonPlayerEntity(bolt.getId(), (Entity)bolt);
                 }
                 catch (Exception exception) {
                     // ignored
                 }
                 if (cfg.useLightningSound) continue;
-                KillFXFeature.safeSetInt(bolt, 1, "life", "field_7185", "f_20860_");
+                KillFXFeature.safeSetInt(bolt, 1, "life", "field_7185", "life");
             }
         }
         if (cfg.useParticles) {
@@ -250,7 +250,7 @@ public class KillFXFeature {
             try {
                 SoundEvent s = KillFXFeature.resolveSound(cfg);
                 if (s != null) {
-                    level.m_6263_((Player)mc.player, x, y, z, s, SoundSource.WEATHER, cfg.volume, cfg.pitch);
+                    level.playSound((Player)mc.player, x, y, z, s, SoundSource.WEATHER, (float)cfg.volume, (float)cfg.pitch);
                 }
             }
             catch (Exception s) {
@@ -259,12 +259,12 @@ public class KillFXFeature {
         }
         if (cfg.useFirework) {
             try {
-                ItemStack stack = new ItemStack((ItemLike)Items.f_42688_);
+                ItemStack stack = new ItemStack((ItemLike)Items.FIREWORK_ROCKET);
                 CompoundTag tag = new CompoundTag();
-                tag.m_128405_("Flight", 1);
-                stack.m_41751_(tag);
+                tag.putInt("Flight", 1);
+                stack.setTag(tag);
                 FireworkRocketEntity rocket = new FireworkRocketEntity((Level)level, x, y, z, stack);
-                level.m_104627_(rocket.m_19879_(), (Entity)rocket);
+                level.putNonPlayerEntity(rocket.getId(), (Entity)rocket);
             }
             catch (Exception exception) {
                 // ignored
@@ -272,7 +272,7 @@ public class KillFXFeature {
         }
         if (cfg.useExplosion) {
             try {
-                level.m_7106_((ParticleOptions)ParticleTypes.f_123812_, x, y, z, 0.0, 0.0, 0.0);
+                level.addParticle((ParticleOptions)ParticleTypes.EXPLOSION_EMITTER, x, y, z, 0.0, 0.0, 0.0);
             }
             catch (Exception exception) {
                 // ignored
@@ -280,7 +280,7 @@ public class KillFXFeature {
         }
     }
 
-    private static Field findField(Class<?> c, String . names) {
+    private static Field findField(Class<?> c, String... names) {
         for (String n : names) {
             try {
                 Field f = c.getDeclaredField(n);
@@ -294,7 +294,7 @@ public class KillFXFeature {
         return null;
     }
 
-    private static void safeSetInt(Object o, int v, String . names) {
+    private static void safeSetInt(Object o, int v, String... names) {
         try {
             Field f = KillFXFeature.findField(o.getClass(), names);
             if (f != null) {
@@ -306,7 +306,7 @@ public class KillFXFeature {
         }
     }
 
-    private static void safeSetBool(Object o, boolean v, String . names) {
+    private static void safeSetBool(Object o, boolean v, String... names) {
         try {
             Field f = KillFXFeature.findField(o.getClass(), names);
             if (f != null) {
@@ -326,111 +326,111 @@ public class KillFXFeature {
             case "Nature" -> KillFXFeature.natureP(cfg.natureParticle);
             case "Update121" -> KillFXFeature.updateP(cfg.updateParticle);
             case "Misc" -> KillFXFeature.miscP(cfg.miscParticle);
-            default -> ParticleTypes.f_123810_;
+            default -> ParticleTypes.END_ROD;
         };
     }
 
     private static ParticleOptions combatP(String n) {
         return switch (n) {
-            case "DAMAGE_INDICATOR" -> ParticleTypes.f_123798_;
-            case "CRIT" -> ParticleTypes.f_123797_;
-            case "ENCHANTED_HIT" -> ParticleTypes.f_123808_;
-            case "SWEEP_ATTACK" -> ParticleTypes.f_123766_;
-            case "EXPLOSION" -> ParticleTypes.f_123813_;
-            case "EXPLOSION_EMITTER" -> ParticleTypes.f_123812_;
-            case "SONIC_BOOM" -> ParticleTypes.f_235902_;
-            case "TOTEM_OF_UNDYING" -> ParticleTypes.f_123767_;
-            case "FIREWORK" -> ParticleTypes.f_123815_;
-            case "EGG_CRACK" -> ParticleTypes.f_276512_;
-            default -> ParticleTypes.f_123797_;
+            case "DAMAGE_INDICATOR" -> ParticleTypes.DAMAGE_INDICATOR;
+            case "CRIT" -> ParticleTypes.CRIT;
+            case "ENCHANTED_HIT" -> ParticleTypes.ENCHANTED_HIT;
+            case "SWEEP_ATTACK" -> ParticleTypes.SWEEP_ATTACK;
+            case "EXPLOSION" -> ParticleTypes.EXPLOSION;
+            case "EXPLOSION_EMITTER" -> ParticleTypes.EXPLOSION_EMITTER;
+            case "SONIC_BOOM" -> ParticleTypes.SONIC_BOOM;
+            case "TOTEM_OF_UNDYING" -> ParticleTypes.TOTEM_OF_UNDYING;
+            case "FIREWORK" -> ParticleTypes.FIREWORK;
+            case "EGG_CRACK" -> ParticleTypes.EGG_CRACK;
+            default -> ParticleTypes.CRIT;
         };
     }
 
     private static ParticleOptions magicP(String n) {
         return switch (n) {
-            case "WITCH" -> ParticleTypes.f_123771_;
-            case "END_ROD" -> ParticleTypes.f_123810_;
-            case "PORTAL" -> ParticleTypes.f_123760_;
-            case "ENCHANT" -> ParticleTypes.f_123809_;
-            case "NAUTILUS" -> ParticleTypes.f_123775_;
-            case "ELDER_GUARDIAN" -> ParticleTypes.f_123807_;
-            case "SCULK_CHARGE_POP" -> ParticleTypes.f_235900_;
-            case "SOUL" -> ParticleTypes.f_123746_;
-            case "GLOW_SQUID_INK" -> ParticleTypes.f_175826_;
-            default -> ParticleTypes.f_123810_;
+            case "WITCH" -> ParticleTypes.WITCH;
+            case "END_ROD" -> ParticleTypes.END_ROD;
+            case "PORTAL" -> ParticleTypes.PORTAL;
+            case "ENCHANT" -> ParticleTypes.ENCHANT;
+            case "NAUTILUS" -> ParticleTypes.NAUTILUS;
+            case "ELDER_GUARDIAN" -> ParticleTypes.ELDER_GUARDIAN;
+            case "SCULK_CHARGE_POP" -> ParticleTypes.SCULK_CHARGE_POP;
+            case "SOUL" -> ParticleTypes.SOUL;
+            case "GLOW_SQUID_INK" -> ParticleTypes.GLOW_SQUID_INK;
+            default -> ParticleTypes.END_ROD;
         };
     }
 
     private static ParticleOptions fireP(String n) {
         return switch (n) {
-            case "FLAME" -> ParticleTypes.f_123744_;
-            case "SOUL_FIRE_FLAME" -> ParticleTypes.f_123745_;
-            case "SMALL_FLAME" -> ParticleTypes.f_175834_;
-            case "LAVA" -> ParticleTypes.f_123756_;
-            case "LARGE_SMOKE" -> ParticleTypes.f_123755_;
-            case "SMOKE" -> ParticleTypes.f_123762_;
-            case "CAMPFIRE_COSY_SMOKE" -> ParticleTypes.f_123777_;
-            case "CAMPFIRE_SIGNAL_SMOKE" -> ParticleTypes.f_123778_;
-            case "GLOW" -> ParticleTypes.f_175827_;
-            case "WAX_ON" -> ParticleTypes.f_175828_;
-            case "WAX_OFF" -> ParticleTypes.f_175829_;
-            case "SCRAPE" -> ParticleTypes.f_175831_;
-            case "ELECTRIC_SPARK" -> ParticleTypes.f_175830_;
-            default -> ParticleTypes.f_123744_;
+            case "FLAME" -> ParticleTypes.FLAME;
+            case "SOUL_FIRE_FLAME" -> ParticleTypes.SOUL_FIRE_FLAME;
+            case "SMALL_FLAME" -> ParticleTypes.SMALL_FLAME;
+            case "LAVA" -> ParticleTypes.LAVA;
+            case "LARGE_SMOKE" -> ParticleTypes.LARGE_SMOKE;
+            case "SMOKE" -> ParticleTypes.SMOKE;
+            case "CAMPFIRE_COSY_SMOKE" -> ParticleTypes.CAMPFIRE_COSY_SMOKE;
+            case "CAMPFIRE_SIGNAL_SMOKE" -> ParticleTypes.CAMPFIRE_SIGNAL_SMOKE;
+            case "GLOW" -> ParticleTypes.GLOW;
+            case "WAX_ON" -> ParticleTypes.WAX_ON;
+            case "WAX_OFF" -> ParticleTypes.WAX_OFF;
+            case "SCRAPE" -> ParticleTypes.SCRAPE;
+            case "ELECTRIC_SPARK" -> ParticleTypes.ELECTRIC_SPARK;
+            default -> ParticleTypes.FLAME;
         };
     }
 
     private static ParticleOptions natureP(String n) {
         return switch (n) {
-            case "HEART" -> ParticleTypes.f_123750_;
-            case "CLOUD" -> ParticleTypes.f_123796_;
-            case "RAIN" -> ParticleTypes.f_123761_;
-            case "SNOWFLAKE" -> ParticleTypes.f_175821_;
-            case "ITEM_SLIME" -> ParticleTypes.f_123753_;
-            case "BUBBLE" -> ParticleTypes.f_123795_;
-            case "BUBBLE_COLUMN_UP" -> ParticleTypes.f_123774_;
-            case "CURRENT_DOWN" -> ParticleTypes.f_123773_;
-            case "BUBBLE_POP" -> ParticleTypes.f_123772_;
-            case "SPLASH" -> ParticleTypes.f_123769_;
-            case "FISHING" -> ParticleTypes.f_123816_;
-            case "DOLPHIN" -> ParticleTypes.f_123776_;
-            case "UNDERWATER" -> ParticleTypes.f_123768_;
-            case "NOTE" -> ParticleTypes.f_123758_;
-            case "CHERRY_LEAVES" -> ParticleTypes.f_276452_;
-            case "SPORE_BLOSSOM_AIR" -> ParticleTypes.f_175833_;
-            case "WHITE_ASH" -> ParticleTypes.f_123790_;
-            case "WARPED_SPORE" -> ParticleTypes.f_123785_;
-            case "CRIMSON_SPORE" -> ParticleTypes.f_123784_;
-            default -> ParticleTypes.f_123750_;
+            case "HEART" -> ParticleTypes.HEART;
+            case "CLOUD" -> ParticleTypes.CLOUD;
+            case "RAIN" -> ParticleTypes.RAIN;
+            case "SNOWFLAKE" -> ParticleTypes.SNOWFLAKE;
+            case "ITEM_SLIME" -> ParticleTypes.ITEM_SLIME;
+            case "BUBBLE" -> ParticleTypes.BUBBLE;
+            case "BUBBLE_COLUMN_UP" -> ParticleTypes.BUBBLE_COLUMN_UP;
+            case "CURRENT_DOWN" -> ParticleTypes.CURRENT_DOWN;
+            case "BUBBLE_POP" -> ParticleTypes.BUBBLE_POP;
+            case "SPLASH" -> ParticleTypes.SPLASH;
+            case "FISHING" -> ParticleTypes.FISHING;
+            case "DOLPHIN" -> ParticleTypes.DOLPHIN;
+            case "UNDERWATER" -> ParticleTypes.UNDERWATER;
+            case "NOTE" -> ParticleTypes.NOTE;
+            case "CHERRY_LEAVES" -> ParticleTypes.CHERRY_LEAVES;
+            case "SPORE_BLOSSOM_AIR" -> ParticleTypes.SPORE_BLOSSOM_AIR;
+            case "WHITE_ASH" -> ParticleTypes.WHITE_ASH;
+            case "WARPED_SPORE" -> ParticleTypes.WARPED_SPORE;
+            case "CRIMSON_SPORE" -> ParticleTypes.CRIMSON_SPORE;
+            default -> ParticleTypes.HEART;
         };
     }
 
     private static ParticleOptions updateP(String n) {
         return switch (n) {
-            case "DRAGON_BREATH" -> ParticleTypes.f_123799_;
-            case "FLASH" -> ParticleTypes.f_123747_;
-            case "POOF" -> ParticleTypes.f_123759_;
-            case "ELECTRIC_SPARK" -> ParticleTypes.f_175830_;
-            case "GLOW" -> ParticleTypes.f_175827_;
-            case "SCRAPE" -> ParticleTypes.f_175831_;
-            case "WAX_ON" -> ParticleTypes.f_175828_;
-            case "WAX_OFF" -> ParticleTypes.f_175829_;
-            case "SNOWFLAKE" -> ParticleTypes.f_175821_;
-            case "SPIT" -> ParticleTypes.f_123764_;
-            default -> ParticleTypes.f_123799_;
+            case "DRAGON_BREATH" -> ParticleTypes.DRAGON_BREATH;
+            case "FLASH" -> ParticleTypes.FLASH;
+            case "POOF" -> ParticleTypes.POOF;
+            case "ELECTRIC_SPARK" -> ParticleTypes.ELECTRIC_SPARK;
+            case "GLOW" -> ParticleTypes.GLOW;
+            case "SCRAPE" -> ParticleTypes.SCRAPE;
+            case "WAX_ON" -> ParticleTypes.WAX_ON;
+            case "WAX_OFF" -> ParticleTypes.WAX_OFF;
+            case "SNOWFLAKE" -> ParticleTypes.SNOWFLAKE;
+            case "SPIT" -> ParticleTypes.SPIT;
+            default -> ParticleTypes.DRAGON_BREATH;
         };
     }
 
     private static ParticleOptions miscP(String n) {
         return switch (n) {
-            case "ASH" -> ParticleTypes.f_123783_;
-            case "MYCELIUM" -> ParticleTypes.f_123757_;
-            case "SCULK_SOUL" -> ParticleTypes.f_235898_;
-            case "HAPPY_VILLAGER" -> ParticleTypes.f_123748_;
-            case "ANGRY_VILLAGER" -> ParticleTypes.f_123792_;
-            case "SNEEZE" -> ParticleTypes.f_123763_;
-            case "SQUID_INK" -> ParticleTypes.f_123765_;
-            default -> ParticleTypes.f_235898_;
+            case "ASH" -> ParticleTypes.ASH;
+            case "MYCELIUM" -> ParticleTypes.MYCELIUM;
+            case "SCULK_SOUL" -> ParticleTypes.SCULK_SOUL;
+            case "HAPPY_VILLAGER" -> ParticleTypes.HAPPY_VILLAGER;
+            case "ANGRY_VILLAGER" -> ParticleTypes.ANGRY_VILLAGER;
+            case "SNEEZE" -> ParticleTypes.SNEEZE;
+            case "SQUID_INK" -> ParticleTypes.SQUID_INK;
+            default -> ParticleTypes.SCULK_SOUL;
         };
     }
 
@@ -445,7 +445,7 @@ public class KillFXFeature {
     }
 
     private static SoundEvent se(String s) {
-        return SoundEvent.m_262824_((ResourceLocation)new ResourceLocation(s));
+        return SoundEvent.createVariableRangeEvent((ResourceLocation)new ResourceLocation(s));
     }
 
     private static SoundEvent combatS(String n) {
@@ -581,7 +581,7 @@ public class KillFXFeature {
         c = Math.min(c, 200);
         for (int i = 0; i < c; ++i) {
             try {
-                l.m_7106_(p, x, y, z, (r.nextDouble() - 0.5) * s * 2.0, (r.nextDouble() - 0.5) * s * 2.0, (r.nextDouble() - 0.5) * s * 2.0);
+                l.addParticle(p, x, y, z, (r.nextDouble() - 0.5) * s * 2.0, (r.nextDouble() - 0.5) * s * 2.0, (r.nextDouble() - 0.5) * s * 2.0);
                 continue;
             }
             catch (Exception exception) {
@@ -598,7 +598,7 @@ public class KillFXFeature {
             try {
                 double t = Math.PI * 2 * r.nextDouble();
                 double ph = Math.acos(2.0 * r.nextDouble() - 1.0);
-                l.m_7106_(p, x + rd * Math.sin(ph) * Math.cos(t), y + rd * Math.sin(ph) * Math.sin(t), z + rd * Math.cos(ph), 0.0, 0.0, 0.0);
+                l.addParticle(p, x + rd * Math.sin(ph) * Math.cos(t), y + rd * Math.sin(ph) * Math.sin(t), z + rd * Math.cos(ph), 0.0, 0.0, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -615,7 +615,7 @@ public class KillFXFeature {
         for (int i = 0; i < c; ++i) {
             try {
                 double a = Math.PI * 2 * i / ppl;
-                l.m_7106_(p, x + rd * Math.cos(a), y + h * i / c, z + rd * Math.sin(a), 0.0, 0.02, 0.0);
+                l.addParticle(p, x + rd * Math.cos(a), y + h * i / c, z + rd * Math.sin(a), 0.0, 0.02, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -630,7 +630,7 @@ public class KillFXFeature {
         for (int i = 0; i < c; ++i) {
             try {
                 double a = Math.PI * 2 * r.nextDouble();
-                l.m_7106_(p, x + 0.3 * Math.cos(a), y + r.nextDouble() * s * 2.0, z + 0.3 * Math.sin(a), 0.0, s * 0.5, 0.0);
+                l.addParticle(p, x + 0.3 * Math.cos(a), y + r.nextDouble() * s * 2.0, z + 0.3 * Math.sin(a), 0.0, s * 0.5, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -644,7 +644,7 @@ public class KillFXFeature {
         for (int i = 0; i < c; ++i) {
             try {
                 double a = Math.PI * 2 * i / c;
-                l.m_7106_(p, x + 1.2 * Math.cos(a), y + 0.5 * s, z + 1.2 * Math.sin(a), 0.0, 0.0, 0.0);
+                l.addParticle(p, x + 1.2 * Math.cos(a), y + 0.5 * s, z + 1.2 * Math.sin(a), 0.0, 0.0, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -659,7 +659,7 @@ public class KillFXFeature {
         for (int i = 0; i < c; ++i) {
             try {
                 double t = Math.PI * 2 * i / c;
-                l.m_7106_(p, x + 16.0 * Math.pow(Math.sin(t), 3.0) * sc, y + (13.0 * Math.cos(t) - 5.0 * Math.cos(2.0 * t) - 2.0 * Math.cos(3.0 * t) - Math.cos(4.0 * t)) * sc, z, 0.0, 0.0, 0.0);
+                l.addParticle(p, x + 16.0 * Math.pow(Math.sin(t), 3.0) * sc, y + (13.0 * Math.cos(t) - 5.0 * Math.cos(2.0 * t) - 2.0 * Math.cos(3.0 * t) - Math.cos(4.0 * t)) * sc, z, 0.0, 0.0, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -676,9 +676,9 @@ public class KillFXFeature {
             try {
                 double t = Math.PI * 2 * i / (c / 2.0);
                 double py = y + h * i / c;
-                l.m_7106_(p, x + rd * Math.cos(t), py, z + rd * Math.sin(t), 0.0, 0.01, 0.0);
+                l.addParticle(p, x + rd * Math.cos(t), py, z + rd * Math.sin(t), 0.0, 0.01, 0.0);
                 if (i + 1 >= c) continue;
-                l.m_7106_(p, x + rd * Math.cos(t + Math.PI), py, z + rd * Math.sin(t + Math.PI), 0.0, 0.01, 0.0);
+                l.addParticle(p, x + rd * Math.cos(t + Math.PI), py, z + rd * Math.sin(t + Math.PI), 0.0, 0.01, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -694,7 +694,7 @@ public class KillFXFeature {
             try {
                 double t = Math.PI * 2 * i / c;
                 double r = i % 2 == 0 ? rd : rd * 0.4;
-                l.m_7106_(p, x + r * Math.cos(t), y, z + r * Math.sin(t), 0.0, 0.02, 0.0);
+                l.addParticle(p, x + r * Math.cos(t), y, z + r * Math.sin(t), 0.0, 0.02, 0.0);
                 continue;
             }
             catch (Exception exception) {
@@ -710,7 +710,7 @@ public class KillFXFeature {
             try {
                 double a = Math.PI * 2 * i / c;
                 double r = mr * (0.5 + 0.5 * Math.random());
-                l.m_7106_(p, x + r * Math.cos(a), y + (Math.random() - 0.5) * 0.2, z + r * Math.sin(a), Math.cos(a) * 0.05, 0.0, Math.sin(a) * 0.05);
+                l.addParticle(p, x + r * Math.cos(a), y + (Math.random() - 0.5) * 0.2, z + r * Math.sin(a), Math.cos(a) * 0.05, 0.0, Math.sin(a) * 0.05);
                 continue;
             }
             catch (Exception exception) {
@@ -746,12 +746,12 @@ public class KillFXFeature {
 
     public static String chineseFromShaderType(KillFXShaderManager.ShaderType type) {
         return switch (type) {
-            case KillFXShaderManager.ShaderType.BLACKHOLE -> "\u9ed1\u6d1e";
-            case KillFXShaderManager.ShaderType.CRYSTAL -> "\u6c34\u6676";
-            case KillFXShaderManager.ShaderType.SKY_BEAM -> "\u5929\u5149\u5149\u675f";
-            case KillFXShaderManager.ShaderType.SKY_RING -> "\u5929\u5149\u73af";
-            case KillFXShaderManager.ShaderType.HYPERNOVA -> "\u8d85\u65b0\u661f";
-            case KillFXShaderManager.ShaderType.RAY_BURST -> "\u5149\u7ebf\u7206\u53d1";
+            case BLACKHOLE -> "\u9ed1\u6d1e";
+            case CRYSTAL -> "\u6c34\u6676";
+            case SKY_BEAM -> "\u5929\u5149\u5149\u675f";
+            case SKY_RING -> "\u5929\u5149\u73af";
+            case HYPERNOVA -> "\u8d85\u65b0\u661f";
+            case RAY_BURST -> "\u5149\u7ebf\u7206\u53d1";
             default -> "\u65e0";
         };
     }

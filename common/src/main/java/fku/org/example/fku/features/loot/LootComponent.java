@@ -23,13 +23,13 @@ extends GuiComponent {
                 cfg.setEnabled(false);
                 LootFeature.stop();
                 if (Minecraft.getInstance().player != null) {
-                    Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u5df2\u5173\u95ed\uff0c\u6e05\u7a7a\u5bb9\u5668\u6807\u8bb0"), false);
+                    Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u5df2\u5173\u95ed\uff0c\u6e05\u7a7a\u5bb9\u5668\u6807\u8bb0"), false);
                 }
             } else {
                 cfg.setEnabled(true);
                 LootFeature.start();
                 if (Minecraft.getInstance().player != null) {
-                    Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7a\u5df2\u5f00\u542f\uff0c\u5f00\u59cb\u81ea\u52a8\u53d6\u7269"), false);
+                    Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7a\u5df2\u5f00\u542f\uff0c\u5f00\u59cb\u81ea\u52a8\u53d6\u7269"), false);
                 }
             }
         });
@@ -49,13 +49,13 @@ extends GuiComponent {
             cfg.setEnabled(false);
             LootFeature.stop();
             if (Minecraft.getInstance().player != null) {
-                Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u5df2\u5173\u95ed\uff0c\u6e05\u7a7a\u5bb9\u5668\u6807\u8bb0"), false);
+                Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u5df2\u5173\u95ed\uff0c\u6e05\u7a7a\u5bb9\u5668\u6807\u8bb0"), false);
             }
         } else {
             cfg.setEnabled(true);
             LootFeature.start();
             if (Minecraft.getInstance().player != null) {
-                Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7a\u5df2\u5f00\u542f\uff0c\u5f00\u59cb\u81ea\u52a8\u53d6\u7269"), false);
+                Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7a\u5df2\u5f00\u542f\uff0c\u5f00\u59cb\u81ea\u52a8\u53d6\u7269"), false);
             }
         }
     }

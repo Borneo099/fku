@@ -38,17 +38,17 @@ public class FakeRotationManager {
             origX = player.getX();
             origY = player.getY();
             origZ = player.getZ();
-            origYaw = player.m_146908_();
-            origPitch = player.m_146909_();
+            origYaw = player.getYRot();
+            origPitch = player.getXRot();
             active = true;
         }
-        float yawRad = Math.toRadians(targetYaw);
+        float yawRad = (float)Math.toRadians(targetYaw);
         pendingX = target.getX() + 0.3 * Math.sin(yawRad);
         pendingZ = target.getZ() - 0.3 * Math.cos(yawRad);
         pendingY = player.getY();
         pendingYaw = targetYaw;
-        pendingPitch = player.m_146909_();
-        pendingOnGround = player.m_20096_();
+        pendingPitch = player.getXRot();
+        pendingOnGround = player.onGround();
         pending = true;
     }
 
@@ -75,15 +75,15 @@ public class FakeRotationManager {
             origX = playerPos.x;
             origY = playerPos.y;
             origZ = playerPos.z;
-            origYaw = player.m_146908_();
-            origPitch = player.m_146909_();
+            origYaw = player.getYRot();
+            origPitch = player.getXRot();
             active = true;
         }
-        float yawRad = Math.toRadians(targetYaw);
+        float yawRad = (float)Math.toRadians(targetYaw);
         double fakedX = targetPos.x + 0.3 * Math.sin(yawRad);
         double fakedZ = targetPos.z - 0.3 * Math.cos(yawRad);
         double fakedY = playerPos.y;
-        player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.PosRot(fakedX, fakedY, fakedZ, targetYaw, player.m_146909_(), player.m_20096_()));
+        player.connection.send((Packet)new ServerboundMovePlayerPacket.PosRot(fakedX, fakedY, fakedZ, targetYaw, player.getXRot(), player.onGround()));
         restoreTimer = 2;
     }
 
@@ -97,7 +97,7 @@ public class FakeRotationManager {
         if (player == null) {
             return;
         }
-        player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.PosRot(origX, origY, origZ, origYaw, origPitch, player.m_20096_()));
+        player.connection.send((Packet)new ServerboundMovePlayerPacket.PosRot(origX, origY, origZ, origYaw, origPitch, player.onGround()));
     }
 
     public static void tick() {

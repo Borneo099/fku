@@ -44,7 +44,7 @@ extends Screen {
     private boolean listeningForKey = false;
 
     public BedrockBreakerScreen() {
-        super(Component.literal((String)"\u57fa\u5ca9\u7834\u574f\u5668\u914d\u7f6e"));
+        super(Component.literal("\u57fa\u5ca9\u7834\u574f\u5668\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -54,48 +54,48 @@ extends Screen {
         String currentKeyName = this.getCurrentKeyDisplay();
         this.hotkeyButton = Button.builder(Component.literal((String)("\u70ed\u952e: " + currentKeyName)), btn -> {
             this.listeningForKey = true;
-            btn.setMessage(Component.literal((String)"\u70ed\u952e: \u6309\u4e0b\u65b0\u952e."));
+            btn.setMessage(Component.literal("\u70ed\u952e: \u6309\u4e0b\u65b0\u952e."));
         }).bounds(cx + 10, this.cy(30), 120, 18).build();
         this.addRenderableWidget(this.hotkeyButton);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u91cd\u7f6e"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u91cd\u7f6e"), btn -> {
             KeyBindings.updateBedrockBreakerKey(InputConstants.Type.KEYSYM.getOrCreate(66));
-            this.hotkeyButton.setMessage(Component.literal((String)"\u70ed\u952e: B"));
+            this.hotkeyButton.setMessage(Component.literal("\u70ed\u952e: B"));
             this.listeningForKey = false;
         }).bounds(cx + 135, this.cy(30), 50, 18).build());
-        this.targetBlockInput = new EditBox(this.font, cx + 68, this.cy(74), 130, 14, Component.literal((String)""));
-        this.targetBlockInput.m_94144_(cfg.targetBlockId != null ? cfg.targetBlockId : "minecraft:bedrock");
-        this.targetBlockInput.m_94199_(64);
+        this.targetBlockInput = new EditBox(this.font, cx + 68, this.cy(74), 130, 14, Component.literal(""));
+        this.targetBlockInput.setValue(cfg.targetBlockId != null ? cfg.targetBlockId : "minecraft:bedrock");
+        this.targetBlockInput.setMaxLength(64);
         this.addRenderableWidget(this.targetBlockInput);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5199\u5165"), btn -> this.writeCrosshairBlockTo(this.targetBlockInput)).bounds(cx + 202, this.cy(73), 40, 16).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5199\u5165"), btn -> this.writeCrosshairBlockTo(this.targetBlockInput)).bounds(cx + 202, this.cy(73), 40, 16).build());
         String allBlocksLabel = "\u5168\u65b9\u5757: " + (cfg.allBlocks ? "\u5f00" : "\u5173");
         this.addRenderableWidget(Button.builder(Component.literal((String)allBlocksLabel), btn -> {
             cfg.setAllBlocks(!cfg.allBlocks);
             btn.setMessage(Component.literal((String)("\u5168\u65b9\u5757: " + (cfg.allBlocks ? "\u5f00" : "\u5173"))));
         }).bounds(cx + 10, this.cy(88), 80, 16).build());
-        this.replaceBlockInput = new EditBox(this.font, cx + 68, this.cy(112), 130, 14, Component.literal((String)""));
-        this.replaceBlockInput.m_94144_(cfg.replaceBlockId != null ? cfg.replaceBlockId : "");
-        this.replaceBlockInput.m_94199_(64);
+        this.replaceBlockInput = new EditBox(this.font, cx + 68, this.cy(112), 130, 14, Component.literal(""));
+        this.replaceBlockInput.setValue(cfg.replaceBlockId != null ? cfg.replaceBlockId : "");
+        this.replaceBlockInput.setMaxLength(64);
         this.addRenderableWidget(this.replaceBlockInput);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5199\u5165"), btn -> this.writeCrosshairBlockTo(this.replaceBlockInput)).bounds(cx + 202, this.cy(111), 40, 16).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5199\u5165"), btn -> this.writeCrosshairBlockTo(this.replaceBlockInput)).bounds(cx + 202, this.cy(111), 40, 16).build());
         this.scanModeButton = Button.builder(Component.literal((String)("\u626b\u63cf\u6a21\u5f0f: " + (cfg.scanMode ? "\u5f00" : "\u5173"))), btn -> {
             cfg.setScanMode(!cfg.scanMode);
             btn.setMessage(Component.literal((String)("\u626b\u63cf\u6a21\u5f0f: " + (cfg.scanMode ? "\u5f00" : "\u5173"))));
         }).bounds(cx + 10, this.cy(136), 100, 16).build();
         this.addRenderableWidget(this.scanModeButton);
-        this.breakTimeoutInput = new EditBox(this.font, cx + 68, this.cy(174), 40, 14, Component.literal((String)""));
-        this.breakTimeoutInput.m_94144_(String.valueOf(cfg.breakTimeout));
-        this.breakTimeoutInput.m_94199_(3);
-        this.breakTimeoutInput.m_94153_(s -> s.matches("\\d*"));
+        this.breakTimeoutInput = new EditBox(this.font, cx + 68, this.cy(174), 40, 14, Component.literal(""));
+        this.breakTimeoutInput.setValue(String.valueOf(cfg.breakTimeout));
+        this.breakTimeoutInput.setMaxLength(3);
+        this.breakTimeoutInput.setFilter(s -> s.matches("\\d*"));
         this.addRenderableWidget(this.breakTimeoutInput);
-        this.extendTimeoutInput = new EditBox(this.font, cx + 170, this.cy(174), 40, 14, Component.literal((String)""));
-        this.extendTimeoutInput.m_94144_(String.valueOf(cfg.extendTimeout));
-        this.extendTimeoutInput.m_94199_(2);
-        this.extendTimeoutInput.m_94153_(s -> s.matches("\\d*"));
+        this.extendTimeoutInput = new EditBox(this.font, cx + 170, this.cy(174), 40, 14, Component.literal(""));
+        this.extendTimeoutInput.setValue(String.valueOf(cfg.extendTimeout));
+        this.extendTimeoutInput.setMaxLength(2);
+        this.extendTimeoutInput.setFilter(s -> s.matches("\\d*"));
         this.addRenderableWidget(this.extendTimeoutInput);
-        this.leverTimeoutInput = new EditBox(this.font, cx + 68, this.cy(210), 40, 14, Component.literal((String)""));
-        this.leverTimeoutInput.m_94144_(String.valueOf(cfg.leverBreakTimeout));
-        this.leverTimeoutInput.m_94199_(3);
-        this.leverTimeoutInput.m_94153_(s -> s.matches("\\d*"));
+        this.leverTimeoutInput = new EditBox(this.font, cx + 68, this.cy(210), 40, 14, Component.literal(""));
+        this.leverTimeoutInput.setValue(String.valueOf(cfg.leverBreakTimeout));
+        this.leverTimeoutInput.setMaxLength(3);
+        this.leverTimeoutInput.setFilter(s -> s.matches("\\d*"));
         this.addRenderableWidget(this.leverTimeoutInput);
         this.addRenderableWidget(Button.builder(Component.literal((String)("\u8f85\u52a9\u65b9\u5757: " + (cfg.enableHelperBlocks ? "\u5f00" : "\u5173"))), btn -> {
             cfg.setEnableHelperBlocks(!cfg.enableHelperBlocks);
@@ -105,22 +105,22 @@ extends Screen {
             cfg.setCleanupHelpers(!cfg.cleanupHelpers);
             btn.setMessage(Component.literal((String)("\u6e05\u7406\u8f85\u52a9\u5757: " + (cfg.cleanupHelpers ? "\u5f00" : "\u5173"))));
         }).bounds(cx + 120, this.cy(236), 110, 16).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u7f16\u8f91\u8f85\u52a9\u65b9\u5757\u5217\u8868."), btn -> Minecraft.getInstance().setScreen((Screen)new HelperBlockListScreen(this))).bounds(cx + 68, this.cy(278), 150, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 80, this.cy(340), 60, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> Minecraft.getInstance().setScreen(new ClickGuiScreen())).bounds(cx + 160, this.cy(340), 60, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u7f16\u8f91\u8f85\u52a9\u65b9\u5757\u5217\u8868."), btn -> Minecraft.getInstance().setScreen((Screen)new HelperBlockListScreen(this))).bounds(cx + 68, this.cy(278), 150, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 80, this.cy(340), 60, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5b8c\u6210"), btn -> Minecraft.getInstance().setScreen(new ClickGuiScreen())).bounds(cx + 160, this.cy(340), 60, 18).build());
     }
 
     private void writeCrosshairBlockTo(EditBox input) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.f_91077_ == null || mc.f_91077_.m_6662_() != HitResult.Type.BLOCK) {
-            input.m_94144_("\u00a7c\u672a\u7784\u51c6\u65b9\u5757");
+        if (mc.hitResult == null || mc.hitResult.getType() != HitResult.Type.BLOCK) {
+            input.setValue("\u00a7c\u672a\u7784\u51c6\u65b9\u5757");
             return;
         }
-        BlockHitResult hit = (BlockHitResult)mc.f_91077_;
-        Block block = mc.f_91073_.m_8055_(hit.m_82425_()).m_60734_();
-        ResourceLocation id = BuiltInRegistries.f_256975_.m_7981_(block);
+        BlockHitResult hit = (BlockHitResult)mc.hitResult;
+        Block block = mc.level.getBlockState(hit.getBlockPos()).getBlock();
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         if (id != null) {
-            input.m_94144_(id.toString());
+            input.setValue(id.toString());
         }
     }
 
@@ -134,36 +134,36 @@ extends Screen {
         return name.toUpperCase();
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         InputConstants.Key newKey;
-        if (this.listeningForKey && (newKey = InputConstants.m_84827_(keyCode, scanCode)) != InputConstants.UNKNOWN) {
+        if (this.listeningForKey && (newKey = InputConstants.getKey(keyCode, scanCode)) != InputConstants.UNKNOWN) {
             KeyBindings.updateBedrockBreakerKey(newKey);
             String display = this.getCurrentKeyDisplay();
             this.hotkeyButton.setMessage(Component.literal((String)("\u70ed\u952e: " + display)));
             this.listeningForKey = false;
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void saveConfig() {
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-        cfg.setTargetBlockId(this.targetBlockInput.m_94155_());
-        cfg.setReplaceBlockId(this.replaceBlockInput.m_94155_());
+        cfg.setTargetBlockId(this.targetBlockInput.getValue());
+        cfg.setReplaceBlockId(this.replaceBlockInput.getValue());
         try {
-            cfg.setBreakTimeout(Integer.parseInt(this.breakTimeoutInput.m_94155_()));
+            cfg.setBreakTimeout(Integer.parseInt(this.breakTimeoutInput.getValue()));
         }
         catch (Exception exception) {
             // ignored
         }
         try {
-            cfg.setExtendTimeout(Integer.parseInt(this.extendTimeoutInput.m_94155_()));
+            cfg.setExtendTimeout(Integer.parseInt(this.extendTimeoutInput.getValue()));
         }
         catch (Exception exception) {
             // ignored
         }
         try {
-            cfg.setLeverBreakTimeout(Integer.parseInt(this.leverTimeoutInput.m_94155_()));
+            cfg.setLeverBreakTimeout(Integer.parseInt(this.leverTimeoutInput.getValue()));
         }
         catch (Exception exception) {
             // ignored
@@ -175,7 +175,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int cx = (this.width - 290) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, this.cy(0), 290, 375, false);
         guiGraphics.drawString(this.font, "\u57fa\u5ca9\u7834\u574f\u5668\u914d\u7f6e", cx + 10, this.cy(8), 0xFFFFFF);

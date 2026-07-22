@@ -45,17 +45,17 @@ extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7e?"), b -> {}).bounds(cx + 106, cy + 20, 16, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal((String)"\u76ee\u6807\u89c6\u8ddd:"), b -> {}).bounds(cx + 12, cy + 65, 70, 18).build());
         this.targetInput = new EditBox(this.font, cx + 86, cy + 65, 40, 16, Component.literal((String)""));
-        this.targetInput.m_94144_(String.valueOf(cfg.targetRenderDistance));
-        this.targetInput.m_94153_(s -> s.matches("\\d*"));
-        this.targetInput.m_94199_(2);
-        this.m_7787_(this.targetInput);
+        this.targetInput.setValue(String.valueOf(cfg.targetRenderDistance));
+        this.targetInput.setFilter(s -> s.matches("\\d*"));
+        this.targetInput.setMaxLength(2);
+        this.addWidget(this.targetInput);
         this.addRenderableWidget(Button.builder(Component.literal((String)"\u533a\u5757 (2~32)"), b -> {}).bounds(cx + 130, cy + 65, 80, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal((String)"\u6062\u590d\u901f\u5ea6:"), b -> {}).bounds(cx + 12, cy + 88, 70, 18).build());
         this.speedInput = new EditBox(this.font, cx + 86, cy + 88, 40, 16, Component.literal((String)""));
-        this.speedInput.m_94144_(String.valueOf(cfg.recoverSpeed));
-        this.speedInput.m_94153_(s -> s.matches("[1-4]"));
-        this.speedInput.m_94199_(1);
-        this.m_7787_(this.speedInput);
+        this.speedInput.setValue(String.valueOf(cfg.recoverSpeed));
+        this.speedInput.setFilter(s -> s.matches("[1-4]"));
+        this.speedInput.setMaxLength(1);
+        this.addWidget(this.speedInput);
         this.addRenderableWidget(Button.builder(Component.literal((String)"(1~4)"), b -> {}).bounds(cx + 130, cy + 88, 50, 18).build());
         this.progressBtn = this.addToggle(cx + 12, cy + 130, "\u663e\u793a\u8fdb\u5ea6", cfg.showLoadingProgress, v -> cfg.setShowLoadingProgress((boolean)v));
         this.timeoutBtn = this.addToggle(cx + 12, cy + 153, "\u8d85\u65f6\u56de\u9000", cfg.onTimeoutFallback, v -> cfg.setOnTimeoutFallback((boolean)v));
@@ -87,8 +87,8 @@ extends Screen {
         g.drawString(this.font, "\u00a77- - - \u9009\u9879 - - -", cx + 10, cy + 115, 0x666666);
         g.drawString(this.font, "\u00a77\u8fde\u63a5\u65f6\u81ea\u52a8\u8054\u52a8\u7981\u8fde\u8d85\u65f6", cx + 10, cy + 180, 0x666666);
         if (mx >= cx + 106 && mx <= cx + 122 && my >= cy + 20 && my <= cy + 38 && !(tip = FastJoinConfig.getModeTooltip(MODES[this.modeIndex])).isEmpty()) {
-            int tw = Math.max(180, this.font.m_92895_(tip));
-            g.m_280509_(mx + 10, my + 10, mx + 10 + tw, my + 30, -533515469);
+            int tw = Math.max(180, this.font.width(tip));
+            g.fill(mx + 10, my + 10, mx + 10 + tw, my + 30, -533515469);
             g.drawString(this.font, tip, mx + 12, my + 14, 0xFFFFFF);
         }
     }
@@ -103,28 +103,28 @@ extends Screen {
         return super.mouseClicked(mx, my, btn);
     }
 
-    public boolean m_7933_(int k, int s, int m) {
-        if (this.targetInput != null && this.targetInput.m_93696_()) {
-            return this.targetInput.m_7933_(k, s, m);
+    public boolean keyPressed(int k, int s, int m) {
+        if (this.targetInput != null && this.targetInput.isFocused()) {
+            return this.targetInput.keyPressed(k, s, m);
         }
-        if (this.speedInput != null && this.speedInput.m_93696_()) {
-            return this.speedInput.m_7933_(k, s, m);
+        if (this.speedInput != null && this.speedInput.isFocused()) {
+            return this.speedInput.keyPressed(k, s, m);
         }
         if (k == 256) {
             this.saveAndClose();
             return true;
         }
-        return super.m_7933_(k, s, m);
+        return super.keyPressed(k, s, m);
     }
 
-    public boolean m_5534_(char c, int m) {
-        if (this.targetInput != null && this.targetInput.m_93696_()) {
-            return this.targetInput.m_5534_(c, m);
+    public boolean charTyped(char c, int m) {
+        if (this.targetInput != null && this.targetInput.isFocused()) {
+            return this.targetInput.charTyped(c, m);
         }
-        if (this.speedInput != null && this.speedInput.m_93696_()) {
-            return this.speedInput.m_5534_(c, m);
+        if (this.speedInput != null && this.speedInput.isFocused()) {
+            return this.speedInput.charTyped(c, m);
         }
-        return super.m_5534_(c, m);
+        return super.charTyped(c, m);
     }
 
     public void onClose() {
@@ -138,13 +138,13 @@ extends Screen {
     private void saveAndClose() {
         FastJoinConfig cfg = FastJoinConfig.getInstance();
         try {
-            cfg.setTargetRenderDistance(Integer.parseInt(this.targetInput.m_94155_().trim()));
+            cfg.setTargetRenderDistance(Integer.parseInt(this.targetInput.getValue().trim()));
         }
         catch (Exception exception) {
             // ignored
         }
         try {
-            cfg.setRecoverSpeed(Integer.parseInt(this.speedInput.m_94155_().trim()));
+            cfg.setRecoverSpeed(Integer.parseInt(this.speedInput.getValue().trim()));
         }
         catch (Exception exception) {
             // ignored

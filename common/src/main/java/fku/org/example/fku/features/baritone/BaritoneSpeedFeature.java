@@ -45,7 +45,7 @@ public class BaritoneSpeedFeature {
         }
         Minecraft mc = Minecraft.getInstance();
         BaritoneConfig cfg = BaritoneConfig.getInstance();
-        if (!cfg.speedEnabled || mc.player == null || mc.f_91073_ == null) {
+        if (!cfg.speedEnabled || mc.player == null || mc.level == null) {
             if (wasActive) {
                 BaritoneSpeedFeature.restoreSpeed();
                 wasActive = false;
@@ -54,14 +54,14 @@ public class BaritoneSpeedFeature {
         }
         boolean active = BaritoneBridge.isActive();
         if (active) {
-            if (cfg.groundOnly && !mc.player.m_20096_()) {
+            if (cfg.groundOnly && !mc.player.onGround()) {
                 BaritoneSpeedFeature.restoreSpeed();
                 wasActive = true;
                 return;
             }
-            AttributeInstance attr = mc.player.m_21051_(Attributes.f_22279_);
+            AttributeInstance attr = mc.player.getAttribute(Attributes.MOVEMENT_SPEED);
             if (attr != null) {
-                attr.m_22100_(0.1 * cfg.speedMultiplier);
+                attr.setBaseValue(0.1 * cfg.speedMultiplier);
             }
         }
         if (wasActive && !active) {
@@ -73,8 +73,8 @@ public class BaritoneSpeedFeature {
     private static void restoreSpeed() {
         AttributeInstance attr;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && (attr = mc.player.m_21051_(Attributes.f_22279_)) != null) {
-            attr.m_22100_(0.1);
+        if (mc.player != null && (attr = mc.player.getAttribute(Attributes.MOVEMENT_SPEED)) != null) {
+            attr.setBaseValue(0.1);
         }
     }
 }

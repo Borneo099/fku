@@ -50,8 +50,8 @@ public class KillIconFeature {
             return;
         }
         attackedTargets.put(entityId, System.currentTimeMillis());
-        Vec3 pos = mc.player != null ? mc.player.position() : Vec3.f_82478_;
-        recentAttacks.put(entityId, new AttackRecord(System.currentTimeMillis(), lastHeadshot, pos, mc.player != null ? mc.player.m_21223_() : 20.0f));
+        Vec3 pos = mc.player != null ? mc.player.position() : Vec3.ZERO;
+        recentAttacks.put(entityId, new AttackRecord(System.currentTimeMillis(), lastHeadshot, pos, mc.player != null ? mc.player.getHealth() : 20.0f));
         lastHeadshot = false;
     }
 
@@ -65,24 +65,24 @@ public class KillIconFeature {
             return;
         }
         Minecraft mc = KillIconFeature.getMc();
-        if (mc == null || !KillIconConfig.getInstance().enabled || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || !KillIconConfig.getInstance().enabled || mc.player == null || mc.level == null) {
             return;
         }
         long now = System.currentTimeMillis();
         attackedTargets.entrySet().removeIf(e -> now - (Long)e.getValue() > 5000L);
-        for (Entity entity : mc.f_91073_.m_104735_()) {
+        for (Entity entity : mc.level.entitiesForRendering()) {
             Long at;
             if (!(entity instanceof LivingEntity)) continue;
             LivingEntity living = (LivingEntity) entity;
             if (entity == mc.player) continue;
-            int id = living.m_19879_();
-            float health = living.m_21223_();
+            int id = living.getId();
+            float health = living.getHealth();
             Float prevHealth = lastHealthMap.get(id);
             if (prevHealth != null && health <= 0.0f && prevHealth.floatValue() > 0.0f && processedDeaths.add(id) && (at = attackedTargets.get(id)) != null && now - at <= 5000L) {
                 KillIconFeature.addKillEntry(living);
             }
             if (health > 0.0f) {
-                lastHealthMap.put(id, health));
+                lastHealthMap.put(id, health);
                 continue;
             }
             lastHealthMap.remove(id);
@@ -99,10 +99,10 @@ public class KillIconFeature {
         if (mc == null) {
             return;
         }
-        AttackRecord rec = recentAttacks.remove(victim.m_19879_());
+        AttackRecord rec = recentAttacks.remove(victim.getId());
         if (rec != null && System.currentTimeMillis() - rec.time <= 5000L) {
             hs = rec.headshot || lastHeadshot;
-            d = rec.pos.m_82554_(victim.position());
+            d = rec.pos.distanceTo(victim.position());
         } else {
             hs = lastHeadshot;
             d = mc.player.distanceTo((Entity)victim);
@@ -110,7 +110,7 @@ public class KillIconFeature {
         lastHeadshot = false;
         long now = System.currentTimeMillis();
         int combo = !killHistory.isEmpty() && now - KillIconFeature.killHistory.get(0).time < 5000L ? KillIconFeature.killHistory.get(0).combo + 1 : 1;
-        killHistory.add(0, new KillEntry(victim.m_7755_().getString(), now, hs, victim instanceof Player, d, combo));
+        killHistory.add(0, new KillEntry(victim.getName().getString(), now, hs, victim instanceof Player, d, combo));
         int max = KillIconConfig.getInstance().maxEntries;
         while (killHistory.size() > max) {
             killHistory.remove(killHistory.size() - 1);
@@ -126,7 +126,7 @@ public class KillIconFeature {
             return;
         }
         LivingEntity victim = (LivingEntity) entity;
-        int id = victim.m_19879_();
+        int id = victim.getId();
         if (!processedDeaths.add(id)) {
             return;
         }
@@ -143,9 +143,9 @@ public class KillIconFeature {
         if (mc == null || event.getEntity() != mc.player || event.getTarget() == null) {
             return;
         }
-        int id = event.getTarget().m_19879_();
+        int id = event.getTarget().getId();
         attackedTargets.put(id, System.currentTimeMillis());
-        recentAttacks.put(id, new AttackRecord(System.currentTimeMillis(), lastHeadshot, mc.player.position(), mc.player.m_21223_()));
+        recentAttacks.put(id, new AttackRecord(System.currentTimeMillis(), lastHeadshot, mc.player.position(), mc.player.getHealth()));
         lastHeadshot = false;
     }
 
@@ -160,7 +160,7 @@ public class KillIconFeature {
         if (!killHistory.isEmpty()) {
             areaW = 0;
             for (KillEntry e : killHistory) {
-                int w = mc.font.m_92895_(e.displayText);
+                int w = mc.font.width(e.displayText);
                 if (w <= areaW) continue;
                 areaW = w;
             }
@@ -168,8 +168,8 @@ public class KillIconFeature {
         }
         if (mx >= (cfg.x - 4) && mx <= (cfg.x + areaW + 4) && my >= (cfg.y - 4) && my <= (cfg.y + areaH + 4) && btn == 0) {
             dragging = true;
-            dragOffsetX = mx - cfg.x;
-            dragOffsetY = my - cfg.y;
+            dragOffsetX = (int)(mx - cfg.x);
+            dragOffsetY = (int)(my - cfg.y);
             return true;
         }
         return false;
@@ -178,8 +178,8 @@ public class KillIconFeature {
     public static void onMouseDragged(double mx, double my, int btn) {
         if (dragging && btn == 0) {
             KillIconConfig cfg = KillIconConfig.getInstance();
-            cfg.x = Math.max(0, mx - dragOffsetX);
-            cfg.y = Math.max(0, my - dragOffsetY);
+            cfg.x = (int)Math.max(0, mx - dragOffsetX);
+            cfg.y = (int)Math.max(0, my - dragOffsetY);
         }
     }
 
@@ -229,7 +229,7 @@ public class KillIconFeature {
         if (!killHistory.isEmpty()) {
             totalH = killHistory.size() * (cfg.entryHeight + cfg.entrySpacing);
             for (KillEntry e2 : killHistory) {
-                int w = font.m_92895_(e2.displayText);
+                int w = font.width(e2.displayText);
                 if (w <= totalW) continue;
                 totalW = w;
             }
@@ -239,8 +239,8 @@ public class KillIconFeature {
         }
         if (screenOpen) {
             int pad = 4;
-            g.m_280509_(cfg.x - pad, cfg.y - pad, cfg.x + totalW + pad, cfg.y + totalH + pad + 12, 0x44000000);
-            g.m_280637_(cfg.x - pad, cfg.y - pad, totalW + pad * 2, totalH + pad * 2 + 12, -1438349057);
+            g.fill(cfg.x - pad, cfg.y - pad, cfg.x + totalW + pad, cfg.y + totalH + pad + 12, 0x44000000);
+            g.renderOutline(cfg.x - pad, cfg.y - pad, totalW + pad * 2, totalH + pad * 2 + 12, -1438349057);
             g.drawString(font, "\u00a77\u283f \u62d6\u62fd\u51fb\u6740\u56fe\u6807", cfg.x, cfg.y + totalH + 2, -1996488705);
             if (killHistory.isEmpty()) {
                 cfg.x = Math.max(cfg.x, 10);
@@ -254,10 +254,10 @@ public class KillIconFeature {
             float alpha = 1.0f - Math.max(0.0f, age - 0.5f) * 2.0f;
             if (alpha <= 0.0f) continue;
             int yPos = cfg.y + i * (cfg.entryHeight + cfg.entrySpacing);
-            int color = (alpha * 255.0f) << 24 | 0xFFFFFF;
+            int color = ((int)(alpha * 255.0f)) << 24 | 0xFFFFFF;
             if (cfg.showBackground) {
-                int bw = font.m_92895_(e2.displayText) + 8;
-                g.m_280509_(cfg.x - 2, yPos - 1, cfg.x + bw, yPos + 10, (alpha * cfg.bgOpacity * 255.0f) << 24 | 0);
+                int bw = font.width(e2.displayText) + 8;
+                g.fill(cfg.x - 2, yPos - 1, cfg.x + bw, yPos + 10, ((int)(alpha * cfg.bgOpacity * 255.0f)) << 24 | 0);
             }
             g.drawString(font, e2.displayText, cfg.x, yPos, color);
         }

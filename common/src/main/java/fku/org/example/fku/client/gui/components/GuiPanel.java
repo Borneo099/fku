@@ -65,7 +65,7 @@ public abstract class GuiPanel {
     }
 
     protected static float[] springDamp(float target, float current, float vel, float dt, float stiffness) {
-        float damping = 2.0f * Math.sqrt(stiffness);
+        float damping = (float)(2.0f * Math.sqrt(stiffness));
         float displacement = current - target;
         float springForce = -stiffness * displacement;
         float dampingForce = -damping * vel;
@@ -119,17 +119,17 @@ public abstract class GuiPanel {
         this.updateSpringAnimation();
         float entryScale = 0.85f + 0.15f * this.entryProgress;
         float entryAlpha = Math.min(1.0f, this.entryProgress * 2.0f);
-        int renderHeight = this.currentHeight;
+        int renderHeight = (int)this.currentHeight;
         if (renderHeight <= 0) {
             return;
         }
         if (config.shadowEnabled && renderHeight > 20 && this.entryProgress > 0.1f) {
             GuiRenderHelper.drawSoftShadow(guiGraphics, this.x, this.y, this.width, renderHeight, entryAlpha);
         }
-        int titleBarWidth = (this.width * entryScale);
+        int titleBarWidth = (int)(this.width * entryScale);
         int titleBarX = this.x + (this.width - titleBarWidth) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, titleBarX, this.y, titleBarWidth, 20, true, entryAlpha);
-        int textAlpha = (255.0f * entryAlpha);
+        int textAlpha = (int)(255.0f * entryAlpha);
         int textColor = textAlpha << 24 | config.getTextColor() & 0xFFFFFF;
         guiGraphics.drawString(this.mc.font, this.title, titleBarX + 5, this.y + 6, textColor);
         String indicator = this.collapsed ? "+" : "\u2212";
@@ -155,8 +155,8 @@ public abstract class GuiPanel {
         if (mouseX >= this.x && mouseX <= (this.x + this.width) && mouseY >= this.y && mouseY <= (this.y + 20)) {
             if (button == 0) {
                 this.dragging = true;
-                this.dragOffsetX = mouseX - this.x;
-                this.dragOffsetY = mouseY - this.y;
+                this.dragOffsetX = (int)(mouseX - this.x);
+                this.dragOffsetY = (int)(mouseY - this.y);
                 this.dragHistoryIndex = 0;
                 this.momentumActive = false;
                 return true;
@@ -177,11 +177,11 @@ public abstract class GuiPanel {
 
     public void mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (this.dragging) {
-            this.dragPositions[this.dragHistoryIndex % 5] = mouseX;
+            this.dragPositions[this.dragHistoryIndex % 5] = (float)mouseX;
             this.dragTimes[this.dragHistoryIndex % 5] = System.nanoTime();
             ++this.dragHistoryIndex;
-            this.x = mouseX - this.dragOffsetX;
-            this.y = mouseY - this.dragOffsetY;
+            this.x = (int)(mouseX - this.dragOffsetX);
+            this.y = (int)(mouseY - this.dragOffsetY);
             this.applyRubberBand();
             this.updatePositions();
             this.savePosition();
@@ -225,24 +225,24 @@ public abstract class GuiPanel {
 
     protected void applyRubberBand() {
         float overshoot;
-        int sw = this.mc.getWindow().m_85445_();
-        int sh = this.mc.getWindow().m_85446_();
+        int sw = this.mc.getWindow().getGuiScaledWidth();
+        int sh = this.mc.getWindow().getGuiScaledHeight();
         float margin = 20.0f;
         if (this.x < -margin) {
             overshoot = -(this.x + margin);
-            this.x = (-margin - GuiPanel.rubberband(overshoot, sw, 0.55f));
+            this.x = (int)(-margin - GuiPanel.rubberband(overshoot, sw, 0.55f));
         }
         if (this.y < -margin) {
             overshoot = -(this.y + margin);
-            this.y = (-margin - GuiPanel.rubberband(overshoot, sh, 0.55f));
+            this.y = (int)(-margin - GuiPanel.rubberband(overshoot, sh, 0.55f));
         }
         if ((this.x + this.width) > sw + margin) {
             overshoot = (this.x + this.width) - (sw + margin);
-            this.x = (sw + margin - this.width + GuiPanel.rubberband(overshoot, sw, 0.55f));
+            this.x = (int)(sw + margin - this.width + GuiPanel.rubberband(overshoot, sw, 0.55f));
         }
         if ((this.y + this.currentHeight) > sh + margin) {
             overshoot = (this.y + this.currentHeight) - (sh + margin);
-            this.y = (sh + margin - (this.currentHeight) + GuiPanel.rubberband(overshoot, sh, 0.55f));
+            this.y = (int)(sh + margin - (this.currentHeight) + GuiPanel.rubberband(overshoot, sh, 0.55f));
         }
         if (!this.dragging && !this.momentumActive) {
             this.snapBackToBounds(sw, sh);
@@ -264,7 +264,7 @@ public abstract class GuiPanel {
             this.x = sw - this.width;
         }
         if (this.y + this.currentHeight > sh) {
-            this.y = sh - this.currentHeight;
+            this.y = (int)(sh - this.currentHeight);
         }
     }
 
@@ -298,7 +298,7 @@ public abstract class GuiPanel {
     }
 
     public int getCurrentHeight() {
-        return this.currentHeight;
+        return (int)this.currentHeight;
     }
 
     public boolean isVisible() {

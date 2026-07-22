@@ -30,7 +30,7 @@ public class LiquidGlassRenderer {
             if (blurFramebuffer != null) {
                 blurFramebuffer.destroyBuffers();
             }
-            blurFramebuffer = new TextureTarget(width, height, false, Minecraft.ON_MS);
+            blurFramebuffer = new TextureTarget(width, height, false, false);
             blurFramebuffer.setFilterMode(9729);
             RenderSystem.bindTexture(blurFramebuffer.getColorTextureId());
             GL11.glTexParameteri(3553, 10241, 9987);
@@ -48,7 +48,7 @@ public class LiquidGlassRenderer {
             RenderSystem.bindTexture(blurFramebuffer.getColorTextureId());
             GL30.glGenerateMipmap(3553);
             RenderSystem.bindTexture(0);
-            mainTarget.unbindRead(true);
+            mainTarget.unbindRead();
         }
     }
 
@@ -93,7 +93,7 @@ public class LiquidGlassRenderer {
             shader.getUniform("GlassTint").set(cfg.tintR, cfg.tintG, cfg.tintB, cfg.tintStrength);
         }
         if (shader.getUniform("TintMode") != null) {
-            shader.getUniform("TintMode").setInt(cfg.tintMode);
+            shader.getUniform("TintMode").set((float)cfg.tintMode);
         }
         if (shader.getUniform("Noise") != null) {
             shader.getUniform("Noise").set(cfg.noise);

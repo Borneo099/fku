@@ -48,14 +48,14 @@ public class HistoryManager {
         for (BlockSnapshot snapshot : snapshots) {
             BlockEntity be;
             CompoundTag tag;
-            if (HistoryManager.mc().f_91073_ == null) continue;
+            if (HistoryManager.mc().level == null) continue;
             BlockPos pos = snapshot.pos;
-            BlockState currentState = HistoryManager.mc().f_91073_.m_8055_(pos);
+            BlockState currentState = HistoryManager.mc().level.getBlockState(pos);
             redoSnapshots.add(new BlockSnapshot(pos, currentState, snapshot.blockEntityData));
-            HistoryManager.mc().f_91073_.m_7731_(pos, snapshot.oldState, 3);
+            HistoryManager.mc().level.setBlock(pos, snapshot.oldState, 3);
             Object object = snapshot.blockEntityData;
-            if (object instanceof CompoundTag && !(tag = (CompoundTag)object).m_128456_() && (be = HistoryManager.mc().f_91073_.m_7702_(pos)) != null) {
-                be.m_142466_(tag);
+            if (object instanceof CompoundTag && !(tag = (CompoundTag)object).isEmpty() && (be = HistoryManager.mc().level.getBlockEntity(pos)) != null) {
+                be.load(tag);
             }
             this.sendBlockPacket(pos, snapshot.oldState);
         }
@@ -72,11 +72,11 @@ public class HistoryManager {
         List<BlockSnapshot> snapshots = this.redoStack.pop();
         ArrayList<BlockSnapshot> undoSnapshots = new ArrayList<BlockSnapshot>();
         for (BlockSnapshot snapshot : snapshots) {
-            if (HistoryManager.mc().f_91073_ == null) continue;
+            if (HistoryManager.mc().level == null) continue;
             BlockPos pos = snapshot.pos;
-            BlockState currentState = HistoryManager.mc().f_91073_.m_8055_(pos);
+            BlockState currentState = HistoryManager.mc().level.getBlockState(pos);
             undoSnapshots.add(new BlockSnapshot(pos, currentState, snapshot.blockEntityData));
-            HistoryManager.mc().f_91073_.m_7731_(pos, snapshot.oldState, 3);
+            HistoryManager.mc().level.setBlock(pos, snapshot.oldState, 3);
             this.sendBlockPacket(pos, snapshot.oldState);
         }
         this.undoStack.push(undoSnapshots);
@@ -85,7 +85,7 @@ public class HistoryManager {
     }
 
     private void sendBlockPacket(BlockPos pos, BlockState state) {
-        if (HistoryManager.mc()player == null || HistoryManager.mc().player.f_108617_ == null) {
+        if (HistoryManager.mc().player == null || HistoryManager.mc().player.connection == null) {
             return;
         }
         ArrayList<BlockPos> posList = new ArrayList<BlockPos>();
@@ -97,7 +97,7 @@ public class HistoryManager {
 
     private void sendStatus(String msg) {
         if (HistoryManager.mc().player != null) {
-            HistoryManager.mc().player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
+            HistoryManager.mc().player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
         }
     }
 

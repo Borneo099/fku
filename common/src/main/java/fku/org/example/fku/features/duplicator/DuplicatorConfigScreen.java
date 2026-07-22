@@ -56,13 +56,13 @@ extends Screen {
     private void saveInputs() {
         DuplicatorConfig cfg = DuplicatorConfig.getInstance();
         try {
-            cfg.setDupeDelay(Integer.parseInt(this.dupeDelayInput.m_94155_()));
+            cfg.setDupeDelay(Integer.parseInt(this.dupeDelayInput.getValue()));
         }
         catch (Exception exception) {
             // ignored
         }
         try {
-            cfg.setHoldDuration(Integer.parseInt(this.holdDurationInput.m_94155_()));
+            cfg.setHoldDuration(Integer.parseInt(this.holdDurationInput.getValue()));
         }
         catch (Exception exception) {
             // ignored
@@ -71,10 +71,10 @@ extends Screen {
 
     private EditBox mkEdit(int x, int y, int w, String val) {
         EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal((String)""));
-        b.m_94144_(val);
-        b.m_94199_(8);
-        b.m_94153_(s -> s.matches("\\d*"));
-        this.m_7787_(b);
+        b.setValue(val);
+        b.setMaxLength(8);
+        b.setFilter(s -> s.matches("\\d*"));
+        this.addWidget(b);
         return b;
     }
 
@@ -95,13 +95,13 @@ extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.saveInputs();
             Minecraft.getInstance().setScreen(null);
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public void onClose() {

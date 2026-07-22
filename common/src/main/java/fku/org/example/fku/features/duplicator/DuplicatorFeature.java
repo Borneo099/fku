@@ -35,7 +35,7 @@ public class DuplicatorFeature {
         enabled = v;
         if (v) {
             Minecraft mc = Minecraft.getInstance();
-            mc.player.m_5661_(Component.literal((String)"\u00a77[\u590d\u5236] \u00a7a\u4e09\u53c9\u621f\u590d\u5236\u5df2\u5f00\u542f\uff0c\u8bf7\u5c06\u4e09\u53c9\u621f\u653e\u5165\u70ed\u680f"), false);
+            mc.player.displayClientMessage(Component.literal((String)"\u00a77[\u590d\u5236] \u00a7a\u4e09\u53c9\u621f\u590d\u5236\u5df2\u5f00\u542f\uff0c\u8bf7\u5c06\u4e09\u53c9\u621f\u653e\u5165\u70ed\u680f"), false);
         } else {
             DuplicatorManager.getInstance().reset();
         }

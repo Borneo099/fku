@@ -38,14 +38,14 @@ public class SelfDamageFeature {
 
     public static void applyDamage() {
         Minecraft mc = SelfDamageFeature.getMc();
-        if (mc == null || mc.player == null || mc.m_91403_() == null) {
+        if (mc == null || mc.player == null || mc.getConnection() == null) {
             if (mc != null && mc.player != null) {
-                mc.player.m_5661_(Component.literal((String)"\u00a7c[\u81ea\u4f24] \u672a\u8fde\u63a5\u670d\u52a1\u5668"), false);
+                mc.player.displayClientMessage(Component.literal((String)"\u00a7c[\u81ea\u4f24] \u672a\u8fde\u63a5\u670d\u52a1\u5668"), false);
             }
             return;
         }
-        if (mc.player.m_150110_().f_35937_) {
-            mc.player.m_5661_(Component.literal((String)"\u00a7c[\u81ea\u4f24] \u521b\u9020\u6a21\u5f0f\u65e0\u6cd5\u53d7\u4f24"), false);
+        if (mc.player.getAbilities().instabuild) {
+            mc.player.displayClientMessage(Component.literal((String)"\u00a7c[\u81ea\u4f24] \u521b\u9020\u6a21\u5f0f\u65e0\u6cd5\u53d7\u4f24"), false);
             return;
         }
         boolean nofallWasOn = NoFallFeature.isEnabled();
@@ -67,7 +67,7 @@ public class SelfDamageFeature {
         pendingRestoreNoFall = nofallWasOn;
         pendingRestoreArrow = arrowWasOn;
         restoreDelayTicks = 5;
-        mc.player.m_5661_(Component.literal((String)("\u00a76[\u81ea\u4f24] \u00a7a\u5df2\u9020\u6210 " + amount + " \u70b9\u4f24\u5bb3\uff08\u9632\u64545tick\u540e\u6062\u590d\uff09")), false);
+        mc.player.displayClientMessage(Component.literal((String)("\u00a76[\u81ea\u4f24] \u00a7a\u5df2\u9020\u6210 " + amount + " \u70b9\u4f24\u5bb3\uff08\u9632\u64545tick\u540e\u6062\u590d\uff09")), false);
     }
 
     @SubscribeEvent
@@ -112,7 +112,7 @@ public class SelfDamageFeature {
                     hotkeyCallback.run();
                 }
                 if ((mc = SelfDamageFeature.getMc()) != null && mc.player != null) {
-                    mc.player.m_5661_(Component.literal((String)("\u00a7a[\u81ea\u4f24] \u70ed\u952e\u5df2\u7ed1\u5b9a: " + cfg.hotkeyName)), false);
+                    mc.player.displayClientMessage(Component.literal((String)("\u00a7a[\u81ea\u4f24] \u70ed\u952e\u5df2\u7ed1\u5b9a: " + cfg.hotkeyName)), false);
                 }
             }
             return;
@@ -121,10 +121,10 @@ public class SelfDamageFeature {
 
     private static void sendPos(double x, double y, double z, boolean onGround) {
         Minecraft mc = SelfDamageFeature.getMc();
-        if (mc == null || mc.m_91403_() == null) {
+        if (mc == null || mc.getConnection() == null) {
             return;
         }
-        mc.m_91403_().m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
+        mc.getConnection().send((Packet)new ServerboundMovePlayerPacket.Pos(x, y, z, onGround));
     }
 }
 

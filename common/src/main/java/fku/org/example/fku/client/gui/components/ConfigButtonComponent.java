@@ -34,22 +34,22 @@ extends GuiComponent {
         String fn = this.getFeatureName();
         boolean bl = waiting = fn != null && HotkeySystem.isWaitingFor(fn);
         if (waiting) {
-            int bgColor = config.getPrimaryColorWithAlpha((180.0f * this.currentAlpha));
+            int bgColor = config.getPrimaryColorWithAlpha((int)(180.0f * this.currentAlpha));
             GuiRenderHelper.drawRoundedRect(g, this.x, this.y, this.width, this.height, bgColor, Math.max(2, config.cornerRadius / 2));
             g.drawString(Minecraft.getInstance().font, "\u7ed1\u5b9a\u70ed\u952e\u4e2d. (Esc\u53d6\u6d88)", this.x + 5, this.y + (this.height - 8) / 2, 0xFFFF00);
             return;
         }
-        int alpha = (180.0f * this.currentAlpha);
+        int alpha = (int)(180.0f * this.currentAlpha);
         int bgColor = config.getPrimaryColorWithAlpha(alpha);
         GuiRenderHelper.drawRoundedRect(g, this.x, this.y, this.width, this.height, bgColor, Math.max(2, config.cornerRadius / 2));
-        int borderAlpha = (255.0f * this.currentAlpha);
+        int borderAlpha = (int)(255.0f * this.currentAlpha);
         int borderColor = borderAlpha << 24 | config.getPrimaryColor() & 0xFFFFFF;
         GuiRenderHelper.drawRoundedOutline(g, this.x, this.y, this.width, this.height, borderColor, Math.max(2, config.cornerRadius / 2), 1);
         Object display = this.label;
         if (fn != null && (hk = FeatureHotkeyManager.getInstance().getHotkey(fn)).getHotkeyKey() >= 0) {
-            display = (String)display + " \u00a77[" + hk.getHotkeyName() + "]";
+            display = display + " \u00a77[" + hk.getHotkeyName() + "]";
         }
-        int textAlpha = (255.0f * this.currentAlpha);
+        int textAlpha = (int)(255.0f * this.currentAlpha);
         int textColor = textAlpha << 24 | config.getTextColor() & 0xFFFFFF;
         g.drawString(Minecraft.getInstance().font, (String)display, this.x + 5, this.y + (this.height - 8) / 2, textColor);
         g.drawString(Minecraft.getInstance().font, ">>", this.x + this.width - 18, this.y + (this.height - 8) / 2, textAlpha << 24 | 0x888888);

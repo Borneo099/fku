@@ -38,7 +38,7 @@ extends Screen {
     private String filterText = "";
 
     public ListSelectScreen(String title, Collection<String> allItems, Collection<String> currentSelected, Consumer<Set<String>> callback) {
-        super(Component.literal((String)title));
+        super(Component.literal(title));
         this.screenTitle = title;
         this.allItems = new ArrayList<String>(new TreeSet<String>(allItems));
         this.selected = new HashSet<String>(currentSelected);
@@ -50,17 +50,17 @@ extends Screen {
         super.init();
         int cx = (this.width - 320) / 2;
         int cy = (this.height - 400) / 2;
-        this.searchBox = new EditBox(this.font, cx + 20, cy + 35, 280, 16, Component.literal((String)"\u641c\u7d22."));
-        this.searchBox.m_94199_(50);
-        this.searchBox.m_94153_(s -> true);
-        this.searchBox.m_94151_(this::onSearchChanged);
+        this.searchBox = new EditBox(this.font, cx + 20, cy + 35, 280, 16, Component.literal("\u641c\u7d22."));
+        this.searchBox.setMaxLength(50);
+        this.searchBox.setFilter(s -> true);
+        this.searchBox.setResponder(this::onSearchChanged);
         this.addRenderableWidget(this.searchBox);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5168\u9009"), btn -> this.selectAll()).bounds(cx + 20, cy + 55, 60, 16).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u53d6\u6d88\u5168\u9009"), btn -> this.deselectAll()).bounds(cx + 85, cy + 55, 70, 16).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u53cd\u9009"), btn -> this.invertSelection()).bounds(cx + 160, cy + 55, 50, 16).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)("\u603b\u6570:" + this.selected.size())), btn -> {}).bounds(cx + 220, cy + 55, 70, 16).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveAndClose()).bounds(cx + 80, cy + 400 - 35, 60, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u53d6\u6d88"), btn -> this.onClose()).bounds(cx + 180, cy + 400 - 35, 60, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5168\u9009"), btn -> this.selectAll()).bounds(cx + 20, cy + 55, 60, 16).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u53d6\u6d88\u5168\u9009"), btn -> this.deselectAll()).bounds(cx + 85, cy + 55, 70, 16).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u53cd\u9009"), btn -> this.invertSelection()).bounds(cx + 160, cy + 55, 50, 16).build());
+        this.addRenderableWidget(Button.builder(Component.literal(("\u603b\u6570:" + this.selected.size())), btn -> {}).bounds(cx + 220, cy + 55, 70, 16).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u4fdd\u5b58"), btn -> this.saveAndClose()).bounds(cx + 80, cy + 400 - 35, 60, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u53d6\u6d88"), btn -> this.onClose()).bounds(cx + 180, cy + 400 - 35, 60, 20).build());
         int listAreaHeight = 265;
         this.maxVisibleItems = Math.max(1, listAreaHeight / 13);
     }
@@ -106,14 +106,14 @@ extends Screen {
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
         int y;
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 320) / 2;
         int cy = (this.height - 400) / 2;
-        g.m_280509_(cx, cy, cx + 320, cy + 400, -870178270);
-        g.m_280509_(cx, cy, cx + 320, cy + 1, -12303292);
-        g.m_280509_(cx, cy + 400 - 1, cx + 320, cy + 400, -12303292);
-        g.m_280509_(cx, cy, cx + 1, cy + 400, -12303292);
-        g.m_280509_(cx + 320 - 1, cy, cx + 320, cy + 400, -12303292);
+        g.fill(cx, cy, cx + 320, cy + 400, -870178270);
+        g.fill(cx, cy, cx + 320, cy + 1, -12303292);
+        g.fill(cx, cy + 400 - 1, cx + 320, cy + 400, -12303292);
+        g.fill(cx, cy, cx + 1, cy + 400, -12303292);
+        g.fill(cx + 320 - 1, cy, cx + 320, cy + 400, -12303292);
         g.drawString(this.font, this.screenTitle, cx + 20, cy + 12, 0xFFFFFF);
         g.drawString(this.font, "\u00a77\u5df2\u9009: " + this.selected.size() + " / " + this.filteredItems.size() + " \u9879", cx + 20, cy + 400 - 52, 0xAAAAAA);
         int listY = cy + 75;
@@ -133,7 +133,7 @@ extends Screen {
             boolean isSelected = this.selected.contains(item);
             boolean bl = isHovered = mx >= cx + 20 && mx < cx + 20 + 280 && my >= y && my < y + 13;
             if (isHovered) {
-                g.m_280509_(cx + 20, y, cx + 20 + 280, y + 13, 0x33FFFFFF);
+                g.fill(cx + 20, y, cx + 20 + 280, y + 13, 0x33FFFFFF);
             }
             String marker = isSelected ? "\u00a7a[\u2713]" : "\u00a77[ ]";
             g.drawString(this.font, marker + " " + item, cx + 20 + 4, y + 2, isSelected ? 0x55FF55 : 0xCCCCCC);
@@ -142,7 +142,7 @@ extends Screen {
         if (this.filteredItems.size() > this.maxVisibleItems) {
             int barY = listY + (this.scrollOffset / this.filteredItems.size() * visibleArea);
             int barH = Math.max(10, (this.maxVisibleItems / this.filteredItems.size() * visibleArea));
-            g.m_280509_(cx + 20 + 280 - 4, Math.max(barY, listY), cx + 20 + 280 - 1, Math.min(barY + barH, listEndY), -2002081110);
+            g.fill(cx + 20 + 280 - 4, Math.max(barY, listY), cx + 20 + 280 - 1, Math.min(barY + barH, listEndY), -2002081110);
         }
         super.render(g, mx, my, pt);
     }
@@ -162,7 +162,7 @@ extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
-    public boolean m_6050_(double mx, double my, double delta) {
+    public boolean mouseScrolled(double mx, double my, double delta) {
         if (delta < 0.0) {
             this.scrollOffset = Math.min(this.scrollOffset + 3, Math.max(0, this.filteredItems.size() - this.maxVisibleItems));
         } else if (delta > 0.0) {
@@ -171,22 +171,22 @@ extends Screen {
         return true;
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
-        if (this.searchBox.m_93696_() && this.searchBox.m_7933_(keyCode, scanCode, modifiers)) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.searchBox.isFocused() && this.searchBox.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         if (keyCode == 256) {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    public boolean m_5534_(char codePoint, int modifiers) {
-        if (this.searchBox.m_93696_() && this.searchBox.m_5534_(codePoint, modifiers)) {
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (this.searchBox.isFocused() && this.searchBox.charTyped(codePoint, modifiers)) {
             return true;
         }
-        return super.m_5534_(codePoint, modifiers);
+        return super.charTyped(codePoint, modifiers);
     }
 
     public boolean isPauseScreen() {
@@ -198,11 +198,11 @@ extends Screen {
     }
 
     private void enableScissor(int x1, int y1, int x2, int y2) {
-        int scale = Minecraft.getInstance().getWindow().m_85449_();
+        int scale = (int)Minecraft.getInstance().getWindow().getGuiScale();
         int sx1 = x1 * scale;
-        int sy1 = Minecraft.getInstance().getWindow().m_85444_() - y2 * scale;
+        int sy1 = Minecraft.getInstance().getWindow().getScreenHeight() - y2 * scale;
         int sx2 = x2 * scale;
-        int sy2 = Minecraft.getInstance().getWindow().m_85444_() - y1 * scale;
+        int sy2 = Minecraft.getInstance().getWindow().getScreenHeight() - y1 * scale;
         RenderSystem.enableScissor(sx1, sy1, (sx2 - sx1), (sy2 - sy1));
     }
 

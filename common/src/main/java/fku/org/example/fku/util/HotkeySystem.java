@@ -42,7 +42,7 @@ public class HotkeySystem {
         waitingCallback = onComplete;
         Minecraft mc = HotkeySystem.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)("\u00a7e[\u70ed\u952e] \u6309\u4efb\u610f\u952e\u7ed1\u5b9a " + featureName + "\uff0cDelete \u5220\u9664\uff0cEsc \u53d6\u6d88")), false);
+            mc.player.displayClientMessage(Component.literal((String)("\u00a7e[\u70ed\u952e] \u6309\u4efb\u610f\u952e\u7ed1\u5b9a " + featureName + "\uff0cDelete \u5220\u9664\uff0cEsc \u53d6\u6d88")), false);
         }
         return true;
     }
@@ -53,7 +53,7 @@ public class HotkeySystem {
         }
         Minecraft mc = HotkeySystem.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)"\u00a77[\u70ed\u952e] \u5df2\u53d6\u6d88"), false);
+            mc.player.displayClientMessage(Component.literal((String)"\u00a77[\u70ed\u952e] \u5df2\u53d6\u6d88"), false);
         }
         HotkeySystem.finishBind();
     }
@@ -75,7 +75,7 @@ public class HotkeySystem {
         if (mc == null || mc.getWindow() == null) {
             return;
         }
-        long window = mc.getWindow().m_85439_();
+        long window = mc.getWindow().getWindow();
         if (waitingFeature != null) {
             for (int key = 32; key < 512; ++key) {
                 if (GLFW.glfwGetKey(window, key) != 1) continue;
@@ -85,7 +85,7 @@ public class HotkeySystem {
                     hk.setHotkeyName("");
                     hk.saveConfig();
                     if (mc.player != null) {
-                        mc.player.m_5661_(Component.literal((String)("\u00a7e[\u70ed\u952e] " + waitingFeature + " \u70ed\u952e\u5df2\u5220\u9664")), false);
+                        mc.player.displayClientMessage(Component.literal((String)("\u00a7e[\u70ed\u952e] " + waitingFeature + " \u70ed\u952e\u5df2\u5220\u9664")), false);
                     }
                     HotkeySystem.finishBind();
                     return;
@@ -103,7 +103,7 @@ public class HotkeySystem {
                 hk.setHotkeyName((String)name);
                 hk.saveConfig();
                 if (mc.player != null) {
-                    mc.player.m_5661_(Component.literal((String)("\u00a7a[\u70ed\u952e] " + waitingFeature + " \u5df2\u7ed1\u5b9a: " + (String)name)), false);
+                    mc.player.displayClientMessage(Component.literal((String)("\u00a7a[\u70ed\u952e] " + waitingFeature + " \u5df2\u7ed1\u5b9a: " + (String)name)), false);
                 }
                 HotkeySystem.finishBind();
                 return;

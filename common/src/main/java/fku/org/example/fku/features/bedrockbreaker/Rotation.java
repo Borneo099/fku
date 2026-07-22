@@ -25,12 +25,12 @@ public record Rotation(float xRot, float yRot) {
 
     public static Direction nearestDirection(float xRotDegrees, float yRotDegrees) {
         Direction dirNS;
-        float xRad = xRotDegrees * (Math.PI / 180);
-        float yRad = -yRotDegrees * (Math.PI / 180);
-        float sinX = Mth.m_14031_(xRad);
-        float cosX = Mth.m_14089_(xRad);
-        float sinY = Mth.m_14031_(yRad);
-        float cosY = Mth.m_14089_(yRad);
+        float xRad = xRotDegrees * (float)(Math.PI / 180);
+        float yRad = -yRotDegrees * (float)(Math.PI / 180);
+        float sinX = Mth.sin(xRad);
+        float cosX = Mth.cos(xRad);
+        float sinY = Mth.sin(yRad);
+        float cosY = Mth.cos(yRad);
         boolean east = sinY > 0.0f;
         boolean up = sinX < 0.0f;
         boolean south = cosY > 0.0f;

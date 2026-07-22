@@ -44,14 +44,14 @@ public class GuiComponent {
             drawW += expand * 2;
             drawH += expand * 2;
         }
-        int bgAlpha = (180.0f * this.currentAlpha);
+        int bgAlpha = (int)(180.0f * this.currentAlpha);
         int bgColor = this.hovered ? config.getPrimaryColorWithAlpha(bgAlpha) : config.getBackgroundColorWithAlpha(bgAlpha);
         GuiRenderHelper.drawRoundedRect(guiGraphics, drawX, drawY, drawW, drawH, bgColor, Math.max(2, config.cornerRadius / 2));
         if (this.hovered && this.currentAlpha > 0.5f) {
-            int borderAlpha = (200.0f * this.currentAlpha);
+            int borderAlpha = (int)(200.0f * this.currentAlpha);
             GuiRenderHelper.drawRoundedOutline(guiGraphics, drawX, drawY, drawW, drawH, config.getPrimaryColorWithAlpha(borderAlpha), Math.max(2, config.cornerRadius / 2), 1);
         }
-        int textAlpha = (255.0f * this.currentAlpha);
+        int textAlpha = (int)(255.0f * this.currentAlpha);
         int textColor = textAlpha << 24 | config.getTextColor() & 0xFFFFFF;
         guiGraphics.drawString(Minecraft.getInstance().font, this.text, drawX + 5, drawY + (drawH - 8) / 2, textColor);
     }
@@ -73,7 +73,7 @@ public class GuiComponent {
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.listeningForKey) {
-            InputConstants.Key newKey = InputConstants.m_84827_(keyCode, scanCode);
+            InputConstants.Key newKey = InputConstants.getKey(keyCode, scanCode);
             KeyBindings.updateKeyBinding(newKey);
             String keyDisplay = newKey.getName();
             this.text = "\u7ed1\u5b9aGUI\u6309\u952e: " + keyDisplay;

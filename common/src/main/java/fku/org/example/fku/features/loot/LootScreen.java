@@ -36,7 +36,7 @@ extends Screen {
     private final LootConfig cfg = LootConfig.getInstance();
 
     public LootScreen() {
-        super(Component.literal((String)"\u4e00\u952e\u53d6\u7269\u914d\u7f6e"));
+        super(Component.literal("\u4e00\u952e\u53d6\u7269\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -47,35 +47,35 @@ extends Screen {
         this.clickDelayField = this.createEditBox(cx + 100, cy + 58, String.valueOf(this.cfg.clickDelay), 3);
         this.containerDelayField = this.createEditBox(cx + 100, cy + 81, String.valueOf(this.cfg.containerDelay), 4);
         this.scanIntervalField = this.createEditBox(cx + 150, cy + 104, String.valueOf(this.cfg.scanRefreshInterval), 3);
-        this.dropOverflowButton = Button.builder(Component.literal((String)(this.cfg.dropOverflow ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")), btn -> {
+        this.dropOverflowButton = Button.builder(Component.literal(this.cfg.dropOverflow ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed"), btn -> {
             this.cfg.setDropOverflow(!this.cfg.dropOverflow);
-            btn.setMessage(Component.literal((String)(this.cfg.dropOverflow ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")));
+            btn.setMessage(Component.literal(this.cfg.dropOverflow ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed"));
         }).bounds(cx + 185, cy + 127, 60, 18).build();
         this.addRenderableWidget(this.dropOverflowButton);
-        this.autoCloseButton = Button.builder(Component.literal((String)(this.cfg.autoCloseGUI ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")), btn -> {
+        this.autoCloseButton = Button.builder(Component.literal(this.cfg.autoCloseGUI ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed"), btn -> {
             this.cfg.setAutoCloseGUI(!this.cfg.autoCloseGUI);
-            btn.setMessage(Component.literal((String)(this.cfg.autoCloseGUI ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed")));
+            btn.setMessage(Component.literal(this.cfg.autoCloseGUI ? "\u00a7a\u5f00\u542f" : "\u00a7c\u5173\u95ed"));
         }).bounds(cx + 185, cy + 150, 60, 18).build();
         this.addRenderableWidget(this.autoCloseButton);
         String hotkeyText = this.cfg.hotkeyKey >= 0 ? "\u70ed\u952e: " + this.getKeyName(this.cfg.hotkeyKey) : "\u70ed\u952e: \u672a\u8bbe\u7f6e";
-        this.hotkeyBindButton = Button.builder(Component.literal((String)hotkeyText), btn -> {
+        this.hotkeyBindButton = Button.builder(Component.literal(hotkeyText), btn -> {
             this.waitingHotkey = !this.waitingHotkey;
             this.updateHotkeyButton();
         }).bounds(cx + 10, cy + 178, 185, 18).build();
         this.addRenderableWidget(this.hotkeyBindButton);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u6e05\u9664"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u6e05\u9664"), btn -> {
             this.cfg.setHotkeyKey(-1);
             this.cfg.setHotkeyName("");
             this.waitingHotkey = false;
             this.updateHotkeyButton();
         }).bounds(cx + 205, cy + 178, 55, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 105, cy + 220, 80, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 105, cy + 220, 80, 20).build());
     }
 
     private EditBox createEditBox(int x, int y, String value, int maxLen) {
-        EditBox box = new EditBox(this.font, x, y, 50, 18, (Component)Component.m_237119_());
-        box.m_94144_(value);
-        box.m_94199_(maxLen);
+        EditBox box = new EditBox(this.font, x, y, 50, 18, (Component)Component.empty());
+        box.setValue(value);
+        box.setMaxLength(maxLen);
         this.addRenderableWidget(box);
         return box;
     }
@@ -85,10 +85,10 @@ extends Screen {
             return;
         }
         if (this.waitingHotkey) {
-            this.hotkeyBindButton.setMessage(Component.literal((String)"\u6309\u4e0b\u6309\u952e. (Esc\u53d6\u6d88)"));
+            this.hotkeyBindButton.setMessage(Component.literal("\u6309\u4e0b\u6309\u952e. (Esc\u53d6\u6d88)"));
         } else {
             String text = this.cfg.hotkeyKey >= 0 ? "\u70ed\u952e: " + this.getKeyName(this.cfg.hotkeyKey) : "\u70ed\u952e: \u672a\u8bbe\u7f6e";
-            this.hotkeyBindButton.setMessage(Component.literal((String)text));
+            this.hotkeyBindButton.setMessage(Component.literal(text));
         }
     }
 
@@ -116,7 +116,7 @@ extends Screen {
         };
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.waitingHotkey) {
             if (keyCode == 256) {
                 this.waitingHotkey = false;
@@ -131,30 +131,30 @@ extends Screen {
             this.updateHotkeyButton();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void saveConfig() {
         try {
-            this.cfg.setRadius(Integer.parseInt(this.radiusField.m_94155_()));
+            this.cfg.setRadius(Integer.parseInt(this.radiusField.getValue()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            this.cfg.setClickDelay(Integer.parseInt(this.clickDelayField.m_94155_()));
+            this.cfg.setClickDelay(Integer.parseInt(this.clickDelayField.getValue()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            this.cfg.setContainerDelay(Integer.parseInt(this.containerDelayField.m_94155_()));
+            this.cfg.setContainerDelay(Integer.parseInt(this.containerDelayField.getValue()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            this.cfg.setScanRefreshInterval(Integer.parseInt(this.scanIntervalField.m_94155_()));
+            this.cfg.setScanRefreshInterval(Integer.parseInt(this.scanIntervalField.getValue()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
@@ -163,7 +163,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int cx = (this.width - 290) / 2;
         int cy = (this.height - 320) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, 290, 320, false);

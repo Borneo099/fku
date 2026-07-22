@@ -40,7 +40,7 @@ extends Screen {
     private String cachedSpeedText = "";
 
     public SprintConfigScreen() {
-        super(Component.literal((String)"\u5f3a\u5236\u75be\u8dd1\u914d\u7f6e"));
+        super(Component.literal("\u5f3a\u5236\u75be\u8dd1\u914d\u7f6e"));
         this.cfg = SprintConfig.getInstance();
         for (int i = 0; i < this.modeValues.length; ++i) {
             if (!this.modeValues[i].name().equals(this.cfg.mode)) continue;
@@ -62,15 +62,15 @@ extends Screen {
         this.rebuildWidgets();
     }
 
-    public boolean m_6050_(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         int cx = this.cx();
         int cyb = (this.height - 260) / 2;
         if (mouseX >= cx && mouseX <= (cx + 300) && mouseY >= cyb && mouseY <= (cyb + 260)) {
-            this.scrollOffset = Math.max(0, this.scrollOffset - (delta * 20.0));
+            this.scrollOffset = (int)Math.max(0, this.scrollOffset - (delta * 20.0));
             this.rebuildWidgets();
             return true;
         }
-        return super.m_6050_(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     protected void rebuildWidgets() {
@@ -82,7 +82,7 @@ extends Screen {
         for (int i = 0; i < TAB_NAMES.length; ++i) {
             int fi = i;
             boolean isActive = i == this.activeTab;
-            int tw = Minecraft.getInstance().font.m_92895_(TAB_NAMES[i]) + 12;
+            int tw = Minecraft.getInstance().font.width(TAB_NAMES[i]) + 12;
             this.addRenderableWidget(Button.builder(Component.literal((String)(isActive ? "\u00a7l[" + TAB_NAMES[i] + "]\u00a7r" : TAB_NAMES[i])), btn -> {
                 this.saveInputNow();
                 this.activeTab = fi;
@@ -95,11 +95,11 @@ extends Screen {
         } else {
             this.buildTabAdvanced();
         }
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u8fd4\u56de\u4e3b\u83dc\u5355"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u8fd4\u56de\u4e3b\u83dc\u5355"), btn -> {
             this.saveInputNow();
             Minecraft.getInstance().setScreen(new ClickGuiScreen());
         }).bounds(cx + 40, this.cy(220), 100, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u91cd\u7f6e\u9ed8\u8ba4"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u91cd\u7f6e\u9ed8\u8ba4"), btn -> {
             this.cfg.mode = "OMNIROTATIONAL";
             this.cfg.ignoreBlindness = false;
             this.cfg.ignoreHunger = false;
@@ -155,11 +155,11 @@ extends Screen {
             this.rebuildWidgets();
         });
         if (this.cfg.smoothRotation) {
-            this.rotationSpeedInput = new EditBox(this.font, cx + 105 + 90, this.cy(105), 45, 16, Component.literal((String)""));
-            this.rotationSpeedInput.m_94144_(String.valueOf(this.cfg.rotationSpeed));
-            this.rotationSpeedInput.m_94199_(3);
-            this.rotationSpeedInput.m_94153_(s -> s.matches("\\d*"));
-            this.rotationSpeedInput.m_94151_(s -> {
+            this.rotationSpeedInput = new EditBox(this.font, cx + 105 + 90, this.cy(105), 45, 16, Component.literal(""));
+            this.rotationSpeedInput.setValue(String.valueOf(this.cfg.rotationSpeed));
+            this.rotationSpeedInput.setMaxLength(3);
+            this.rotationSpeedInput.setFilter(s -> s.matches("\\d*"));
+            this.rotationSpeedInput.setResponder(s -> {
                 this.cachedSpeedText = s;
             });
             this.addRenderableWidget(this.rotationSpeedInput);
@@ -179,7 +179,7 @@ extends Screen {
     private void saveInputNow() {
         if (this.rotationSpeedInput != null) {
             try {
-                int val = Integer.parseInt(this.rotationSpeedInput.m_94155_());
+                int val = Integer.parseInt(this.rotationSpeedInput.getValue());
                 if (val > 0 && val <= 360) {
                     this.cfg.rotationSpeed = val;
                     SprintConfig.save();
@@ -192,11 +192,11 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = this.cx();
         int cy = this.cy(0);
         GuiRenderHelper.drawPanelBackground(g, cx, cy, 300, 260, false);
-        g.m_280588_(cx + 2, cy + 20, cx + 300 - 2, cy + 260 - 32);
+        g.enableScissor(cx + 2, cy + 20, cx + 300 - 2, cy + 260 - 32);
         g.drawString(this.font, "\u5f3a\u5236\u75be\u8dd1\u914d\u7f6e - " + TAB_NAMES[this.activeTab], cx + 10, cy + 2, 0xFFFFFF);
         if (this.activeTab == 0) {
             g.drawString(this.font, "\u75be\u8dd1\u6a21\u5f0f:", cx + 10, this.cy(30), 0xAAAAAA);
@@ -215,7 +215,7 @@ extends Screen {
                 g.drawString(this.font, "\u00a77\u00b0/\u5e27", cx + 105 + 137, this.cy(105), 0x666666);
             }
         }
-        g.m_280618_();
+        g.disableScissor();
         super.render(g, mx, my, pt);
     }
 

@@ -33,7 +33,7 @@ public class SelectionManager {
         this.pos1 = pos;
         this.hasPos1 = true;
         if (SelectionManager.mc.player != null) {
-            SelectionManager.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] \u00a7aPos1 \u5df2\u8bbe\u7f6e: " + this.formatPos(pos))), true);
+            SelectionManager.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] \u00a7aPos1 \u5df2\u8bbe\u7f6e: " + this.formatPos(pos))), true);
             this.showSelectionInfo();
         }
     }
@@ -42,7 +42,7 @@ public class SelectionManager {
         this.pos2 = pos;
         this.hasPos2 = true;
         if (SelectionManager.mc.player != null) {
-            SelectionManager.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] \u00a7aPos2 \u5df2\u8bbe\u7f6e: " + this.formatPos(pos))), true);
+            SelectionManager.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] \u00a7aPos2 \u5df2\u8bbe\u7f6e: " + this.formatPos(pos))), true);
             this.showSelectionInfo();
         }
     }
@@ -53,7 +53,7 @@ public class SelectionManager {
         this.hasPos1 = false;
         this.hasPos2 = false;
         if (SelectionManager.mc.player != null) {
-            SelectionManager.mc.player.m_5661_(Component.literal((String)"\u00a77[WorldEdit] \u00a7e\u9009\u533a\u5df2\u6e05\u9664"), true);
+            SelectionManager.mc.player.displayClientMessage(Component.literal((String)"\u00a77[WorldEdit] \u00a7e\u9009\u533a\u5df2\u6e05\u9664"), true);
         }
     }
 
@@ -61,12 +61,12 @@ public class SelectionManager {
         if (!this.hasPos1 || !this.hasPos2) {
             return;
         }
-        int dx = Math.abs(this.pos1.m_123341_() - this.pos2.m_123341_()) + 1;
-        int dy = Math.abs(this.pos1.m_123342_() - this.pos2.m_123342_()) + 1;
-        int dz = Math.abs(this.pos1.m_123343_() - this.pos2.m_123343_()) + 1;
+        int dx = Math.abs(this.pos1.getX() - this.pos2.getX()) + 1;
+        int dy = Math.abs(this.pos1.getY() - this.pos2.getY()) + 1;
+        int dz = Math.abs(this.pos1.getZ() - this.pos2.getZ()) + 1;
         long volume = dx * dy * dz;
         if (SelectionManager.mc.player != null) {
-            SelectionManager.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] \u00a7e\u9009\u533a: " + dx + "\u00d7" + dy + "\u00d7" + dz + " = " + volume + " \u65b9\u5757")), true);
+            SelectionManager.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] \u00a7e\u9009\u533a: " + dx + "\u00d7" + dy + "\u00d7" + dz + " = " + volume + " \u65b9\u5757")), true);
         }
     }
 
@@ -94,23 +94,23 @@ public class SelectionManager {
         if (!this.hasSelection()) {
             return null;
         }
-        return new BlockPos(Math.min(this.pos1.m_123341_(), this.pos2.m_123341_()), Math.min(this.pos1.m_123342_(), this.pos2.m_123342_()), Math.min(this.pos1.m_123343_(), this.pos2.m_123343_()));
+        return new BlockPos(Math.min(this.pos1.getX(), this.pos2.getX()), Math.min(this.pos1.getY(), this.pos2.getY()), Math.min(this.pos1.getZ(), this.pos2.getZ()));
     }
 
     public BlockPos getMax() {
         if (!this.hasSelection()) {
             return null;
         }
-        return new BlockPos(Math.max(this.pos1.m_123341_(), this.pos2.m_123341_()), Math.max(this.pos1.m_123342_(), this.pos2.m_123342_()), Math.max(this.pos1.m_123343_(), this.pos2.m_123343_()));
+        return new BlockPos(Math.max(this.pos1.getX(), this.pos2.getX()), Math.max(this.pos1.getY(), this.pos2.getY()), Math.max(this.pos1.getZ(), this.pos2.getZ()));
     }
 
     public long getVolume() {
         if (!this.hasSelection()) {
             return 0L;
         }
-        int dx = Math.abs(this.pos1.m_123341_() - this.pos2.m_123341_()) + 1;
-        int dy = Math.abs(this.pos1.m_123342_() - this.pos2.m_123342_()) + 1;
-        int dz = Math.abs(this.pos1.m_123343_() - this.pos2.m_123343_()) + 1;
+        int dx = Math.abs(this.pos1.getX() - this.pos2.getX()) + 1;
+        int dy = Math.abs(this.pos1.getY() - this.pos2.getY()) + 1;
+        int dz = Math.abs(this.pos1.getZ() - this.pos2.getZ()) + 1;
         return dx * dy * dz;
     }
 
@@ -118,7 +118,7 @@ public class SelectionManager {
         if (!this.hasSelection() || !WorldEditConfig.getInstance().renderSelection) {
             return;
         }
-        if (SelectionManager.mc.f_91073_ == null || SelectionManager.mc.player == null) {
+        if (SelectionManager.mc.level == null || SelectionManager.mc.player == null) {
             return;
         }
         BlockPos min = this.getMin();
@@ -126,13 +126,13 @@ public class SelectionManager {
         if (min == null || max == null) {
             return;
         }
-        Vec3 camPos = SelectionManager.mc.f_91063_.m_109153_().getPosition();
-        float x1 = (min.m_123341_() - camPos.x);
-        float y1 = (min.m_123342_() - camPos.y);
-        float z1 = (min.m_123343_() - camPos.z);
-        float x2 = ((max.m_123341_() + 1) - camPos.x);
-        float y2 = ((max.m_123342_() + 1) - camPos.y);
-        float z2 = ((max.m_123343_() + 1) - camPos.z);
+        Vec3 camPos = SelectionManager.mc.gameRenderer.getMainCamera().getPosition();
+        float x1 = (float)(min.getX() - camPos.x);
+        float y1 = (float)(min.getY() - camPos.y);
+        float z1 = (float)(min.getZ() - camPos.z);
+        float x2 = (float)((max.getX() + 1) - camPos.x);
+        float y2 = (float)((max.getY() + 1) - camPos.y);
+        float z2 = (float)((max.getZ() + 1) - camPos.z);
         int color = this.parseColor(WorldEditConfig.getInstance().selectionColor);
         Matrix4f matrix = poseStack.last().pose();
         RenderSystem.disableDepthTest();
@@ -159,15 +159,15 @@ public class SelectionManager {
         this.addLine(matrix, buffer, x2, y1, z1, x2, y2, z1, r, g, b, a);
         this.addLine(matrix, buffer, x2, y1, z2, x2, y2, z2, r, g, b, a);
         this.addLine(matrix, buffer, x1, y1, z2, x1, y2, z2, r, g, b, a);
-        tesselator.m_85914_();
+        tesselator.end();
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.disableBlend();
     }
 
     private void addLine(Matrix4f matrix, BufferBuilder buffer, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float b, float a) {
-        buffer.vertex(matrix, x1, y1, z1).m_85950_(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x2, y2, z2).m_85950_(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x1, y1, z1).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x2, y2, z2).color(r, g, b, a).endVertex();
     }
 
     private int parseColor(String color) {
@@ -183,7 +183,7 @@ public class SelectionManager {
     }
 
     private String formatPos(BlockPos pos) {
-        return pos.m_123341_() + ", " + pos.m_123342_() + ", " + pos.m_123343_();
+        return pos.getX() + ", " + pos.getY() + ", " + pos.getZ();
     }
 }
 

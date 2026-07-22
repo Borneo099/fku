@@ -44,20 +44,20 @@ public class ToolManager {
     }
 
     public boolean handleClick(int button, InteractionHand hand) {
-        if (ToolManager.mc.player == null || ToolManager.mc.f_91073_ == null) {
+        if (ToolManager.mc.player == null || ToolManager.mc.level == null) {
             return false;
         }
         if (!this.wandMode) {
             return false;
         }
-        ItemStack heldItem = ToolManager.mc.player.m_21120_(hand != null ? hand : InteractionHand.MAIN_HAND);
-        String itemId = ForgeRegistries.ITEMS.getKey(heldItem.m_41720_()).toString();
+        ItemStack heldItem = ToolManager.mc.player.getItemInHand(hand != null ? hand : InteractionHand.MAIN_HAND);
+        String itemId = ForgeRegistries.ITEMS.getKey(heldItem.getItem()).toString();
         if (itemId.equals(WorldEditConfig.getInstance().toolItem) && this.currentTool.equals("wand")) {
             BlockHitResult hitResult = this.customRayTrace();
-            if (hitResult == null || hitResult.m_6662_() != HitResult.Type.BLOCK) {
+            if (hitResult == null || hitResult.getType() != HitResult.Type.BLOCK) {
                 return false;
             }
-            BlockPos targetPos = hitResult.m_82425_();
+            BlockPos targetPos = hitResult.getBlockPos();
             if (button == 0) {
                 SelectionManager.getInstance().setPos1(targetPos);
                 return true;
@@ -71,22 +71,22 @@ public class ToolManager {
     }
 
     private BlockHitResult customRayTrace() {
-        if (ToolManager.mc.player == null || ToolManager.mc.f_91073_ == null) {
+        if (ToolManager.mc.player == null || ToolManager.mc.level == null) {
             return null;
         }
-        Vec3 eyePos = ToolManager.mc.player.m_20299_(1.0f);
+        Vec3 eyePos = ToolManager.mc.player.getEyePosition(1.0f);
         Vec3 lookVec = ToolManager.mc.player.getLookAngle();
         double range = WorldEditConfig.getInstance().rangeMultiplier;
         Vec3 endPos = eyePos.add(lookVec.scale(range));
-        return ToolManager.mc.f_91073_.m_45547_(new ClipContext(eyePos, endPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, (Entity)ToolManager.mc.player));
+        return ToolManager.mc.level.clip(new ClipContext(eyePos, endPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, (Entity)ToolManager.mc.player));
     }
 
     private boolean handleToolAction(int button, InteractionHand hand) {
-        if (ToolManager.mc.f_91077_ == null || ToolManager.mc.f_91077_.m_6662_() != HitResult.Type.BLOCK) {
+        if (ToolManager.mc.hitResult == null || ToolManager.mc.hitResult.getType() != HitResult.Type.BLOCK) {
             return false;
         }
-        BlockPos targetPos = ((BlockHitResult)ToolManager.mc.f_91077_).m_82425_();
-        BlockState targetState = ToolManager.mc.f_91073_.m_8055_(targetPos);
+        BlockPos targetPos = ((BlockHitResult)ToolManager.mc.hitResult).getBlockPos();
+        BlockState targetState = ToolManager.mc.level.getBlockState(targetPos);
         switch (this.currentTool) {
             case "tree": {
                 if (button != 1) break;
@@ -115,35 +115,35 @@ public class ToolManager {
         if (ToolManager.mc.player == null) {
             return;
         }
-        int height = 5 + ToolManager.mc.f_91073_.f_46441_.m_188503_(3);
+        int height = 5 + ToolManager.mc.level.random.nextInt(3);
         for (int i = 0; i < height; ++i) {
-            BlockPos trunkPos = pos.m_6630_(i);
-            if (!ToolManager.mc.f_91073_.m_8055_(trunkPos).m_247087_()) continue;
-            this.sendBlockPacket(trunkPos, Blocks.f_49999_.m_49966_());
+            BlockPos trunkPos = pos.above(i);
+            if (!ToolManager.mc.level.getBlockState(trunkPos).canBeReplaced()) continue;
+            this.sendBlockPacket(trunkPos, Blocks.OAK_LOG.defaultBlockState());
         }
         int leafRadius = 2;
-        BlockPos leafCenter = pos.m_6630_(height - 2);
+        BlockPos leafCenter = pos.above(height - 2);
         HashSet<BlockPos> leafPositions = new HashSet<BlockPos>();
         leafPositions.addAll(ShapeGenerator.sphere(leafCenter, leafRadius, false));
         for (BlockPos leafPos : leafPositions) {
-            if (!ToolManager.mc.f_91073_.m_8055_(leafPos).m_247087_()) continue;
-            this.sendBlockPacket(leafPos, Blocks.f_50050_.m_49966_());
+            if (!ToolManager.mc.level.getBlockState(leafPos).canBeReplaced()) continue;
+            this.sendBlockPacket(leafPos, Blocks.OAK_LEAVES.defaultBlockState());
         }
         Fku.LOGGER.debug("[WorldEdit] \u6811\u6728\u5df2\u751f\u6210\u5728 {}", pos);
     }
 
     private void removeTree(BlockPos pos) {
-        if (ToolManager.mc.f_91073_ == null) {
+        if (ToolManager.mc.level == null) {
             return;
         }
         int range = 10;
         for (int x = -range; x <= range; ++x) {
             for (int y = -range; y <= range; ++y) {
                 for (int z = -range; z <= range; ++z) {
-                    BlockPos scanPos = pos.m_7918_(x, y, z);
-                    BlockState state = ToolManager.mc.f_91073_.m_8055_(scanPos);
-                    Block block = state.m_60734_();
-                    if (block != Blocks.f_49999_ && block != Blocks.f_50050_ && block != Blocks.f_50001_ && block != Blocks.f_50052_ && block != Blocks.f_50000_ && block != Blocks.f_50051_ && block != Blocks.f_50002_ && block != Blocks.f_50053_ && block != Blocks.f_50003_ && block != Blocks.f_50054_ && block != Blocks.f_50004_ && block != Blocks.f_50055_ && block != Blocks.f_220832_ && block != Blocks.f_220838_) continue;
+                    BlockPos scanPos = pos.offset(x, y, z);
+                    BlockState state = ToolManager.mc.level.getBlockState(scanPos);
+                    Block block = state.getBlock();
+                    if (block != Blocks.OAK_LOG && block != Blocks.OAK_LEAVES && block != Blocks.BIRCH_LOG && block != Blocks.BIRCH_LEAVES && block != Blocks.SPRUCE_LOG && block != Blocks.SPRUCE_LEAVES && block != Blocks.JUNGLE_LOG && block != Blocks.JUNGLE_LEAVES && block != Blocks.ACACIA_LOG && block != Blocks.ACACIA_LEAVES && block != Blocks.DARK_OAK_LOG && block != Blocks.DARK_OAK_LEAVES && block != Blocks.MANGROVE_LOG && block != Blocks.MANGROVE_LEAVES) continue;
                     this.breakBlockPacket(scanPos);
                 }
             }
@@ -154,53 +154,53 @@ public class ToolManager {
         if (ToolManager.mc.player == null) {
             return;
         }
-        Block block = state.m_60734_();
+        Block block = state.getBlock();
         String blockId = ForgeRegistries.BLOCKS.getKey(block).toString();
-        String hardness = String.format("%.2f", state.m_60800_((BlockGetter)ToolManager.mc.f_91073_, pos)));
-        ToolManager.mc.player.m_5661_(Component.literal((String)"\u00a77[WorldEdit] \u00a7e\u65b9\u5757\u4fe1\u606f:"), true);
-        ToolManager.mc.player.m_5661_(Component.literal((String)(" \u00a77ID: \u00a7f" + blockId)), true);
-        ToolManager.mc.player.m_5661_(Component.literal((String)(" \u00a77\u786c\u5ea6: \u00a7f" + hardness)), true);
-        ToolManager.mc.player.m_5661_(Component.literal((String)(" \u00a77\u4f4d\u7f6e: \u00a7f" + pos.m_123341_() + ", " + pos.m_123342_() + ", " + pos.m_123343_())), true);
-        ToolManager.mc.player.m_5661_(Component.literal((String)(" \u00a77\u53ef\u66ff\u6362: \u00a7f" + state.m_247087_())), true);
+        String hardness = String.format("%.2f", state.getDestroySpeed((BlockGetter)ToolManager.mc.level, pos));
+        ToolManager.mc.player.displayClientMessage(Component.literal((String)"\u00a77[WorldEdit] \u00a7e\u65b9\u5757\u4fe1\u606f:"), true);
+        ToolManager.mc.player.displayClientMessage(Component.literal((String)(" \u00a77ID: \u00a7f" + blockId)), true);
+        ToolManager.mc.player.displayClientMessage(Component.literal((String)(" \u00a77\u786c\u5ea6: \u00a7f" + hardness)), true);
+        ToolManager.mc.player.displayClientMessage(Component.literal((String)(" \u00a77\u4f4d\u7f6e: \u00a7f" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ())), true);
+        ToolManager.mc.player.displayClientMessage(Component.literal((String)(" \u00a77\u53ef\u66ff\u6362: \u00a7f" + state.canBeReplaced())), true);
     }
 
     private void sendBlockPacket(BlockPos pos, BlockState state) {
-        if (ToolManager.mc.player == null || ToolManager.mc.player.f_108617_ == null) {
+        if (ToolManager.mc.player == null || ToolManager.mc.player.connection == null) {
             return;
         }
-        ItemStack itemStack = new ItemStack((ItemLike)state.m_60734_().m_5456_(), 1);
-        if (itemStack.m_41619_()) {
+        ItemStack itemStack = new ItemStack((ItemLike)state.getBlock().asItem(), 1);
+        if (itemStack.isEmpty()) {
             return;
         }
         for (int i = 0; i < 9; ++i) {
-            ItemStack invStack = ToolManager.mc.player.m_150109_().m_8020_(i);
-            if (invStack.m_41720_() != itemStack.m_41720_()) continue;
-            ToolManager.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(i));
+            ItemStack invStack = ToolManager.mc.player.getInventory().getItem(i);
+            if (invStack.getItem() != itemStack.getItem()) continue;
+            ToolManager.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(i));
             break;
         }
-        Vec3 blockCenter = Vec3.m_82512_((Vec3i)pos);
+        Vec3 blockCenter = Vec3.atCenterOf((Vec3i)pos);
         Vec3 lookVec = ToolManager.mc.player.getLookAngle();
-        Direction face = Direction.m_122366_(lookVec.x, lookVec.y, lookVec.z).m_122424_();
-        Vec3 clickPos = blockCenter.add(Vec3.m_82528_((Vec3i)face.m_122436_()).scale(-0.5));
-        ToolManager.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, new BlockHitResult(clickPos, face, pos, false), this.getSequence()));
+        Direction face = Direction.getNearest(lookVec.x, lookVec.y, lookVec.z).getOpposite();
+        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf((Vec3i)face.getNormal()).scale(-0.5));
+        ToolManager.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, new BlockHitResult(clickPos, face, pos, false), this.getSequence()));
     }
 
     private void breakBlockPacket(BlockPos pos) {
-        if (ToolManager.mc.player == null || ToolManager.mc.player.f_108617_ == null) {
+        if (ToolManager.mc.player == null || ToolManager.mc.player.connection == null) {
             return;
         }
         int seq = this.getSequence();
-        ToolManager.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
-        ToolManager.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+        ToolManager.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+        ToolManager.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
     }
 
     private int getSequence() {
-        if (ToolManager.mc.f_91073_ == null) {
+        if (ToolManager.mc.level == null) {
             return 0;
         }
-        BlockStatePredictionHandler handler = ((ClientLevelAccessor)ToolManager.mc.f_91073_).getBlockStatePredictionHandler_CU();
-        handler.m_233855_();
-        int num = handler.m_233871_();
+        BlockStatePredictionHandler handler = ((ClientLevelAccessor)ToolManager.mc.level).getBlockStatePredictionHandler_CU();
+        handler.startPredicting();
+        int num = handler.currentSequence();
         handler.close();
         return num;
     }
@@ -209,7 +209,7 @@ public class ToolManager {
         this.currentTool = tool;
         boolean bl = this.wandMode = !tool.isEmpty();
         if (ToolManager.mc.player != null) {
-            ToolManager.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] " + this.getToolDisplayName(tool) + " \u00a7a\u5df2\u6fc0\u6d3b")), true);
+            ToolManager.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] " + this.getToolDisplayName(tool) + " \u00a7a\u5df2\u6fc0\u6d3b")), true);
         }
     }
 

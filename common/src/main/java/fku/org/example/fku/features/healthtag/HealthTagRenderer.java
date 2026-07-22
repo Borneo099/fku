@@ -33,9 +33,9 @@ public class HealthTagRenderer {
         float health = 20.0f;
         float maxHealth = 20.0f;
         if (entity != null) {
-            name = entity instanceof Player ? entity.m_7755_().getString() : entity.m_6095_().m_20676_().getString();
-            health = entity.m_21223_();
-            maxHealth = entity.m_21233_();
+            name = entity instanceof Player ? entity.getName().getString() : entity.getType().getDescription().getString();
+            health = entity.getHealth();
+            maxHealth = entity.getMaxHealth();
         } else if (!editing) {
             return;
         }
@@ -69,30 +69,30 @@ public class HealthTagRenderer {
             Quaternionf pose = new Quaternionf().rotateZ(Math.PI);
             Quaternionf rotation = new Quaternionf().rotateX(Math.atan(yMouse / 40.0f) * 20.0f * (Math.PI / 180));
             pose.mul((Quaternionfc)rotation);
-            float oldYRot = entity.m_146908_();
-            float oldYRotO = entity.f_19859_;
-            float oldYBodyRot = entity.f_20883_;
-            float oldYBodyRotO = entity.f_20884_;
-            float oldYHeadRot = entity.m_6080_();
-            float oldYHeadRotO = entity.f_20886_;
-            entity.m_146922_(180.0f);
-            entity.f_19859_ = 180.0f;
-            entity.f_20883_ = 180.0f;
-            entity.f_20884_ = 180.0f;
-            entity.m_5616_(180.0f + xMouse * 0.2f);
-            entity.f_20886_ = 180.0f + xMouse * 0.2f;
+            float oldYRot = entity.getYRot();
+            float oldYRotO = entity.yRotO;
+            float oldYBodyRot = entity.yBodyRot;
+            float oldYBodyRotO = entity.yBodyRotO;
+            float oldYHeadRot = entity.getYHeadRot();
+            float oldYHeadRotO = entity.yHeadRotO;
+            entity.setYRot(180.0f);
+            entity.yRotO = 180.0f;
+            entity.yBodyRot = 180.0f;
+            entity.yBodyRotO = 180.0f;
+            entity.setYHeadRot(180.0f + xMouse * 0.2f);
+            entity.yHeadRotO = 180.0f + xMouse * 0.2f;
             try {
-                InventoryScreen.m_280432_((GuiGraphics)guiGraphics, modelX, modelY, (size), (Quaternionf)pose, null, (LivingEntity) entity);
+                InventoryScreen.renderEntityInInventory((GuiGraphics)guiGraphics, modelX, modelY, (size), (Quaternionf)pose, null, (LivingEntity) entity);
             }
             catch (Exception exception) {
                 // ignored
             }
-            entity.m_146922_(oldYRot);
-            entity.f_19859_ = oldYRotO;
-            entity.f_20883_ = oldYBodyRot;
-            entity.f_20884_ = oldYBodyRotO;
-            entity.m_5616_(oldYHeadRot);
-            entity.f_20886_ = oldYHeadRotO;
+            entity.setYRot(oldYRot);
+            entity.yRotO = oldYRotO;
+            entity.yBodyRot = oldYBodyRot;
+            entity.yBodyRotO = oldYBodyRotO;
+            entity.setYHeadRot(oldYHeadRot);
+            entity.yHeadRotO = oldYHeadRotO;
             if (entity instanceof ILivingEntityGui) {
                 ILivingEntityGui guiEntity = (ILivingEntityGui)entity;
                 guiEntity.fku$setGuiRendering(false);
@@ -116,26 +116,26 @@ public class HealthTagRenderer {
         int barY = config.y + 24;
         int barWidth = 125;
         int barHeight = 8;
-        guiGraphics.m_280509_(barX, barY, barX + barWidth, barY + barHeight, new Color(20, 20, 20, alphaInt).getRGB());
+        guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, new Color(20, 20, 20, alphaInt).getRGB());
         if (animatedRatio > healthRatio) {
             int bufferColor = new Color(180, 50, 50, (alphaInt * 0.8f)).getRGB();
-            guiGraphics.m_280509_(barX, barY, barX + (barWidth * animatedRatio), barY + barHeight, bufferColor);
+            guiGraphics.fill(barX, barY, barX + (barWidth * animatedRatio), barY + barHeight, bufferColor);
         }
         int hColor = HealthTagRenderer.getHealthColor(healthRatio, alphaInt);
-        guiGraphics.m_280509_(barX, barY, barX + (barWidth * healthRatio), barY + barHeight, hColor);
+        guiGraphics.fill(barX, barY, barX + (barWidth * healthRatio), barY + barHeight, hColor);
         int highlightColor = new Color(255, 255, 255, (alphaInt * 0.3f)).getRGB();
-        guiGraphics.m_280509_(barX, barY, barX + (barWidth * healthRatio), barY + 1, highlightColor);
-        String healthText = String.format("%.1f / %.1f", health), maxHealth));
+        guiGraphics.fill(barX, barY, barX + (barWidth * healthRatio), barY + 1, highlightColor);
+        String healthText = String.format("%.1f / %.1f", health, maxHealth);
         float textScale = 0.85f;
-        float textWidth = Minecraft.getInstance().font.m_92895_(healthText) * textScale;
+        float textWidth = Minecraft.getInstance().font.width(healthText) * textScale;
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().m_252880_(barX + (barWidth - textWidth) / 2.0f, (barY - 2), 0.0f);
-        guiGraphics.pose().m_85841_(textScale, textScale, textScale);
+        guiGraphics.pose().translate(barX + (barWidth - textWidth) / 2.0f, (barY - 2), 0.0f);
+        guiGraphics.pose().scale(textScale, textScale, textScale);
         guiGraphics.drawString(Minecraft.getInstance().font, healthText, 1, 1, alphaInt / 2 << 24, false);
         guiGraphics.drawString(Minecraft.getInstance().font, healthText, 0, 0, 0xFFFFFF | alphaInt << 24, false);
         guiGraphics.pose().popPose();
         if (editing && entity == null) {
-            guiGraphics.m_280137_(Minecraft.getInstance().font, "\u62d6\u52a8\u6211 (3D \u6a21\u578b\u533a\u57df)", config.x + 90, config.y + 22 - 4, 0x55FFFFFF);
+            guiGraphics.drawCenteredString(Minecraft.getInstance().font, "\u62d6\u52a8\u6211 (3D \u6a21\u578b\u533a\u57df)", config.x + 90, config.y + 22 - 4, 0x55FFFFFF);
         }
     }
 
@@ -158,16 +158,16 @@ public class HealthTagRenderer {
     }
 
     private static void drawBetterRoundedRect(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int radius, int color, int borderColor) {
-        guiGraphics.m_280509_(x1 + radius, y1, x2 - radius, y2, color);
-        guiGraphics.m_280509_(x1, y1 + radius, x2, y2 - radius, color);
+        guiGraphics.fill(x1 + radius, y1, x2 - radius, y2, color);
+        guiGraphics.fill(x1, y1 + radius, x2, y2 - radius, color);
         HealthTagRenderer.fillCircleCorner(guiGraphics, x1 + radius, y1 + radius, radius, 180, color);
         HealthTagRenderer.fillCircleCorner(guiGraphics, x2 - radius, y1 + radius, radius, 270, color);
         HealthTagRenderer.fillCircleCorner(guiGraphics, x1 + radius, y2 - radius, radius, 90, color);
         HealthTagRenderer.fillCircleCorner(guiGraphics, x2 - radius, y2 - radius, radius, 0, color);
-        guiGraphics.m_280509_(x1 + radius, y1, x2 - radius, y1 + 1, borderColor);
-        guiGraphics.m_280509_(x1 + radius, y2 - 1, x2 - radius, y2, borderColor);
-        guiGraphics.m_280509_(x1, y1 + radius, x1 + 1, y2 - radius, borderColor);
-        guiGraphics.m_280509_(x2 - 1, y1 + radius, x2, y2 - radius, borderColor);
+        guiGraphics.fill(x1 + radius, y1, x2 - radius, y1 + 1, borderColor);
+        guiGraphics.fill(x1 + radius, y2 - 1, x2 - radius, y2, borderColor);
+        guiGraphics.fill(x1, y1 + radius, x1 + 1, y2 - radius, borderColor);
+        guiGraphics.fill(x2 - 1, y1 + radius, x2, y2 - radius, borderColor);
     }
 
     private static void fillCircleCorner(GuiGraphics guiGraphics, int x, int y, int radius, int startAngle, int color) {
@@ -176,7 +176,7 @@ public class HealthTagRenderer {
                 if (i * i + j * j > radius * radius) continue;
                 int dx = startAngle == 180 || startAngle == 90 ? -i : i;
                 int dy = startAngle == 180 || startAngle == 270 ? -j : j;
-                guiGraphics.m_280509_(x + dx, y + dy, x + dx + 1, y + dy + 1, color);
+                guiGraphics.fill(x + dx, y + dy, x + dx + 1, y + dy + 1, color);
             }
         }
     }

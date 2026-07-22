@@ -21,7 +21,7 @@ public class DisplayModelFeature {
 
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
         CommandDispatcher dispatcher = event.getDispatcher();
-        dispatcher.register((LiteralArgumentBuilder)Commands.m_82127_((String)"fku").then(Commands.m_82127_((String)"displaymodel").executes(DisplayModelFeature::openDisplayModelScreen)));
+        dispatcher.register((LiteralArgumentBuilder)Commands.literal((String)"fku").then(Commands.literal((String)"displaymodel").executes(DisplayModelFeature::openDisplayModelScreen)));
     }
 
     private static int openDisplayModelScreen(CommandContext<CommandSourceStack> context) {

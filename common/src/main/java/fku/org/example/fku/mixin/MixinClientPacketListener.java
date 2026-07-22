@@ -27,7 +27,7 @@ public abstract class MixinClientPacketListener {
         LocalPlayer p;
         TpAuraConfig cfg = TpAuraConfig.getInstance();
         if (cfg.autoFlight && cfg.enabled && (p = Minecraft.getInstance().player) != null) {
-            p.m_150110_().f_35935_ = true;
+            p.getAbilities().flying = true;
         }
     }
 }

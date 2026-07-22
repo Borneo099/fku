@@ -27,7 +27,7 @@ extends Screen {
     private AbstractWidget customBowInput;
 
     public ArrowDmgConfigScreen() {
-        super(Component.literal((String)"32k\u5f13\u914d\u7f6e"));
+        super(Component.literal("32k\u5f13\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -45,8 +45,8 @@ extends Screen {
         int tx = cx + 2;
         for (int i = 0; i < 5; ++i) {
             int fi = i;
-            int tw = this.font.m_92895_(tabs[i]) + 14;
-            this.addRenderableWidget(Button.builder(Component.literal((String)(i == this.activeTab ? "\u00a7e[" + tabs[i] + "]\u00a7r" : tabs[i])), b -> {
+            int tw = this.font.width(tabs[i]) + 14;
+            this.addRenderableWidget(Button.builder(Component.literal((i == this.activeTab ? "\u00a7e[" + tabs[i] + "]\u00a7r" : tabs[i])), b -> {
                 this.saveInputs();
                 this.activeTab = fi;
                 this.init();
@@ -76,7 +76,7 @@ extends Screen {
                     AbstractWidget patt2434$temp = this.expandInput;
                     if (patt2434$temp instanceof EditBox) {
                         EditBox e = (EditBox)patt2434$temp;
-                        e.m_94144_(String.format("%.1f", cfg.expandHitbox));
+                        e.setValue(String.format("%.1f", cfg.expandHitbox));
                     }
                 });
                 this.addRenderableWidget(this.newButton(cx + 2, ly + sp * 4, "\u500d\u6570:"));
@@ -88,9 +88,9 @@ extends Screen {
                     cfg.autoCrouch = v;
                 });
                 this.addRenderableWidget(this.newButton(cx + 2, ly + sp * 6, "\u00a77\u81ea\u5b9a\u4e49\u5f13ID(\u9017\u53f7\u5206\u9694):"));
-                this.customBowInput = new EditBox(this.font, cx + 2, ly + sp * 7, 260, 16, Component.literal((String)""));
-                ((EditBox)this.customBowInput).m_94199_(100000);
-                ((EditBox)this.customBowInput).m_94144_(cfg.customBowIds);
+                this.customBowInput = new EditBox(this.font, cx + 2, ly + sp * 7, 260, 16, Component.literal(""));
+                ((EditBox)this.customBowInput).setMaxLength(100000);
+                ((EditBox)this.customBowInput).setValue(cfg.customBowIds);
                 this.addRenderableWidget(this.customBowInput);
                 break;
             }
@@ -133,11 +133,11 @@ extends Screen {
                     pi = 0;
                 }
                 int fpi = pi;
-                this.addRenderableWidget(Button.builder(Component.literal((String)("\u4f18\u5148:" + pri[fpi])), b -> {
+                this.addRenderableWidget(Button.builder(Component.literal(("\u4f18\u5148:" + pri[fpi])), b -> {
                     int n = (fpi + 1) % 3;
                     cfg.priority = pri[n];
                     ArrowDmgConfig.save();
-                    b.setMessage(Component.literal((String)("\u4f18\u5148:" + pri[n])));
+                    b.setMessage(Component.literal(("\u4f18\u5148:" + pri[n])));
                 }).bounds(cx + 85, ly + sp, 80, 14).build());
                 break;
             }
@@ -149,7 +149,7 @@ extends Screen {
                 this.rangeInput = this.mkEdit(cx + 75, ly + sp, 50, String.valueOf(cfg.renderMaxDistance), "renderDist");
             }
         }
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> {
             this.saveInputs();
             ArrowDmgConfig.save();
             this.minecraft.setScreen(null);
@@ -162,44 +162,44 @@ extends Screen {
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         try {
             abstractWidget = this.packetsInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.packets = Math.max(1.0, Double.parseDouble(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.packets = (int)Math.max(1.0, Double.parseDouble(e2.getValue()));
             }
         }
-        catch (Exception e2) {
+        catch (Exception ex2) {
             // ignored
         }
         try {
             abstractWidget = this.chargeInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.charge = Math.max(1, Math.min(20, Integer.parseInt(e2.m_94155_())));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.charge = Math.max(1, Math.min(20, Integer.parseInt(e2.getValue())));
             }
         }
-        catch (Exception e3) {
+        catch (Exception ex3) {
             // ignored
         }
         try {
             abstractWidget = this.bypassStrInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.bypassStrength = Math.max(1.0, Double.parseDouble(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.bypassStrength = (int)Math.max(1.0, Double.parseDouble(e2.getValue()));
             }
         }
-        catch (Exception e4) {
+        catch (Exception ex4) {
             // ignored
         }
         try {
             abstractWidget = this.bypassDelInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.bypassDelay = Math.max(1, Math.min(10, Integer.parseInt(e2.m_94155_())));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.bypassDelay = Math.max(1, Math.min(10, Integer.parseInt(e2.getValue())));
             }
         }
-        catch (Exception e5) {
+        catch (Exception ex5) {
             // ignored
         }
         try {
             abstractWidget = this.rangeInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                int v = Integer.parseInt(e2.m_94155_());
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                int v = Integer.parseInt(e2.getValue());
                 if (this.activeTab == 3) {
                     cfg.aimRange = Math.max(1, v);
                 } else {
@@ -212,8 +212,8 @@ extends Screen {
         }
         try {
             AbstractWidget abstractWidget2 = this.expandInput;
-            if (abstractWidget2 instanceof EditBox && !(e2 = (EditBox)abstractWidget2).m_94155_().isEmpty()) {
-                cfg.expandHitbox = Math.max(0.5, Math.min(5.0, Double.parseDouble(e2.m_94155_())));
+            if (abstractWidget2 instanceof EditBox && !(e2 = (EditBox)abstractWidget2).getValue().isEmpty()) {
+                cfg.expandHitbox = Math.max(0.5, Math.min(5.0, Double.parseDouble(e2.getValue())));
             }
         }
         catch (Exception e7) {
@@ -222,18 +222,18 @@ extends Screen {
         AbstractWidget abstractWidget3 = this.customBowInput;
         if (abstractWidget3 instanceof EditBox) {
             e2 = (EditBox)abstractWidget3;
-            cfg.customBowIds = e2.m_94155_();
+            cfg.customBowIds = e2.getValue();
         }
         ArrowDmgConfig.save();
     }
 
     private void addC(int x, int y, String label, boolean cur, Consumer<Boolean> setter) {
-        this.addRenderableWidget(Button.builder(Component.literal((String)(label + (cur ? "\u00a7a ON" : "\u00a7c OFF"))), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal((label + (cur ? "\u00a7a ON" : "\u00a7c OFF"))), b -> {
             ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
             boolean actual = ArrowDmgConfigScreen.getToggleVal(label, cfg);
             setter.accept(!actual);
             ArrowDmgConfig.save();
-            b.setMessage(Component.literal((String)(label + (!actual ? "\u00a7a ON" : "\u00a7c OFF"))));
+            b.setMessage(Component.literal((label + (!actual ? "\u00a7a ON" : "\u00a7c OFF"))));
         }).bounds(x, y, 90, 14).build());
     }
 
@@ -263,21 +263,21 @@ extends Screen {
     }
 
     private AbstractWidget newButton(int x, int y, String t) {
-        return Button.builder(Component.literal((String)t), b -> {}).bounds(x, y, this.font.m_92895_(t), 14).build();
+        return Button.builder(Component.literal(t), b -> {}).bounds(x, y, this.font.width(t), 14).build();
     }
 
     private AbstractWidget mkEdit(int x, int y, int w, String v, String field) {
-        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal((String)""));
-        b.m_94144_(v);
-        b.m_94199_(8);
-        b.m_94153_(s -> s.matches("[\\d.]*"));
-        this.m_7787_(b);
+        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal(""));
+        b.setValue(v);
+        b.setMaxLength(8);
+        b.setFilter(s -> s.matches("[\\d.]*"));
+        this.addWidget(b);
         return b;
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
         EditBox e;
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 280) / 2;
         int cy = (this.height - 240) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, 280, 240, false);
@@ -350,42 +350,42 @@ extends Screen {
         return super.mouseClicked(mx, my, btn);
     }
 
-    public boolean m_7933_(int k, int s, int m) {
+    public boolean keyPressed(int k, int s, int m) {
         EditBox e;
         AbstractWidget abstractWidget = this.packetsInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         abstractWidget = this.chargeInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         abstractWidget = this.bypassStrInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         abstractWidget = this.bypassDelInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         abstractWidget = this.rangeInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         abstractWidget = this.expandInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         abstractWidget = this.customBowInput;
-        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).m_93696_()) {
-            return e.m_7933_(k, s, m);
+        if (abstractWidget instanceof EditBox && (e = (EditBox)abstractWidget).isFocused()) {
+            return e.keyPressed(k, s, m);
         }
         if (k == 256) {
             this.saveInputs();
             this.minecraft.setScreen(null);
             return true;
         }
-        return super.m_7933_(k, s, m);
+        return super.keyPressed(k, s, m);
     }
 
     public void onClose() {

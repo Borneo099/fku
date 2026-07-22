@@ -44,7 +44,7 @@ public class AutoDropPanel {
     private static int getPanelX(Minecraft mc) {
         int configX = (Integer)FkuConfig.autoDropPanelXPos.get();
         if (configX == 0) {
-            return mc.getWindow().m_85445_() / 2 + 90;
+            return mc.getWindow().getGuiScaledWidth() / 2 + 90;
         }
         return configX;
     }
@@ -52,7 +52,7 @@ public class AutoDropPanel {
     private static int getPanelY(Minecraft mc) {
         int configY = (Integer)FkuConfig.autoDropPanelYPos.get();
         if (configY == 0) {
-            return mc.getWindow().m_85446_() / 2 - 94;
+            return mc.getWindow().getGuiScaledHeight() / 2 - 94;
         }
         return configY;
     }
@@ -84,10 +84,10 @@ public class AutoDropPanel {
         Color bgColor = new Color(30, 30, 30, 128);
         Color borderColor = new Color(60, 60, 60, 200);
         Color titleBarColor = new Color(0, 102, 204, 200);
-        guiGraphics.m_280509_(x, y, x + 112, y + 20, titleBarColor.getRGB());
+        guiGraphics.fill(x, y, x + 112, y + 20, titleBarColor.getRGB());
         guiGraphics.drawString(Minecraft.getInstance().font, "\u9ed1\u540d\u5355", x + 5, y + 6, 0xFFFFFF);
-        guiGraphics.m_280509_(x, y + 20, x + 112, y + 188, bgColor.getRGB());
-        guiGraphics.m_280637_(x, y, 112, 188, borderColor.getRGB());
+        guiGraphics.fill(x, y + 20, x + 112, y + 188, bgColor.getRGB());
+        guiGraphics.renderOutline(x, y, 112, 188, borderColor.getRGB());
         String hint1 = "\u62d6\u52a8\u7269\u54c1\u957f\u6309\u6dfb\u52a0\u9ed1\u540d\u5355";
         String hint2 = "\u53f3\u952e\u7269\u54c1\u53d6\u6d88\u9ed1\u540d\u5355";
         guiGraphics.drawString(Minecraft.getInstance().font, hint1, x + 5, y + 20 + 4, 0x888888);
@@ -97,8 +97,8 @@ public class AutoDropPanel {
     private static void drawAddSlot(GuiGraphics guiGraphics, int x, int y) {
         Color slotColor = new Color(60, 120, 60, 180);
         Color borderColor = new Color(100, 200, 100, 255);
-        guiGraphics.m_280509_(x, y, x + 18, y + 18, slotColor.getRGB());
-        guiGraphics.m_280637_(x, y, 18, 18, borderColor.getRGB());
+        guiGraphics.fill(x, y, x + 18, y + 18, slotColor.getRGB());
+        guiGraphics.renderOutline(x, y, 18, 18, borderColor.getRGB());
         String plus = "+";
         int textX = x + 9 - 4;
         int textY = y + 9 - 5;
@@ -128,9 +128,9 @@ public class AutoDropPanel {
             int itemX = startX + col * 18;
             int itemY = y + row * 18;
             Item item = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
-            ItemStack stack = new ItemStack((ItemLike)(item != null ? item : Items.f_42516_));
-            guiGraphics.m_280509_(itemX, itemY, itemX + 16, itemY + 16, 0x44444444);
-            guiGraphics.m_280480_(stack, itemX, itemY);
+            ItemStack stack = new ItemStack((ItemLike)(item != null ? item : Items.PAPER));
+            guiGraphics.fill(itemX, itemY, itemX + 16, itemY + 16, 0x44444444);
+            guiGraphics.renderItem(stack, itemX, itemY);
         }
     }
 
@@ -205,8 +205,8 @@ public class AutoDropPanel {
         if (dragging) {
             int newX = event.getMouseX() - dragOffsetX;
             int newY = event.getMouseY() - dragOffsetY;
-            int screenWidth = mc.getWindow().m_85445_();
-            int screenHeight = mc.getWindow().m_85446_();
+            int screenWidth = mc.getWindow().getGuiScaledWidth();
+            int screenHeight = mc.getWindow().getGuiScaledHeight();
             if (newX < 0) {
                 newX = 0;
             }
@@ -231,10 +231,10 @@ public class AutoDropPanel {
         int addSlotY = panelY + 20 + 24;
         double mouseX = event.getMouseX();
         double mouseY = event.getMouseY();
-        if (mouseX >= addSlotX && mouseX <= (addSlotX + 18) && mouseY >= addSlotY && mouseY <= (addSlotY + 18) && !(carried = mc.player.f_36096_.m_142621_()).m_41619_()) {
+        if (mouseX >= addSlotX && mouseX <= (addSlotX + 18) && mouseY >= addSlotY && mouseY <= (addSlotY + 18) && !(carried = mc.player.containerMenu.getCarried()).isEmpty()) {
             String itemId = AutoDropHandler.getItemId(carried);
             config.addToBlacklist(itemId);
-            mc.player.f_36096_.m_142503_(ItemStack.f_41583_);
+            mc.player.containerMenu.setCarried(ItemStack.EMPTY);
             event.setCanceled(true);
         }
     }

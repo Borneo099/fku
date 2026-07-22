@@ -25,14 +25,14 @@ public abstract class MixinLiquidBlockJesus {
         if (!(context instanceof EntityCollisionContext)) {
             return;
         }
-        Entity entity = ((EntityCollisionContext)context).m_193113_();
+        Entity entity = ((EntityCollisionContext)context).getEntity();
         if (!(entity instanceof Player)) {
             return;
         }
-        if (((Player)entity).m_6144_()) {
+        if (((Player)entity).isShiftKeyDown()) {
             return;
         }
-        cir.setReturnValue(Shapes.m_83144_());
+        cir.setReturnValue(Shapes.block());
     }
 }
 

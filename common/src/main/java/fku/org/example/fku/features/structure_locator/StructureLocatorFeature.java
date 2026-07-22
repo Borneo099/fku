@@ -74,12 +74,12 @@ public class StructureLocatorFeature {
 
     public static void requestSeed() {
         Minecraft mc = StructureLocatorFeature.getMc();
-        if (mc == null || mc.player == null || mc.player.f_108617_ == null) {
+        if (mc == null || mc.player == null || mc.player.connection == null) {
             StructureLocatorFeature.msg("\u00a7c\u672a\u8fde\u63a5\u670d\u52a1\u5668");
             return;
         }
         expectingSeed = true;
-        mc.player.f_108617_.m_246623_("seed");
+        mc.player.connection.sendCommand("seed");
         StructureLocatorFeature.msg("\u00a77\u5df2\u53d1\u9001 /seed, \u6b63\u5728\u7b49\u5f85\u79cd\u5b50.");
     }
 
@@ -107,7 +107,7 @@ public class StructureLocatorFeature {
     public static void locate(boolean travel) {
         boolean dimOk;
         Minecraft mc = StructureLocatorFeature.getMc();
-        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || mc.player == null || mc.level == null) {
             return;
         }
         Long seed = StructureLocatorFeature.resolveSeed();
@@ -196,7 +196,7 @@ public class StructureLocatorFeature {
             return;
         }
         Minecraft mc = StructureLocatorFeature.getMc();
-        if (mc == null || markedX < 0 || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || markedX < 0 || mc.player == null || mc.level == null) {
             return;
         }
         int clearDist = StructureLocatorConfig.getInstance().markClearDistance;
@@ -220,8 +220,8 @@ public class StructureLocatorFeature {
             return;
         }
         int r = StructureLocatorConfig.getInstance().searchRadius;
-        int px = mc.player.getX();
-        int pz = mc.player.getZ();
+        int px = (int)mc.player.getX();
+        int pz = (int)mc.player.getZ();
         int centerGx = Math.floorDiv(px, t.spacing);
         int centerGz = Math.floorDiv(pz, t.spacing);
         String key = StructureLocatorFeature.blKey(seed, t.id);
@@ -236,9 +236,9 @@ public class StructureLocatorFeature {
             for (int gz = centerGz - r; gz <= centerGz + r; ++gz) {
                 ResourceKey<Biome> biome;
                 ChunkPos cand = StructureLocatorFeature.calcRandomSpreadPos(seed, t.salt, t.spacing, t.separation, t.spread, gx, gz);
-                if (bl != null && bl.contains(StructureLocatorFeature.packChunk(cand.f_45578_, cand.f_45579_))) continue;
-                int bx = cand.f_45578_ * 16 + 8;
-                int bz = cand.f_45579_ * 16 + 8;
+                if (bl != null && bl.contains(StructureLocatorFeature.packChunk(cand.x, cand.z))) continue;
+                int bx = cand.x * 16 + 8;
+                int bz = cand.z * 16 + 8;
                 long dx = bx - px;
                 long dz = bz - pz;
                 long d = dx * dx + dz * dz;
@@ -246,8 +246,8 @@ public class StructureLocatorFeature {
                 bestDistSq = d;
                 bestX = bx;
                 bestZ = bz;
-                bestCx = cand.f_45578_;
-                bestCz = cand.f_45579_;
+                bestCx = cand.x;
+                bestCz = cand.z;
                 found = true;
             }
         }
@@ -256,17 +256,17 @@ public class StructureLocatorFeature {
             return;
         }
         StructureLocatorFeature.rememberTarget(key, bestCx, bestCz);
-        int dist = Math.sqrt(bestDistSq);
+        int dist = (int)Math.sqrt(bestDistSq);
         StructureLocatorFeature.msg("\u00a7f" + t.name + "  \u00a77\u5750\u6807: \u00a7bX=" + bestX + " Z=" + bestZ + " \u00a77(\u7ea6" + dist + "\u683c)");
         StructureLocatorFeature.doTravel(travel, dimOk, t, bestX, bestZ);
     }
 
     private static ChunkPos calcRandomSpreadPos(long seed, int salt, int spacing, int separation, String spread, int rx, int rz) {
-        RandomSource random = RandomSource.m_216327_();
+        RandomSource random = RandomSource.create();
         long key = rx * 341873128712L + rz * 132897987541L + seed + salt;
-        random.m_188584_(key);
-        int offX = random.m_188503_(spacing - separation);
-        int offZ = random.m_188503_(spacing - separation);
+        random.setSeed(key);
+        int offX = random.nextInt(spacing - separation);
+        int offZ = random.nextInt(spacing - separation);
         return new ChunkPos(rx * spacing + offX, rz * spacing + offZ);
     }
 
@@ -276,8 +276,8 @@ public class StructureLocatorFeature {
             return;
         }
         List<ChunkPos> positions = StructureLocatorFeature.strongholdPositions(seed, t.ringCount, t.ringDist, t.ringSpread);
-        int px = mc.player.getX();
-        int pz = mc.player.getZ();
+        int px = (int)mc.player.getX();
+        int pz = (int)mc.player.getZ();
         String key = StructureLocatorFeature.blKey(seed, t.id);
         Set<Long> bl = skipped.get(key);
         long bestDistSq = Long.MAX_VALUE;
@@ -290,12 +290,12 @@ public class StructureLocatorFeature {
             int bz;
             int bx;
             long d;
-            if (bl != null && bl.contains(StructureLocatorFeature.packChunk(cp.f_45578_, cp.f_45579_)) || (d = ((bx = cp.f_45578_ * 16 + 8) - px) * (bx - px) + ((bz = cp.f_45579_ * 16 + 8) - pz) * (bz - pz)) >= bestDistSq) continue;
+            if (bl != null && bl.contains(StructureLocatorFeature.packChunk(cp.x, cp.z)) || (d = ((bx = cp.x * 16 + 8) - px) * (bx - px) + ((bz = cp.z * 16 + 8) - pz) * (bz - pz)) >= bestDistSq) continue;
             bestDistSq = d;
             bestX = bx;
             bestZ = bz;
-            bestCx = cp.f_45578_;
-            bestCz = cp.f_45579_;
+            bestCx = cp.x;
+            bestCz = cp.z;
             found = true;
         }
         if (!found) {
@@ -303,7 +303,7 @@ public class StructureLocatorFeature {
             return;
         }
         StructureLocatorFeature.rememberTarget(key, bestCx, bestCz);
-        int dist = Math.sqrt(bestDistSq);
+        int dist = (int)Math.sqrt(bestDistSq);
         StructureLocatorFeature.msg("\u00a7f" + t.name + " \u00a77(\u540c\u5fc3\u73af, \u5230\u70b9\u9644\u8fd1\u627e\u4f20\u9001\u95e8)  \u00a77\u5750\u6807: \u00a7bX=" + bestX + " Z=" + bestZ + " \u00a77(\u7ea6" + dist + "\u683c)");
         StructureLocatorFeature.doTravel(travel, dimOk, t, bestX, bestZ);
     }
@@ -338,22 +338,22 @@ public class StructureLocatorFeature {
     private static List<ChunkPos> strongholdPositions(long seed, int count, int distance, int spread) {
         ArrayList<ChunkPos> list = new ArrayList<ChunkPos>();
         WorldgenRandom random = new WorldgenRandom((RandomSource)new LegacyRandomSource(0L));
-        random.m_190068_(seed, 0, 0);
-        double angle = random.m_188500_() * Math.PI * 2.0;
+        random.setLargeFeatureSeed(seed, 0, 0);
+        double angle = random.nextDouble() * Math.PI * 2.0;
         int ring = 0;
         int placed = 0;
         int curSpread = spread;
         for (int i = 0; i < count; ++i) {
-            double d = 4.0 * distance + (distance * ring * 6) + (random.m_188500_() - 0.5) * distance * 2.5;
-            int cx = Math.round(Math.cos(angle) * d);
-            int cz = Math.round(Math.sin(angle) * d);
+            double d = 4.0 * distance + (distance * ring * 6) + (random.nextDouble() - 0.5) * distance * 2.5;
+            int cx = (int)Math.round(Math.cos(angle) * d);
+                        int cz = (int)Math.round(Math.sin(angle) * d);
             list.add(new ChunkPos(cx, cz));
             angle += Math.PI * 2 / curSpread;
             if (++placed != curSpread) continue;
             placed = 0;
             curSpread += 2 * curSpread / (++ring + 1);
             curSpread = Math.min(curSpread, count - i - 1);
-            angle += random.m_188500_() * Math.PI * 2.0;
+            angle += random.nextDouble() * Math.PI * 2.0;
         }
         return list;
     }
@@ -368,14 +368,14 @@ public class StructureLocatorFeature {
 
     private static Dim currentDim() {
         Minecraft mc = StructureLocatorFeature.getMc();
-        if (mc == null || mc.f_91073_ == null) {
+        if (mc == null || mc.level == null) {
             return Dim.OVERWORLD;
         }
-        ResourceKey d = mc.f_91073_.m_46472_();
-        if (d == Level.f_46429_) {
+        ResourceKey d = mc.level.dimension();
+        if (d == Level.NETHER) {
             return Dim.NETHER;
         }
-        if (d == Level.f_46430_) {
+        if (d == Level.END) {
             return Dim.END;
         }
         return Dim.OVERWORLD;
@@ -398,27 +398,27 @@ public class StructureLocatorFeature {
     public static void msg(String s) {
         Minecraft mc = StructureLocatorFeature.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)(PREFIX + s)), false);
+            mc.player.displayClientMessage(Component.literal((String)(PREFIX + s)), false);
         }
     }
 
     static {
-        TARGETS.add(Target.rs("villages", "\u6751\u5e84", Dim.OVERWORLD, 34, 8, 10387312, "linear", 64, Set.of(Biomes.f_48202_, Biomes.f_48203_, Biomes.f_48157_, Biomes.f_186761_, Biomes.f_48206_)));
-        TARGETS.add(Target.rs("desert_pyramids", "\u6c99\u6f20\u795e\u6bbf", Dim.OVERWORLD, 32, 8, 14357617, "linear", 64, Set.of(Biomes.f_48203_)));
-        TARGETS.add(Target.rs("igloos", "\u96ea\u5c4b", Dim.OVERWORLD, 32, 8, 14357618, "linear", 64, Set.of(Biomes.f_186761_, Biomes.f_48182_, Biomes.f_48152_)));
-        TARGETS.add(Target.rs("jungle_temples", "\u4e1b\u6797\u795e\u5e99", Dim.OVERWORLD, 32, 8, 14357619, "linear", 64, Set.of(Biomes.f_48222_, Biomes.f_48197_)));
-        TARGETS.add(Target.rs("swamp_huts", "\u5973\u5deb\u5c0f\u5c4b", Dim.OVERWORLD, 32, 8, 14357620, "linear", 64, Set.of(Biomes.f_48207_)));
+        TARGETS.add(Target.rs("villages", "\u6751\u5e84", Dim.OVERWORLD, 34, 8, 10387312, "linear", 64, Set.of(Biomes.PLAINS, Biomes.DESERT, Biomes.SAVANNA, Biomes.SNOWY_PLAINS, Biomes.TAIGA)));
+        TARGETS.add(Target.rs("desert_pyramids", "\u6c99\u6f20\u795e\u6bbf", Dim.OVERWORLD, 32, 8, 14357617, "linear", 64, Set.of(Biomes.DESERT)));
+        TARGETS.add(Target.rs("igloos", "\u96ea\u5c4b", Dim.OVERWORLD, 32, 8, 14357618, "linear", 64, Set.of(Biomes.SNOWY_PLAINS, Biomes.ICE_SPIKES, Biomes.SNOWY_TAIGA)));
+        TARGETS.add(Target.rs("jungle_temples", "\u4e1b\u6797\u795e\u5e99", Dim.OVERWORLD, 32, 8, 14357619, "linear", 64, Set.of(Biomes.JUNGLE, Biomes.BAMBOO_JUNGLE)));
+        TARGETS.add(Target.rs("swamp_huts", "\u5973\u5deb\u5c0f\u5c4b", Dim.OVERWORLD, 32, 8, 14357620, "linear", 64, Set.of(Biomes.SWAMP)));
         TARGETS.add(Target.rs("pillager_outposts", "\u63a0\u593a\u8005\u524d\u54e8", Dim.OVERWORLD, 32, 8, 165745296, "linear", 64, null));
-        TARGETS.add(Target.rs("woodland_mansions", "\u6797\u5730\u5e9c\u90b8", Dim.OVERWORLD, 80, 20, 10387319, "triangular", 64, Set.of(Biomes.f_48151_)));
+        TARGETS.add(Target.rs("woodland_mansions", "\u6797\u5730\u5e9c\u90b8", Dim.OVERWORLD, 80, 20, 10387319, "triangular", 64, Set.of(Biomes.DARK_FOREST)));
         TARGETS.add(Target.rs("trail_ruins", "\u53e4\u8ff9\u5e9f\u589f", Dim.OVERWORLD, 34, 8, 83469867, "linear", 64, null));
         TARGETS.add(Target.rs("ruined_portals", "\u5e9f\u5f03\u4f20\u9001\u95e8(\u4e3b\u4e16\u754c)", Dim.OVERWORLD, 40, 15, 34222645, "linear", 64, null));
-        TARGETS.add(Target.rs("ocean_monuments", "\u6d77\u5e95\u795e\u6bbf", Dim.OVERWORLD, 32, 5, 10387313, "triangular", 64, Set.of(Biomes.f_48171_, Biomes.f_48172_, Biomes.f_48170_, Biomes.f_48225_)));
+        TARGETS.add(Target.rs("ocean_monuments", "\u6d77\u5e95\u795e\u6bbf", Dim.OVERWORLD, 32, 5, 10387313, "triangular", 64, Set.of(Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.DEEP_OCEAN)));
         TARGETS.add(Target.rs("ocean_ruins", "\u6d77\u5e95\u5e9f\u589f", Dim.OVERWORLD, 20, 8, 14357621, "linear", 64, null));
         TARGETS.add(Target.rs("shipwrecks", "\u6c89\u8239", Dim.OVERWORLD, 24, 4, 165745295, "linear", 64, null));
-        TARGETS.add(Target.rs("ancient_cities", "\u53e4\u57ce(\u76d1\u5b88\u8005)", Dim.OVERWORLD, 24, 8, 20083232, "linear", -50, Set.of(Biomes.f_220594_)));
-        TARGETS.add(Target.rs("nether_fossils", "\u4e0b\u754c\u5316\u77f3", Dim.NETHER, 2, 1, 14357921, "linear", 64, Set.of(Biomes.f_48199_)));
+        TARGETS.add(Target.rs("ancient_cities", "\u53e4\u57ce(\u76d1\u5b88\u8005)", Dim.OVERWORLD, 24, 8, 20083232, "linear", -50, Set.of(Biomes.DEEP_DARK)));
+        TARGETS.add(Target.rs("nether_fossils", "\u4e0b\u754c\u5316\u77f3", Dim.NETHER, 2, 1, 14357921, "linear", 64, Set.of(Biomes.SOUL_SAND_VALLEY)));
         TARGETS.add(Target.rs("nether_complexes", "\u4e0b\u754c\u8981\u585e/\u5821\u5792", Dim.NETHER, 27, 4, 30084232, "linear", 64, null));
-        TARGETS.add(Target.rs("end_cities", "\u672b\u5730\u57ce", Dim.END, 20, 11, 10387313, "triangular", 64, Set.of(Biomes.f_48163_, Biomes.f_48164_)));
+        TARGETS.add(Target.rs("end_cities", "\u672b\u5730\u57ce", Dim.END, 20, 11, 10387313, "triangular", 64, Set.of(Biomes.END_MIDLANDS, Biomes.END_HIGHLANDS)));
         TARGETS.add(Target.rings("strongholds", "\u8981\u585e(\u542b\u672b\u5730\u4f20\u9001\u95e8)", 128, 32, 3));
         TARGETS.add(Target.rs("acropolis", "\u00a7c\u536b\u57ce", Dim.OVERWORLD, 80, 50, 913530101, "linear", 64, null));
         TARGETS.add(Target.rs("ancient_factory", "\u00a7c\u8fdc\u53e4\u5de5\u5382", Dim.OVERWORLD, 112, 70, 319514301, "linear", 64, null));

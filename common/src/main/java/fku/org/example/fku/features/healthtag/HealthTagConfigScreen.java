@@ -29,12 +29,12 @@ extends Screen {
         int x = (this.width - 250) / 2;
         int y = (this.height - 150) / 2;
         this.xPosInput = new EditBox(this.font, x + 150, y + 30, 60, 20, Component.literal((String)""));
-        this.xPosInput.m_94144_(String.valueOf(this.config.x));
-        this.xPosInput.m_94199_(5);
+        this.xPosInput.setValue(String.valueOf(this.config.x));
+        this.xPosInput.setMaxLength(5);
         this.addRenderableWidget(this.xPosInput);
         this.yPosInput = new EditBox(this.font, x + 150, y + 60, 60, 20, Component.literal((String)""));
-        this.yPosInput.m_94144_(String.valueOf(this.config.y));
-        this.yPosInput.m_94199_(5);
+        this.yPosInput.setValue(String.valueOf(this.config.y));
+        this.yPosInput.setMaxLength(5);
         this.addRenderableWidget(this.yPosInput);
         this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> {
             this.saveConfig();
@@ -44,15 +44,15 @@ extends Screen {
 
     private void saveConfig() {
         try {
-            int xPos = Integer.parseInt(this.xPosInput.m_94155_());
-            int yPos = Integer.parseInt(this.yPosInput.m_94155_());
+            int xPos = Integer.parseInt(this.xPosInput.getValue());
+            int yPos = Integer.parseInt(this.yPosInput.getValue());
             this.config.x = xPos;
             this.config.y = yPos;
             HealthTagConfig.save();
-            Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7aHealthTag\u914d\u7f6e\u5df2\u4fdd\u5b58"), true);
+            Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a7aHealthTag\u914d\u7f6e\u5df2\u4fdd\u5b58"), true);
         }
         catch (NumberFormatException e) {
-            Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7c\u8f93\u5165\u65e0\u6548"), true);
+            Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a7c\u8f93\u5165\u65e0\u6548"), true);
         }
     }
 

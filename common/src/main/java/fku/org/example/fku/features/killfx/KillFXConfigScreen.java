@@ -69,22 +69,22 @@ extends Screen {
             return;
         }
         if (this.timeoutInput != null) {
-            catCache.put("timeout", this.timeoutInput.m_94155_());
+            catCache.put("timeout", this.timeoutInput.getValue());
         }
         if (this.lightningAmountInput != null) {
-            catCache.put("lightningAmount", this.lightningAmountInput.m_94155_());
+            catCache.put("lightningAmount", this.lightningAmountInput.getValue());
         }
         if (this.particleCountInput != null) {
-            catCache.put("particleCount", this.particleCountInput.m_94155_());
+            catCache.put("particleCount", this.particleCountInput.getValue());
         }
         if (this.particleSpeedInput != null) {
-            catCache.put("particleSpeed", this.particleSpeedInput.m_94155_());
+            catCache.put("particleSpeed", this.particleSpeedInput.getValue());
         }
         if (this.volumeInput != null) {
-            catCache.put("volume", this.volumeInput.m_94155_());
+            catCache.put("volume", this.volumeInput.getValue());
         }
         if (this.pitchInput != null) {
-            catCache.put("pitch", this.pitchInput.m_94155_());
+            catCache.put("pitch", this.pitchInput.getValue());
         }
     }
 
@@ -110,7 +110,7 @@ extends Screen {
         for (int i = 0; i < n; ++i) {
             String cat;
             String fcat = cat = object[i];
-            int tw = Minecraft.getInstance().font.m_92895_(cat) + 10;
+            int tw = Minecraft.getInstance().font.width(cat) + 10;
             boolean isActive = cat.equals(this.activeCategory);
             this.addRenderableWidget(Button.builder(Component.literal((String)((isActive ? "\u00a7l[" : " ") + cat + (isActive ? "]\u00a7r" : " "))), btn -> {
                 this.saveFloatingInputs();
@@ -202,7 +202,7 @@ extends Screen {
         });
         this.addLabeledInput(row += 24, "\u8bb0\u5fc6\u65f6\u95f4(\u79d2)", this.loadFloatingInput("timeout", String.valueOf(this.cfg.targetTimeout)), box -> {
             this.timeoutInput = box;
-            box.m_94199_(5);
+            box.setMaxLength(5);
         });
     }
 
@@ -212,7 +212,7 @@ extends Screen {
         });
         this.addLabeledInput(row += 24, "\u95ea\u7535\u6570\u91cf", this.loadFloatingInput("lightningAmount", String.valueOf(this.cfg.lightningAmount)), box -> {
             this.lightningAmountInput = box;
-            box.m_94199_(2);
+            box.setMaxLength(2);
         });
         this.addToggle(row += 24, "\u95ea\u7535\u97f3\u6548", this.cfg.useLightningSound, v -> {
             this.cfg.useLightningSound = v;
@@ -272,11 +272,11 @@ extends Screen {
         int shapeRows = (shapeEntries.length + 3) / 4;
         this.addLabeledInput(row += 20 + (shapeRows - 1) * 18, "\u7c92\u5b50\u6570\u91cf", this.loadFloatingInput("particleCount", String.valueOf(this.cfg.particleCount)), box -> {
             this.particleCountInput = box;
-            box.m_94199_(4);
+            box.setMaxLength(4);
         });
         this.addLabeledInput(row += 24, "\u7c92\u5b50\u901f\u5ea6", this.loadFloatingInput("particleSpeed", String.valueOf(this.cfg.particleSpeed)), box -> {
             this.particleSpeedInput = box;
-            box.m_94199_(5);
+            box.setMaxLength(5);
         });
     }
 
@@ -307,11 +307,11 @@ extends Screen {
         }).bounds(cx + 100, row, 90, 20).build());
         this.addLabeledInput(row += 24, "\u97f3\u91cf", this.loadFloatingInput("volume", String.valueOf(this.cfg.volume)), box -> {
             this.volumeInput = box;
-            box.m_94199_(5);
+            box.setMaxLength(5);
         });
         this.addLabeledInput(row += 24, "\u97f3\u8c03", this.loadFloatingInput("pitch", String.valueOf(this.cfg.pitch)), box -> {
             this.pitchInput = box;
-            box.m_94199_(5);
+            box.setMaxLength(5);
         });
     }
 
@@ -503,8 +503,8 @@ extends Screen {
         int cx = (this.width - 300) / 2;
         this.drawLabel(label, cx, row);
         EditBox box = new EditBox(this.font, cx + 135, row, 60, 18, Component.literal((String)""));
-        box.m_94144_(cachedValue);
-        box.m_94199_(10);
+        box.setValue(cachedValue);
+        box.setMaxLength(10);
         this.addRenderableWidget(box);
         setter.accept(box);
     }
@@ -650,7 +650,7 @@ extends Screen {
         }
     }
 
-    public boolean m_6050_(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         int cx = (this.width - 300) / 2;
         int cy = (this.height - 255) / 2;
         if (mouseX >= cx && mouseX <= (cx + 300) && mouseY >= cy && mouseY <= (cy + 255)) {
@@ -660,7 +660,7 @@ extends Screen {
             this.rebuildWidgets();
             return true;
         }
-        return super.m_6050_(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
@@ -671,7 +671,7 @@ extends Screen {
         int cy = (this.height - 255) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, 300, 255, false);
         guiGraphics.drawString(this.font, "\u51fb\u6740\u7279\u6548\u914d\u7f6e - " + this.activeCategory, cx + 10, cy + 25, 0xFFFFFF);
-        guiGraphics.m_280588_(cx + 2, cy + 35, cx + 300 - 2, cy + 255 - 32);
+        guiGraphics.enableScissor(cx + 2, cy + 35, cx + 300 - 2, cy + 255 - 32);
         int row = cy + 35 - this.scrollOffset;
         switch (this.activeCategory) {
             case "\u901a\u7528": {
@@ -773,7 +773,7 @@ extends Screen {
             if (yRow + 4 < cy + 35 || yRow >= cy + 255 - 35) continue;
             guiGraphics.drawString(this.font, pair[0], cx + 10, yRow + 4, 0xAAAAAA);
         }
-        guiGraphics.m_280618_();
+        guiGraphics.disableScissor();
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.colorWheelPicker.render(guiGraphics, mouseX, mouseY);
     }

@@ -18,7 +18,7 @@ extends Screen {
     private final WaterWalkConfig cfg = WaterWalkConfig.getInstance();
 
     public WaterWalkConfigScreen() {
-        super(Component.literal((String)"\u6c34\u4e0a\u884c\u8d70\u914d\u7f6e"));
+        super(Component.literal("\u6c34\u4e0a\u884c\u8d70\u914d\u7f6e"));
     }
 
     private int cx() {
@@ -32,11 +32,11 @@ extends Screen {
     protected void init() {
         super.init();
         int cx = this.cx();
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u8fd4\u56de\u4e3b\u83dc\u5355"), btn -> Minecraft.getInstance().setScreen(new ClickGuiScreen())).bounds(cx + 40, this.cy(112), 100, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u8fd4\u56de\u4e3b\u83dc\u5355"), btn -> Minecraft.getInstance().setScreen(new ClickGuiScreen())).bounds(cx + 40, this.cy(112), 100, 20).build());
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = this.cx();
         int cy = this.cy(0);
         GuiRenderHelper.drawPanelBackground(g, cx, cy, 280, 150, false);

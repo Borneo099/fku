@@ -22,7 +22,7 @@ public class HealthTagEvents {
 
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
-        if (event.getEntity().m_9236_().f_46443_) {
+        if (event.getEntity().level().isClientSide) {
             HealthTagManager.onAttack(event.getTarget());
         }
     }
@@ -33,8 +33,8 @@ public class HealthTagEvents {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        double mouseX = mc.f_91067_.m_91589_() * mc.getWindow().m_85445_() / mc.getWindow().getWidth();
-        double mouseY = mc.f_91067_.m_91594_() * mc.getWindow().m_85446_() / mc.getWindow().getHeight();
+        double mouseX = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getWidth();
+        double mouseY = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getHeight();
         HealthTagRenderer.render(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
     }
 

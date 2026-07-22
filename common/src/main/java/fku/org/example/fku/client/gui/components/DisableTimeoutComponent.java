@@ -20,7 +20,7 @@ extends GuiComponent {
     }
 
     private void toggle() {
-        FkuConfig.disableConnectionTimeout.set(((Boolean)FkuConfig.disableConnectionTimeout.get() == false ? 1 : 0));
+        FkuConfig.disableConnectionTimeout.set(!(Boolean)FkuConfig.disableConnectionTimeout.get());
         FkuConfig.disableConnectionTimeout.save();
     }
 

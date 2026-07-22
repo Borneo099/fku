@@ -160,12 +160,12 @@ extends Screen {
         y += sp;
         if (this.cfg.enableBeam) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.beamColor, "beamColor");
-            this.addSliderDesc(x + 15, y += 20, "\u5bbd\u5ea6: " + String.format("%.1f", this.cfg.beamWidth)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u5bbd\u5ea6: " + String.format("%.1f", this.cfg.beamWidth), b -> {
                 this.cfg.beamWidth = this.cfg.beamWidth >= 5.0f ? 1.0f : this.cfg.beamWidth + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
             });
-            this.addSliderDesc(x + 15, y += 20, "\u6d41\u901f: " + String.format("%.1f", this.cfg.beamFlowSpeed)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u6d41\u901f: " + String.format("%.1f", this.cfg.beamFlowSpeed), b -> {
                 this.cfg.beamFlowSpeed = this.cfg.beamFlowSpeed >= 2.0f ? 0.1f : this.cfg.beamFlowSpeed + 0.2f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -191,7 +191,7 @@ extends Screen {
         y += sp;
         if (this.cfg.enablePulseWave) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.waveColor, "waveColor");
-            this.addSliderDesc(x + 15, y += 20, "\u901f\u5ea6: " + String.format("%.1f", this.cfg.waveSpeed)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u901f\u5ea6: " + String.format("%.1f", this.cfg.waveSpeed), b -> {
                 this.cfg.waveSpeed = this.cfg.waveSpeed >= 3.0f ? 0.5f : this.cfg.waveSpeed + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -204,7 +204,7 @@ extends Screen {
         y += sp;
         if (this.cfg.enableTether) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.tetherColor, "tetherColor");
-            this.addSliderDesc(x + 15, y += 20, "\u6447\u6643: " + String.format("%.1f", this.cfg.tetherSway)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u6447\u6643: " + String.format("%.1f", this.cfg.tetherSway), b -> {
                 this.cfg.tetherSway = this.cfg.tetherSway >= 1.0f ? 0.1f : this.cfg.tetherSway + 0.1f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -217,12 +217,12 @@ extends Screen {
         y += sp;
         if (this.cfg.enableSwordWave) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.swordWaveColor, "swordWaveColor");
-            this.addSliderDesc(x + 15, y += 20, "\u5f3a\u5ea6: " + String.format("%.1f", this.cfg.swordWaveIntensity)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u5f3a\u5ea6: " + String.format("%.1f", this.cfg.swordWaveIntensity), b -> {
                 this.cfg.swordWaveIntensity = this.cfg.swordWaveIntensity >= 2.0f ? 0.5f : this.cfg.swordWaveIntensity + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
             });
-            this.addSliderDesc(x + 15, y += 20, "\u901f\u5ea6: " + String.format("%.1f", this.cfg.swordWaveSpeed)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u901f\u5ea6: " + String.format("%.1f", this.cfg.swordWaveSpeed), b -> {
                 this.cfg.swordWaveSpeed = this.cfg.swordWaveSpeed >= 2.0f ? 0.5f : this.cfg.swordWaveSpeed + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -239,12 +239,12 @@ extends Screen {
         y += sp;
         if (this.cfg.enableLockBox) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.boxColor, "boxColor");
-            this.addSliderDesc(x + 15, y += 20, "\u65cb\u8f6c\u901f\u5ea6: " + String.format("%.1f", this.cfg.boxRotateSpeed)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u65cb\u8f6c\u901f\u5ea6: " + String.format("%.1f", this.cfg.boxRotateSpeed), b -> {
                 this.cfg.boxRotateSpeed = this.cfg.boxRotateSpeed >= 5.0f ? 0.5f : this.cfg.boxRotateSpeed + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
             });
-            this.addSliderDesc(x + 15, y += 20, "\u5927\u5c0f: " + String.format("%.1f", this.cfg.boxSize)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u5927\u5c0f: " + String.format("%.1f", this.cfg.boxSize), b -> {
                 this.cfg.boxSize = this.cfg.boxSize >= 2.0f ? 0.5f : this.cfg.boxSize + 0.25f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -257,7 +257,7 @@ extends Screen {
         y += sp;
         if (this.cfg.enableGlow) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.glowColor, "glowColor");
-            this.addSliderDesc(x + 15, y += 20, "\u5f3a\u5ea6: " + String.format("%.1f", this.cfg.glowIntensity)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u5f3a\u5ea6: " + String.format("%.1f", this.cfg.glowIntensity), b -> {
                 this.cfg.glowIntensity = this.cfg.glowIntensity >= 2.0f ? 0.1f : this.cfg.glowIntensity + 0.2f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -270,7 +270,7 @@ extends Screen {
         y += sp;
         if (this.cfg.enableBeamMarker) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.beamMarkerColor, "beamMarkerColor");
-            this.addSliderDesc(x + 15, y += 20, "\u9ad8\u5ea6: " + String.format("%.1f", this.cfg.beamMarkerHeight)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u9ad8\u5ea6: " + String.format("%.1f", this.cfg.beamMarkerHeight), b -> {
                 this.cfg.beamMarkerHeight = this.cfg.beamMarkerHeight >= 16.0f ? 4.0f : this.cfg.beamMarkerHeight + 2.0f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -283,12 +283,12 @@ extends Screen {
         y += sp;
         if (this.cfg.enableHalo) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.haloColor, "haloColor");
-            this.addSliderDesc(x + 15, y += 20, "\u534a\u5f84: " + String.format("%.1f", this.cfg.haloRadius)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u534a\u5f84: " + String.format("%.1f", this.cfg.haloRadius), b -> {
                 this.cfg.haloRadius = this.cfg.haloRadius >= 3.0f ? 0.5f : this.cfg.haloRadius + 0.25f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
             });
-            this.addSliderDesc(x + 15, y += 20, "\u65cb\u8f6c\u901f\u5ea6: " + String.format("%.1f", this.cfg.haloRotateSpeed)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u65cb\u8f6c\u901f\u5ea6: " + String.format("%.1f", this.cfg.haloRotateSpeed), b -> {
                 this.cfg.haloRotateSpeed = this.cfg.haloRotateSpeed >= 3.0f ? 0.5f : this.cfg.haloRotateSpeed + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -305,7 +305,7 @@ extends Screen {
         y += sp;
         if (this.cfg.enableEdgeFlash) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.flashColor, "flashColor");
-            this.addSliderDesc(x + 15, y += 20, "\u5f3a\u5ea6: " + String.format("%.1f", this.cfg.flashIntensity)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u5f3a\u5ea6: " + String.format("%.1f", this.cfg.flashIntensity), b -> {
                 this.cfg.flashIntensity = this.cfg.flashIntensity >= 1.0f ? 0.1f : this.cfg.flashIntensity + 0.1f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -318,7 +318,7 @@ extends Screen {
         y += sp;
         if (this.cfg.enableDirectionArrow) {
             this.addColorInput(x + 15, y, "\u989c\u8272", this.cfg.arrowColor, "arrowColor");
-            this.addSliderDesc(x + 15, y += 20, "\u5927\u5c0f: " + String.format("%.1f", this.cfg.arrowSize)), b -> {
+            this.addSliderDesc(x + 15, y += 20, "\u5927\u5c0f: " + String.format("%.1f", this.cfg.arrowSize), b -> {
                 this.cfg.arrowSize = this.cfg.arrowSize >= 3.0f ? 0.5f : this.cfg.arrowSize + 0.5f;
                 AttackIndicatorConfig.save();
                 this.rebuildWidgets();
@@ -348,7 +348,7 @@ extends Screen {
             AttackIndicatorConfig.save();
             btn.setMessage(Component.literal((String)("\u6700\u5927\u7c92\u5b50\u6570: \u00a7b" + this.cfg.maxParticles)));
         }).bounds(x + 10, y += 4, 260, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)("LOD\u8ddd\u79bb: \u00a7b" + String.format("%.0f", this.cfg.particleLODDistance)))), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal((String)("LOD\u8ddd\u79bb: \u00a7b" + String.format("%.0f", this.cfg.particleLODDistance))), btn -> {
             float[] levels = new float[]{8.0f, 16.0f, 24.0f, 32.0f, 48.0f, 64.0f, 96.0f, 128.0f};
             int idx = 0;
             for (int i = 0; i < levels.length; ++i) {
@@ -359,7 +359,7 @@ extends Screen {
             idx = (idx + 1) % levels.length;
             this.cfg.particleLODDistance = levels[idx];
             AttackIndicatorConfig.save();
-            btn.setMessage(Component.literal((String)("LOD\u8ddd\u79bb: \u00a7b" + String.format("%.0f", this.cfg.particleLODDistance)))));
+            btn.setMessage(Component.literal((String)("LOD\u8ddd\u79bb: \u00a7b" + String.format("%.0f", this.cfg.particleLODDistance))));
         }).bounds(x + 10, y += sp, 260, 18).build());
         this.addRenderableWidget(Button.builder(Component.literal((String)("\u6b8b\u7559\u7279\u6548: \u00a7b" + this.cfg.despawnDelay + " ticks")), btn -> {
             this.cfg.despawnDelay = (this.cfg.despawnDelay + 1) % 11;

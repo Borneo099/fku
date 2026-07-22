@@ -69,8 +69,8 @@ public class LiquidGlassFeature {
         LiquidGlassRenderer.drawPanel(cfg);
         int x = cfg.panelX;
         int y = cfg.panelY;
-        int w = cfg.panelWidth;
-        int h = cfg.panelHeight;
+        int w = (int)cfg.panelWidth;
+        int h = (int)cfg.panelHeight;
         GuiStyleConfig style = GuiStyleConfig.getInstance();
         guiGraphics.drawString(Minecraft.getInstance().font, "\u00a7l\u6db2\u4f53\u73bb\u7483", x + 8, y + 6, style.getTextColor(), true);
         String mode = cfg.tintMode == 0 ? "Clear" : "Tinted";

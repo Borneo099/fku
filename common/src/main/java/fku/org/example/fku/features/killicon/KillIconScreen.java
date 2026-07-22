@@ -27,7 +27,7 @@ extends Screen {
     private static final String[] TOGGLE_LABELS = new String[]{"\u7206\u5934\u56fe\u6807", "\u80cc\u666f", "\u8fde\u6740", "\u8ddd\u79bb", "\u52a8\u753b"};
 
     public KillIconScreen() {
-        super(Component.literal((String)"\u51fb\u6740\u56fe\u6807\u914d\u7f6e"));
+        super(Component.literal("\u51fb\u6740\u56fe\u6807\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -55,8 +55,8 @@ extends Screen {
                 b.setMessage(Component.literal((String)this.toggleText(idx)));
             }).bounds(bx, by, bw, 16).build());
         }
-        this.saveBtn = (Button)this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58"), b -> this.save()).bounds(this.cx + 30, this.cy + 200, 100, 20).build());
-        this.closeBtn = (Button)this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u5173\u95ed"), b -> this.onClose()).bounds(this.cx + 150, this.cy + 200, 100, 20).build());
+        this.saveBtn = (Button)this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u4fdd\u5b58"), b -> this.save()).bounds(this.cx + 30, this.cy + 200, 100, 20).build());
+        this.closeBtn = (Button)this.addRenderableWidget(Button.builder(Component.literal("\u00a7c\u5173\u95ed"), b -> this.onClose()).bounds(this.cx + 150, this.cy + 200, 100, 20).build());
     }
 
     private String toggleText(int idx) {
@@ -64,42 +64,42 @@ extends Screen {
     }
 
     private EditBox mkEdit(int x, int y, int w, String val, String filter) {
-        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal((String)""));
-        b.m_94144_(val);
-        b.m_94199_(6);
-        b.m_94153_(s -> s.matches(filter));
-        this.m_7787_(b);
+        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal(""));
+        b.setValue(val);
+        b.setMaxLength(6);
+        b.setFilter(s -> s.matches(filter));
+        this.addWidget(b);
         return b;
     }
 
     private void save() {
         KillIconConfig c = KillIconConfig.getInstance();
         try {
-            c.x = Integer.parseInt(this.xIn.m_94155_());
+            c.x = Integer.parseInt(this.xIn.getValue());
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            c.y = Integer.parseInt(this.yIn.m_94155_());
+            c.y = Integer.parseInt(this.yIn.getValue());
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            c.displayDuration = Math.max(10, Math.min(600, Integer.parseInt(this.durIn.m_94155_())));
+            c.displayDuration = Math.max(10, Math.min(600, Integer.parseInt(this.durIn.getValue())));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            c.maxEntries = Math.max(1, Math.min(20, Integer.parseInt(this.maxIn.m_94155_())));
+            c.maxEntries = Math.max(1, Math.min(20, Integer.parseInt(this.maxIn.getValue())));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            c.bgOpacity = Math.max(0, Math.min(255, Integer.parseInt(this.opIn.m_94155_())));
+            c.bgOpacity = Math.max(0, Math.min(255, Integer.parseInt(this.opIn.getValue())));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
@@ -113,10 +113,10 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 280, 240, false);
         g.drawString(this.font, "\u00a7l\u51fb\u6740\u56fe\u6807\u914d\u7f6e", this.cx + 10, this.cy + 8, 0xFFFFFF);
-        g.m_280509_(this.cx + 10, this.cy + 20, this.cx + 280 - 10, this.cy + 21, -12303292);
+        g.fill(this.cx + 10, this.cy + 20, this.cx + 280 - 10, this.cy + 21, -12303292);
         g.drawString(this.font, "X:", this.cx + 10, this.cy + 26, 0xAAAAAA);
         this.xIn.render(g, mx, my, pt);
         g.drawString(this.font, "Y:", this.cx + 105, this.cy + 26, 0xAAAAAA);

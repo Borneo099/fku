@@ -21,7 +21,7 @@ public class WaterWalkFeature {
         if (mc == null || mc.player == null) {
             return false;
         }
-        return !mc.f_91066_.f_92090_.m_90857_();
+        return !mc.options.keyShift.isDown();
     }
 }
 

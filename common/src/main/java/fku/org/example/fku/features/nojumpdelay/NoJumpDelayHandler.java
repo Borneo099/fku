@@ -23,7 +23,7 @@ public class NoJumpDelayHandler {
             return;
         }
         Player player = event.player;
-        if (player.m_5833_() || player.m_20069_() || player.m_20077_()) {
+        if (player.isSpectator() || player.isInWater() || player.isInLava()) {
             return;
         }
         if (!(player instanceof LocalPlayer)) {
@@ -33,10 +33,10 @@ public class NoJumpDelayHandler {
         if (mc.player != player) {
             return;
         }
-        boolean isOnGround = player.m_20096_();
-        boolean wantsToJump = mc.f_91066_.f_92089_.m_90857_();
+        boolean isOnGround = player.onGround();
+        boolean wantsToJump = mc.options.keyJump.isDown();
         if (wantsToJump && !wasOnGround && isOnGround) {
-            player.m_6135_();
+            player.jumpFromGround();
         }
         wasOnGround = isOnGround;
     }

@@ -76,7 +76,7 @@ public class QuickSwitchFeature {
         cfg.enabled = v;
         QuickSwitchConfig.save();
         if (QuickSwitchFeature.mc.player != null) {
-            QuickSwitchFeature.mc.player.m_5661_(Component.literal((String)(v ? "\u00a7b[QuickSwitch] \u00a7a\u5df2\u542f\u7528" : "\u00a7b[QuickSwitch] \u00a7c\u5df2\u7981\u7528")), false);
+            QuickSwitchFeature.mc.player.displayClientMessage(Component.literal((v ? "\u00a7b[QuickSwitch] \u00a7a\u5df2\u542f\u7528" : "\u00a7b[QuickSwitch] \u00a7c\u5df2\u7981\u7528")), false);
         }
         if (!v) {
             QuickSwitchFeature.forceReset();
@@ -98,14 +98,14 @@ public class QuickSwitchFeature {
         if (!QuickSwitchFeature.canHandle()) {
             return;
         }
-        if (QuickSwitchFeature.mc.player == null || QuickSwitchFeature.mc.f_91073_ == null) {
+        if (QuickSwitchFeature.mc.player == null || QuickSwitchFeature.mc.level == null) {
             return;
         }
         if (channel == null || !channel.isOpen()) {
             return;
         }
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
-        int curSlot = QuickSwitchFeature.mc.player.m_150109_().f_35977_;
+        int curSlot = QuickSwitchFeature.mc.player.getInventory().selected;
         switch (cfg.mode) {
             case "SMART": {
                 int firstSlot;
@@ -120,13 +120,13 @@ public class QuickSwitchFeature {
                 switchQueue.clear();
                 switchQueue.addAll(sequence);
                 switchStepIndex = 0;
-                QuickSwitchFeature.mc.player.m_150109_().f_35977_ = firstSlot = switchQueue.get(0).intValue();
+                QuickSwitchFeature.mc.player.getInventory().selected = firstSlot = switchQueue.get(0).intValue();
                 channel.writeAndFlush(new ServerboundSetCarriedItemPacket(firstSlot));
                 switchStepIndex = 1;
                 state = SwitchState.MULTI_SWITCH;
                 actionTime = System.currentTimeMillis();
                 if (!cfg.visualFeedback) break;
-                QuickSwitchFeature.mc.player.m_5661_(Component.literal((String)("\u00a7b[QuickSwitch] \u00a7f\u667a\u80fd\u79d2\u5207 \u2192 \u5e8f\u5217 " + sequence + " (\u5171" + sequence.size() + "\u6b65)")), true);
+                QuickSwitchFeature.mc.player.displayClientMessage(Component.literal(("\u00a7b[QuickSwitch] \u00a7f\u667a\u80fd\u79d2\u5207 \u2192 \u5e8f\u5217 " + sequence + " (\u5171" + sequence.size() + "\u6b65)")), true);
                 break;
             }
             case "CUSTOM": {
@@ -139,13 +139,13 @@ public class QuickSwitchFeature {
                 switchQueue.clear();
                 switchQueue.addAll(sequence);
                 switchStepIndex = 0;
-                QuickSwitchFeature.mc.player.m_150109_().f_35977_ = firstSlot = switchQueue.get(0).intValue();
+                QuickSwitchFeature.mc.player.getInventory().selected = firstSlot = switchQueue.get(0).intValue();
                 channel.writeAndFlush(new ServerboundSetCarriedItemPacket(firstSlot));
                 switchStepIndex = 1;
                 state = SwitchState.MULTI_SWITCH;
                 actionTime = System.currentTimeMillis();
                 if (!cfg.visualFeedback) break;
-                QuickSwitchFeature.mc.player.m_5661_(Component.literal((String)("\u00a7b[QuickSwitch] \u00a7f\u81ea\u5b9a\u4e49\u5207 \u2192 \u5e8f\u5217 " + sequence + " (\u5171" + sequence.size() + "\u6b65)")), true);
+                QuickSwitchFeature.mc.player.displayClientMessage(Component.literal(("\u00a7b[QuickSwitch] \u00a7f\u81ea\u5b9a\u4e49\u5207 \u2192 \u5e8f\u5217 " + sequence + " (\u5171" + sequence.size() + "\u6b65)")), true);
             }
         }
     }
@@ -165,9 +165,9 @@ public class QuickSwitchFeature {
                 if (now < actionTime + 10L) break;
                 if (switchStepIndex < switchQueue.size()) {
                     int nextSlot;
-                    QuickSwitchFeature.mc.player.m_150109_().f_35977_ = nextSlot = switchQueue.get(switchStepIndex).intValue();
-                    if (QuickSwitchFeature.mc.player.f_108617_ != null) {
-                        QuickSwitchFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(nextSlot));
+                    QuickSwitchFeature.mc.player.getInventory().selected = nextSlot = switchQueue.get(switchStepIndex).intValue();
+                    if (QuickSwitchFeature.mc.player.connection != null) {
+                        QuickSwitchFeature.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(nextSlot));
                     }
                     ++switchStepIndex;
                     actionTime = now;
@@ -197,7 +197,7 @@ public class QuickSwitchFeature {
         if (enchSlot < 0) {
             return result;
         }
-        int curSlot = QuickSwitchFeature.mc.player.m_150109_().f_35977_;
+        int curSlot = QuickSwitchFeature.mc.player.getInventory().selected;
         if (enchSlot == curSlot) {
             return result;
         }
@@ -210,7 +210,7 @@ public class QuickSwitchFeature {
         if (QuickSwitchFeature.mc.player == null) {
             return result;
         }
-        Inventory inv = QuickSwitchFeature.mc.player.m_150109_();
+        Inventory inv = QuickSwitchFeature.mc.player.getInventory();
         String[] itemIds = cfg.customItems.split(",");
         if (itemIds.length == 0) {
             return result;
@@ -221,8 +221,8 @@ public class QuickSwitchFeature {
             boolean found = false;
             for (int slot = 0; slot < 9; ++slot) {
                 String regName;
-                ItemStack stack = inv.m_8020_(slot);
-                if (stack.m_41619_() || !(regName = ForgeRegistries.ITEMS.getKey(stack.m_41720_()).toString().toLowerCase()).equals(targetId) && !regName.endsWith(":" + targetId)) continue;
+                ItemStack stack = inv.getItem(slot);
+                if (stack.isEmpty() || !(regName = ForgeRegistries.ITEMS.getKey(stack.getItem()).toString().toLowerCase()).equals(targetId) && !regName.endsWith(":" + targetId)) continue;
                 if (result.isEmpty() || (Integer)result.get(result.size() - 1) != slot) {
                     result.add(slot);
                 }
@@ -237,26 +237,26 @@ public class QuickSwitchFeature {
         if (originalSlot < 0 || originalSlot > 8) {
             return;
         }
-        if (QuickSwitchFeature.mc.player == null || QuickSwitchFeature.mc.player.f_108617_ == null) {
+        if (QuickSwitchFeature.mc.player == null || QuickSwitchFeature.mc.player.connection == null) {
             return;
         }
         int slot = originalSlot;
         switchQueue.clear();
         switchStepIndex = 0;
         originalSlot = -1;
-        QuickSwitchFeature.mc.player.m_150109_().f_35977_ = slot;
-        QuickSwitchFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(slot));
+        QuickSwitchFeature.mc.player.getInventory().selected = slot;
+        QuickSwitchFeature.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(slot));
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
         if (cfg.visualFeedback) {
-            QuickSwitchFeature.mc.player.m_5661_(Component.literal((String)("\u00a7b[QuickSwitch] \u00a7f\u5df2\u6062\u590d\u539f\u69fd\u4f4d " + slot)), true);
+            QuickSwitchFeature.mc.player.displayClientMessage(Component.literal(("\u00a7b[QuickSwitch] \u00a7f\u5df2\u6062\u590d\u539f\u69fd\u4f4d " + slot)), true);
         }
     }
 
     public static void forceReset() {
         if (state != SwitchState.IDLE) {
-            if (originalSlot >= 0 && QuickSwitchFeature.mc.player != null && QuickSwitchFeature.mc.player.f_108617_ != null) {
-                QuickSwitchFeature.mc.player.m_150109_().f_35977_ = originalSlot;
-                QuickSwitchFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(originalSlot));
+            if (originalSlot >= 0 && QuickSwitchFeature.mc.player != null && QuickSwitchFeature.mc.player.connection != null) {
+                QuickSwitchFeature.mc.player.getInventory().selected = originalSlot;
+                QuickSwitchFeature.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(originalSlot));
             }
             switchQueue.clear();
             switchStepIndex = 0;
@@ -280,13 +280,13 @@ public class QuickSwitchFeature {
         if (QuickSwitchFeature.mc.player == null) {
             return -1;
         }
-        Inventory inv = QuickSwitchFeature.mc.player.m_150109_();
+        Inventory inv = QuickSwitchFeature.mc.player.getInventory();
         int bestSlot = -1;
         double bestScore = 0.0;
         for (int i = 0; i < 9; ++i) {
             double score;
-            ItemStack stack = inv.m_8020_(i);
-            if (stack.m_41619_() || !((score = QuickSwitchFeature.calculateWeaponScore(stack)) > bestScore)) continue;
+            ItemStack stack = inv.getItem(i);
+            if (stack.isEmpty() || !((score = QuickSwitchFeature.calculateWeaponScore(stack)) > bestScore)) continue;
             bestScore = score;
             bestSlot = i;
         }
@@ -297,9 +297,9 @@ public class QuickSwitchFeature {
         if (QuickSwitchFeature.mc.player == null) {
             return -1;
         }
-        Inventory inv = QuickSwitchFeature.mc.player.m_150109_();
+        Inventory inv = QuickSwitchFeature.mc.player.getInventory();
         for (int i = 0; i < 9; ++i) {
-            if (!inv.m_8020_(i).m_41619_()) continue;
+            if (!inv.getItem(i).isEmpty()) continue;
             return i;
         }
         int bestSlot = -1;
@@ -307,8 +307,8 @@ public class QuickSwitchFeature {
         for (int i = 0; i < 9; ++i) {
             Item item;
             int score;
-            ItemStack stack = inv.m_8020_(i);
-            if (stack.m_41619_() || (score = QuickSwitchFeature.getNoDurabilityScore(item = stack.m_41720_())) <= bestScore) continue;
+            ItemStack stack = inv.getItem(i);
+            if (stack.isEmpty() || (score = QuickSwitchFeature.getNoDurabilityScore(item = stack.getItem())) <= bestScore) continue;
             bestScore = score;
             bestSlot = i;
         }
@@ -319,7 +319,7 @@ public class QuickSwitchFeature {
         if (item instanceof BlockItem) {
             return 100;
         }
-        if (item.m_41472_()) {
+        if (item.isEdible()) {
             return 90;
         }
         if (item instanceof ArrowItem) {
@@ -395,14 +395,14 @@ public class QuickSwitchFeature {
     }
 
     private static double calculateWeaponScore(ItemStack stack) {
-        if (stack.m_41619_()) {
+        if (stack.isEmpty()) {
             return 0.0;
         }
         double score = QuickSwitchFeature.calculateEnchantmentDamageScore(stack);
         if (score <= 0.0) {
             return 0.0;
         }
-        Item item = stack.m_41720_();
+        Item item = stack.getItem();
         if (item instanceof AxeItem) {
             score += 20.0;
         } else if (item instanceof TridentItem) {
@@ -412,15 +412,15 @@ public class QuickSwitchFeature {
     }
 
     private static double getBaseAttackDamage(ItemStack stack) {
-        if (stack.m_41619_()) {
+        if (stack.isEmpty()) {
             return 0.0;
         }
-        Multimap modifiers = stack.m_41638_(EquipmentSlot.MAINHAND);
+        Multimap modifiers = stack.getAttributeModifiers(EquipmentSlot.MAINHAND);
         if (modifiers == null || modifiers.isEmpty()) {
-            Item item = stack.m_41720_();
+            Item item = stack.getItem();
             if (item instanceof SwordItem) {
                 SwordItem s = (SwordItem)item;
-                return s.m_43299_();
+                return s.getDamage();
             }
             if (item instanceof AxeItem) {
                 return 7.0;
@@ -440,23 +440,25 @@ public class QuickSwitchFeature {
             return 1.0;
         }
         double total = 0.0;
-        for (Map.Entry entry : modifiers.entries()) {
-            if (entry.getKey() == null || !((Attribute)entry.getKey()).equals(Attributes.f_22281_)) continue;
-            total += ((AttributeModifier)entry.getValue()).m_22218_();
+        for (Object entryObj : modifiers.entries()) {
+            Map.Entry entry = (Map.Entry)entryObj;
+            if (entry.getKey() == null || !((Attribute)entry.getKey()).equals(Attributes.ATTACK_DAMAGE)) continue;
+            total += ((AttributeModifier)entry.getValue()).getAmount();
         }
         return total > 0.0 ? total : 1.0;
     }
 
     private static double calculateEnchantmentDamageScore(ItemStack stack) {
-        if (stack.m_41619_()) {
+        if (stack.isEmpty()) {
             return 0.0;
         }
-        Map enchantments = EnchantmentHelper.m_44831_((ItemStack)stack);
+        Map enchantments = EnchantmentHelper.getEnchantments((ItemStack)stack);
         if (enchantments == null || enchantments.isEmpty()) {
             return 0.0;
         }
         double totalScore = 0.0;
-        for (Map.Entry entry : enchantments.entrySet()) {
+        for (Object entryObj : enchantments.entrySet()) {
+            Map.Entry entry = (Map.Entry)entryObj;
             Enchantment ench = (Enchantment)entry.getKey();
             int level = (Integer)entry.getValue();
             if (ench == null || level <= 0) continue;
@@ -470,7 +472,7 @@ public class QuickSwitchFeature {
         Item item;
         ResourceLocation regName = ForgeRegistries.ENCHANTMENTS.getKey(ench);
         if (regName != null) {
-            String path = regName.m_135815_().toLowerCase();
+            String path = regName.getPath().toLowerCase();
             if (path.contains("sharp")) {
                 return 0.5;
             }
@@ -499,7 +501,7 @@ public class QuickSwitchFeature {
                 return 0.4;
             }
         }
-        if ((item = stack.m_41720_()) instanceof SwordItem || item instanceof AxeItem || item instanceof TridentItem || item instanceof PickaxeItem || item instanceof ShovelItem) {
+        if ((item = stack.getItem()) instanceof SwordItem || item instanceof AxeItem || item instanceof TridentItem || item instanceof PickaxeItem || item instanceof ShovelItem) {
             return 0.3;
         }
         return 0.2;

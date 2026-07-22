@@ -23,7 +23,7 @@ extends Screen {
     private int savedMessageTicks = 0;
 
     public HelperBlockListScreen(Screen parent) {
-        super(Component.literal((String)"\u8f85\u52a9\u65b9\u5757\u5217\u8868\u7f16\u8f91"));
+        super(Component.literal("\u8f85\u52a9\u65b9\u5757\u5217\u8868\u7f16\u8f91"));
         this.parentScreen = parent;
     }
 
@@ -33,9 +33,9 @@ extends Screen {
         int inputX = cx + 20;
         int inputY = (this.height - 260) / 2 + 40;
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-        this.listInput = new EditBox(this.font, inputX, inputY, 280, 16, Component.literal((String)"\u8f85\u52a9\u65b9\u5757\u5217\u8868"));
-        this.listInput.m_94199_(5000);
-        this.listInput.m_94144_(cfg.helperBlockList);
+        this.listInput = new EditBox(this.font, inputX, inputY, 280, 16, Component.literal("\u8f85\u52a9\u65b9\u5757\u5217\u8868"));
+        this.listInput.setMaxLength(5000);
+        this.listInput.setValue(cfg.helperBlockList);
         this.addRenderableWidget(this.listInput);
         int btnY = inputY + 100 + 8;
         int btnWidth = 70;
@@ -43,14 +43,14 @@ extends Screen {
         int spacing = 15;
         int totalWidth = btnWidth * 3 + spacing * 2;
         int startX = cx + (320 - totalWidth) / 2;
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.doSave()).bounds(startX, btnY, btnWidth, btnHeight).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u91cd\u7f6e"), btn -> this.listInput.m_94144_("minecraft:cobbled_deepslate,minecraft:andesite,minecraft:granite,minecraft:diorite,minecraft:netherrack,minecraft:tuff,minecraft:sandstone,minecraft:cobblestone,minecraft:dirt")).bounds(startX + btnWidth + spacing, btnY, btnWidth, btnHeight).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u8fd4\u56de"), btn -> this.goBack()).bounds(startX + (btnWidth + spacing) * 2, btnY, btnWidth, btnHeight).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u4fdd\u5b58"), btn -> this.doSave()).bounds(startX, btnY, btnWidth, btnHeight).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u91cd\u7f6e"), btn -> this.listInput.setValue("minecraft:cobbled_deepslate,minecraft:andesite,minecraft:granite,minecraft:diorite,minecraft:netherrack,minecraft:tuff,minecraft:sandstone,minecraft:cobblestone,minecraft:dirt")).bounds(startX + btnWidth + spacing, btnY, btnWidth, btnHeight).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u8fd4\u56de"), btn -> this.goBack()).bounds(startX + (btnWidth + spacing) * 2, btnY, btnWidth, btnHeight).build());
     }
 
     private void doSave() {
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-        cfg.setHelperBlockList(this.listInput.m_94155_());
+        cfg.setHelperBlockList(this.listInput.getValue());
         this.savedMessage = "\u00a7a\u5df2\u4fdd\u5b58!";
         this.savedMessageTicks = 60;
     }
@@ -59,25 +59,25 @@ extends Screen {
         Minecraft.getInstance().setScreen(this.parentScreen);
     }
 
-    public void m_86600_() {
-        super.m_86600_();
+    public void tick() {
+        super.tick();
         if (this.savedMessageTicks > 0) {
             --this.savedMessageTicks;
         }
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
-        if (this.listInput.m_7933_(keyCode, scanCode, modifiers)) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.listInput.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    public boolean m_5534_(char codePoint, int modifiers) {
-        if (this.listInput.m_5534_(codePoint, modifiers)) {
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (this.listInput.charTyped(codePoint, modifiers)) {
             return true;
         }
-        return super.m_5534_(codePoint, modifiers);
+        return super.charTyped(codePoint, modifiers);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -86,7 +86,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int cx = (this.width - 320) / 2;
         int cy = (this.height - 260) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, 320, 260, false);

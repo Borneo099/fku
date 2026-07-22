@@ -15,7 +15,7 @@ public abstract class MixinEntitySetRemoved {
     @Inject(method={"setRemoved(Lnet/minecraft/world/entity/Entity$RemovalReason;)V"}, at={@At(value="HEAD")})
     private void onSetRemoved(Entity.RemovalReason reason, CallbackInfo ci) {
         Entity self = (Entity)this;
-        if (self.m_9236_().f_46443_ && (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED)) {
+        if (self.level().isClientSide && (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED)) {
             KillIconFeature.onEntityRemoved(self);
         }
     }

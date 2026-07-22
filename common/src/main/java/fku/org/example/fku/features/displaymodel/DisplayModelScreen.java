@@ -52,7 +52,7 @@ extends Screen {
     private int totalHeight = 222;
 
     public DisplayModelScreen() {
-        super(Component.literal((String)"\u5b9e\u4f53\u6a21\u578b\u5c55\u793a"));
+        super(Component.literal("\u5b9e\u4f53\u6a21\u578b\u5c55\u793a"));
         this.config = DisplayModelConfig.getInstance();
         this.manager = DisplayModelManager.getInstance();
         this.manager.setOnStatusUpdate(this::updateFromManager);
@@ -75,7 +75,7 @@ extends Screen {
         this.updateFromManager();
     }
 
-    private <T extends GuiEventListener & Renderable> T myAddRenderableWidget(T widget) {
+    private <T extends GuiEventListener & Renderable & NarratableEntry> T myAddRenderableWidget(T widget) {
         this.myChildren.add(widget);
         this.myRenderables.add(widget);
         return (T)this.addRenderableWidget(widget);
@@ -83,7 +83,7 @@ extends Screen {
 
     private <T extends GuiEventListener & NarratableEntry> T myAddWidget(T widget) {
         this.myChildren.add(widget);
-        return (T)this.m_7787_(widget);
+        return (T)this.addWidget(widget);
     }
 
     private void rebuildLayout() {
@@ -92,14 +92,14 @@ extends Screen {
         }
         ArrayList<String> savedCmds = new ArrayList<String>();
         for (CommandRow row : this.commandRows) {
-            String val = row.input != null ? row.input.m_94155_() : row.savedValue;
+            String val = row.input != null ? row.input.getValue() : row.savedValue;
             savedCmds.add(val != null ? val : "");
         }
         for (GuiEventListener w : this.myChildren) {
-            this.m_169411_(w);
+            this.removeWidget(w);
         }
         for (Renderable r : this.myRenderables) {
-            this.f_169369_.remove(r);
+            this.renderables.remove(r);
         }
         this.myChildren.clear();
         this.myRenderables.clear();
@@ -125,12 +125,12 @@ extends Screen {
                 } else {
                     this.commandRows.remove(rowIndex);
                 }
-                Minecraft.getInstance().m_6937_(this::rebuildLayout);
+                Minecraft.getInstance().tell(this::rebuildLayout);
             }).bounds(x + 10, currentY, 18, 18).build();
             this.myAddRenderableWidget(row.toggleBtn);
-            row.input = new EditBox(this.font, x + 32, currentY, 436, 18, Component.literal((String)""));
-            row.input.m_94199_(Short.MAX_VALUE);
-            row.input.m_94144_(savedVal);
+            row.input = new EditBox(this.font, x + 32, currentY, 436, 18, Component.literal(""));
+            row.input.setMaxLength(Short.MAX_VALUE);
+            row.input.setValue(savedVal);
             this.myAddWidget(row.input);
             currentY += 24;
         }
@@ -153,21 +153,21 @@ extends Screen {
         this.placeZInput = this.createConfigInput(x + 250, coordY, 55, this.config.placeZ != 0.0 ? String.valueOf(this.config.placeZ) : "", false, "-?\\d*\\.?\\d*");
         this.myAddWidget(this.placeZInput);
         int btnCoordY = coordY - 1;
-        this.writePosButton = Button.builder(Component.literal((String)"\u5199\u5165\u73a9\u5bb6\u5750\u6807"), btn -> {
+        this.writePosButton = Button.builder(Component.literal("\u5199\u5165\u73a9\u5bb6\u5750\u6807"), btn -> {
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer p = mc.player;
             if (p != null) {
-                BlockPos bp = p.m_20183_();
-                this.placeXInput.m_94144_(String.valueOf(bp.m_123341_()));
-                this.placeYInput.m_94144_(String.valueOf(bp.m_123342_()));
-                this.placeZInput.m_94144_(String.valueOf(bp.m_123343_()));
+                BlockPos bp = p.blockPosition();
+                this.placeXInput.setValue(String.valueOf(bp.getX()));
+                this.placeYInput.setValue(String.valueOf(bp.getY()));
+                this.placeZInput.setValue(String.valueOf(bp.getZ()));
             }
         }).bounds(x + 313, btnCoordY, 80, 16).build();
         this.myAddRenderableWidget(this.writePosButton);
-        this.clearPosButton = Button.builder(Component.literal((String)"\u6e05\u7a7a\u5750\u6807"), btn -> {
-            this.placeXInput.m_94144_("");
-            this.placeYInput.m_94144_("");
-            this.placeZInput.m_94144_("");
+        this.clearPosButton = Button.builder(Component.literal("\u6e05\u7a7a\u5750\u6807"), btn -> {
+            this.placeXInput.setValue("");
+            this.placeYInput.setValue("");
+            this.placeZInput.setValue("");
         }).bounds(x + 398, btnCoordY, 55, 16).build();
         this.myAddRenderableWidget(this.clearPosButton);
         int btnY1 = y + this.totalHeight - 54;
@@ -175,21 +175,21 @@ extends Screen {
         int btnW = 72;
         int gap6 = (480 - 6 * btnW) / 7;
         int bX = x + gap6;
-        this.openWebsiteButton = Button.builder(Component.literal((String)"\u6253\u5f00\u6a21\u578b\u7f51\u7ad9"), btn -> Util.m_137581_().m_137648_(URI.create("https://block-display.com/"))).bounds(bX, btnY1, btnW, 20).build();
+        this.openWebsiteButton = Button.builder(Component.literal("\u6253\u5f00\u6a21\u578b\u7f51\u7ad9"), btn -> Util.getPlatform().openUri(URI.create("https://block-display.com/"))).bounds(bX, btnY1, btnW, 20).build();
         this.myAddRenderableWidget(this.openWebsiteButton);
-        this.savePresetButton = Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u9884\u8bbe"), btn -> this.savePreset()).bounds(bX + (btnW + gap6), btnY1, btnW, 20).build();
+        this.savePresetButton = Button.builder(Component.literal("\u00a7a\u4fdd\u5b58\u9884\u8bbe"), btn -> this.savePreset()).bounds(bX + (btnW + gap6), btnY1, btnW, 20).build();
         this.myAddRenderableWidget(this.savePresetButton);
-        this.loadPresetButton = Button.builder(Component.literal((String)"\u00a7b\u8f7d\u5165\u9884\u8bbe"), btn -> this.loadPreset()).bounds(bX + 2 * (btnW + gap6), btnY1, btnW, 20).build();
+        this.loadPresetButton = Button.builder(Component.literal("\u00a7b\u8f7d\u5165\u9884\u8bbe"), btn -> this.loadPreset()).bounds(bX + 2 * (btnW + gap6), btnY1, btnW, 20).build();
         this.myAddRenderableWidget(this.loadPresetButton);
-        this.saveButton = Button.builder(Component.literal((String)"\u4fdd\u5b58\u914d\u7f6e"), btn -> this.saveInputsToConfig()).bounds(bX, btnY2, btnW, 20).build();
+        this.saveButton = Button.builder(Component.literal("\u4fdd\u5b58\u914d\u7f6e"), btn -> this.saveInputsToConfig()).bounds(bX, btnY2, btnW, 20).build();
         this.myAddRenderableWidget(this.saveButton);
-        this.summonButton = Button.builder(Component.literal((String)"\u53ec\u5524\u6a21\u578b"), btn -> this.startSummon()).bounds(bX + (btnW + gap6), btnY2, btnW, 20).build();
+        this.summonButton = Button.builder(Component.literal("\u53ec\u5524\u6a21\u578b"), btn -> this.startSummon()).bounds(bX + (btnW + gap6), btnY2, btnW, 20).build();
         this.myAddRenderableWidget(this.summonButton);
-        this.cancelButton = Button.builder(Component.literal((String)"\u4e2d\u6b62"), btn -> {
+        this.cancelButton = Button.builder(Component.literal("\u4e2d\u6b62"), btn -> {
             this.manager.stop();
             this.updateFromManager();
         }).bounds(bX + 2 * (btnW + gap6), btnY2, btnW, 20).build();
-        this.cancelButton.f_93623_ = false;
+        this.cancelButton.active = false;
         this.myAddRenderableWidget(this.cancelButton);
     }
 
@@ -229,7 +229,7 @@ extends Screen {
     private List<String> collectCommands() {
         ArrayList<String> cmds = new ArrayList<String>();
         for (CommandRow row : this.commandRows) {
-            String cmd = row.input != null ? row.input.m_94155_().trim() : "";
+            String cmd = row.input != null ? row.input.getValue().trim() : "";
             if (cmd.isEmpty()) continue;
             cmds.add(cmd);
         }
@@ -237,39 +237,39 @@ extends Screen {
     }
 
     private EditBox createConfigInput(int x, int y, int width, String value, boolean intOnly, String filter) {
-        EditBox box = new EditBox(this.font, x, y, width, 14, Component.literal((String)""));
-        box.m_94144_(value);
-        box.m_94199_(intOnly ? 5 : 10);
-        box.m_94153_(s -> s.matches(filter));
+        EditBox box = new EditBox(this.font, x, y, width, 14, Component.literal(""));
+        box.setValue(value);
+        box.setMaxLength(intOnly ? 5 : 10);
+        box.setFilter(s -> s.matches(filter));
         return box;
     }
 
-    public void m_86600_() {
-        super.m_86600_();
+    public void tick() {
+        super.tick();
         for (CommandRow row : this.commandRows) {
             if (row.input == null) continue;
-            row.input.m_94120_();
+            row.input.tick();
         }
         if (this.placeDelayInput != null) {
-            this.placeDelayInput.m_94120_();
+            this.placeDelayInput.tick();
         }
         if (this.generationDelayInput != null) {
-            this.generationDelayInput.m_94120_();
+            this.generationDelayInput.tick();
         }
         if (this.entitySpacingInput != null) {
-            this.entitySpacingInput.m_94120_();
+            this.entitySpacingInput.tick();
         }
         if (this.placeXInput != null) {
-            this.placeXInput.m_94120_();
+            this.placeXInput.tick();
         }
         if (this.placeYInput != null) {
-            this.placeYInput.m_94120_();
+            this.placeYInput.tick();
         }
         if (this.placeZInput != null) {
-            this.placeZInput.m_94120_();
+            this.placeZInput.tick();
         }
         if (this.viewRangeInput != null) {
-            this.viewRangeInput.m_94120_();
+            this.viewRangeInput.tick();
         }
         this.updateFromManager();
     }
@@ -283,18 +283,18 @@ extends Screen {
             }
             if (this.summonButton != null) {
                 this.summonButton.setMessage(Component.literal((String)("\u653e\u7f6e\u4e2d " + this.manager.getCurrentIndex() + "/" + this.manager.getTotalCount())));
-                this.summonButton.f_93623_ = false;
+                this.summonButton.active = false;
             }
             if (this.cancelButton != null) {
-                this.cancelButton.f_93623_ = true;
+                this.cancelButton.active = true;
             }
         } else {
             if (this.summonButton != null) {
-                this.summonButton.setMessage(Component.literal((String)"\u53ec\u5524\u6a21\u578b"));
-                this.summonButton.f_93623_ = true;
+                this.summonButton.setMessage(Component.literal("\u53ec\u5524\u6a21\u578b"));
+                this.summonButton.active = true;
             }
             if (this.cancelButton != null) {
-                this.cancelButton.f_93623_ = false;
+                this.cancelButton.active = false;
             }
         }
     }
@@ -306,7 +306,7 @@ extends Screen {
         }
         ArrayList<String> cmds = new ArrayList<String>();
         for (CommandRow row : this.commandRows) {
-            String cmd = row.input.m_94155_().trim();
+            String cmd = row.input.getValue().trim();
             if (cmd.isEmpty()) continue;
             cmds.add(cmd);
         }
@@ -319,7 +319,7 @@ extends Screen {
         if (player == null) {
             return;
         }
-        if (!player.m_7500_()) {
+        if (!player.isCreative()) {
             this.setStatusMessage("\u00a7c\u9700\u8981\u521b\u9020\u6a21\u5f0f", 0xFF5555);
             return;
         }
@@ -330,7 +330,7 @@ extends Screen {
         double py = DisplayModelScreen.parseDoubleOrDefault(this.placeYInput, 0.0);
         double pz = DisplayModelScreen.parseDoubleOrDefault(this.placeZInput, 0.0);
         double vr = DisplayModelScreen.parseDoubleOrDefault(this.viewRangeInput, 0.0);
-        BlockPos fixedPos = px == 0.0 && py == 0.0 && pz == 0.0 ? player.m_20183_() : BlockPos.m_274561_(px, py, pz);
+        BlockPos fixedPos = px == 0.0 && py == 0.0 && pz == 0.0 ? player.blockPosition() : BlockPos.containing(px, py, pz);
         ArrayList<DisplayModelManager.CommandEntry> queue = new ArrayList<DisplayModelManager.CommandEntry>();
         for (String cmd : cmds) {
             queue.add(new DisplayModelManager.CommandEntry(cmd));
@@ -338,8 +338,8 @@ extends Screen {
         this.manager.start(queue, generationDelayMs, placeDelayMs, spacing, fixedPos, vr);
         if (this.manager.isRunning()) {
             this.setStatusMessage("\u00a7a\u5f00\u59cb\u653e\u7f6e\uff0c" + cmds.size() + " \u884c\u6307\u4ee4.", 0x55FF55);
-            this.summonButton.setMessage(Component.literal((String)"\u653e\u7f6e\u4e2d."));
-            this.summonButton.f_93623_ = false;
+            this.summonButton.setMessage(Component.literal("\u653e\u7f6e\u4e2d."));
+            this.summonButton.active = false;
         }
     }
 
@@ -374,7 +374,7 @@ extends Screen {
 
     private static void tryParseInt(EditBox input, IntConsumer consumer) {
         try {
-            String val = input.m_94155_().trim();
+            String val = input.getValue().trim();
             if (!val.isEmpty()) {
                 consumer.accept(Integer.parseInt(val));
             }
@@ -386,7 +386,7 @@ extends Screen {
 
     private static void tryParseDouble(EditBox input, DoubleConsumer consumer) {
         try {
-            String val = input.m_94155_().trim();
+            String val = input.getValue().trim();
             if (!val.isEmpty()) {
                 consumer.accept(Double.parseDouble(val));
             }
@@ -398,7 +398,7 @@ extends Screen {
 
     private static int parseIntOrDefault(EditBox input, int defaultValue) {
         try {
-            String val = input.m_94155_().trim();
+            String val = input.getValue().trim();
             return val.isEmpty() ? defaultValue : Integer.parseInt(val);
         }
         catch (NumberFormatException ignored) {
@@ -408,7 +408,7 @@ extends Screen {
 
     private static double parseDoubleOrDefault(EditBox input, double defaultValue) {
         try {
-            String val = input.m_94155_().trim();
+            String val = input.getValue().trim();
             return val.isEmpty() ? defaultValue : Double.parseDouble(val);
         }
         catch (NumberFormatException ignored) {
@@ -427,7 +427,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int x = (this.width - 480) / 2;
         if (this.config.guiX >= 0) {
             x = this.config.guiX;
@@ -436,21 +436,21 @@ extends Screen {
         if (this.config.guiY >= 0) {
             y = this.config.guiY;
         }
-        guiGraphics.m_280509_(x - 2, y - 2, x + 480 + 2, y + this.totalHeight + 2, -870178270);
-        guiGraphics.m_280637_(x - 2, y - 2, 484, this.totalHeight + 4, -11184811);
+        guiGraphics.fill(x - 2, y - 2, x + 480 + 2, y + this.totalHeight + 2, -870178270);
+        guiGraphics.renderOutline(x - 2, y - 2, 484, this.totalHeight + 4, -11184811);
         guiGraphics.drawString(this.font, "\u00a7l\u5b9e\u4f53\u6a21\u578b\u5c55\u793a", x + 10, y + 8, 0xFFFFFF);
         guiGraphics.drawString(this.font, "\u7c98\u8d34 /summon \u6307\u4ee4\uff08\u542b Passengers\uff09:", x + 10, y + 24, 0x888888);
-        guiGraphics.m_280509_(x + 10, y + 38, x + 480 - 10, y + 39, -12303292);
+        guiGraphics.fill(x + 10, y + 38, x + 480 - 10, y + 39, -12303292);
         int currentY = y + 44;
         for (CommandRow row : this.commandRows) {
             row.toggleBtn.render(guiGraphics, mouseX, mouseY, partialTick);
             row.input.render(guiGraphics, mouseX, mouseY, partialTick);
-            if (row.input.m_94155_().isEmpty() && !row.input.m_93696_()) {
-                guiGraphics.drawString(this.font, "\u00a77/summon minecraft:block_display ~-0.5 ~-0.5 ~-0.5 {.}", x + 36, row.input.m_252907_() + 2, 0x444444);
+            if (row.input.getValue().isEmpty() && !row.input.isFocused()) {
+                guiGraphics.drawString(this.font, "\u00a77/summon minecraft:block_display ~-0.5 ~-0.5 ~-0.5 {.}", x + 36, row.input.getY() + 2, 0x444444);
             }
             currentY += 24;
         }
-        guiGraphics.m_280509_(x + 10, (currentY += 14) - 4, x + 480 - 10, currentY - 3, -12303292);
+        guiGraphics.fill(x + 10, (currentY += 14) - 4, x + 480 - 10, currentY - 3, -12303292);
         guiGraphics.drawString(this.font, "\u00a77\u914d\u7f6e\u9009\u9879:", x + 10, currentY, 0x888888);
         guiGraphics.drawString(this.font, "\u653e\u7f6e\u5ef6\u8fdf(ms):", x + 10, (currentY += 13) + 1, 0xAAAAAA);
         this.placeDelayInput.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -501,7 +501,7 @@ extends Screen {
         private EditBox nameInput;
 
         PresetSaveScreen(List<String> commands, Consumer<String> callback) {
-            super(Component.literal((String)"\u4fdd\u5b58\u9884\u8bbe"));
+            super(Component.literal("\u4fdd\u5b58\u9884\u8bbe"));
             this.commands = commands;
             this.callback = callback;
         }
@@ -509,42 +509,42 @@ extends Screen {
         protected void init() {
             int cx = this.width / 2;
             int cy = this.height / 2;
-            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u53d6\u6d88"), b -> this.onClose()).bounds(cx - 75, cy + 30, 70, 20).build());
-            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58"), b -> {
-                String name = this.nameInput.m_94155_().trim();
+            this.addRenderableWidget(Button.builder(Component.literal("\u00a7c\u53d6\u6d88"), b -> this.onClose()).bounds(cx - 75, cy + 30, 70, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u4fdd\u5b58"), b -> {
+                String name = this.nameInput.getValue().trim();
                 if (!name.isEmpty()) {
                     this.callback.accept(name);
                 }
             }).bounds(cx + 5, cy + 30, 70, 20).build());
-            this.nameInput = new EditBox(this.font, cx - 70, cy - 10, 140, 18, Component.literal((String)"\u9884\u8bbe\u540d"));
-            this.nameInput.m_94199_(64);
-            this.m_7787_(this.nameInput);
+            this.nameInput = new EditBox(this.font, cx - 70, cy - 10, 140, 18, Component.literal("\u9884\u8bbe\u540d"));
+            this.nameInput.setMaxLength(64);
+            this.addWidget(this.nameInput);
         }
 
         public void render(GuiGraphics g, int mx, int my, float pt) {
-            this.fillGradient(g);
+            this.renderBackground(g);
             g.drawString(this.font, "\u00a7l\u8f93\u5165\u9884\u8bbe\u540d\u79f0:", this.width / 2 - 50, this.height / 2 - 30, 0xFFFFFF);
             g.drawString(this.font, "\u00a77\u5171 " + this.commands.size() + " \u6761\u6307\u4ee4", this.width / 2 - 40, this.height / 2 + 12, 0x888888);
             this.nameInput.render(g, mx, my, pt);
             super.render(g, mx, my, pt);
         }
 
-        public boolean m_7933_(int k, int sc, int mod) {
+        public boolean keyPressed(int k, int sc, int mod) {
             if (k == 256) {
                 this.onClose();
                 return true;
             }
-            if ((k == 257 || k == 335) && this.nameInput.m_93696_()) {
-                String name = this.nameInput.m_94155_().trim();
+            if ((k == 257 || k == 335) && this.nameInput.isFocused()) {
+                String name = this.nameInput.getValue().trim();
                 if (!name.isEmpty()) {
                     this.callback.accept(name);
                 }
                 return true;
             }
-            if (this.nameInput.m_93696_()) {
-                return this.nameInput.m_7933_(k, sc, mod);
+            if (this.nameInput.isFocused()) {
+                return this.nameInput.keyPressed(k, sc, mod);
             }
-            return super.m_7933_(k, sc, mod);
+            return super.keyPressed(k, sc, mod);
         }
 
         public boolean isPauseScreen() {
@@ -559,7 +559,7 @@ extends Screen {
         private int scrollOffset = 0;
 
         PresetLoadScreen(String[] presets, Consumer<String> callback) {
-            super(Component.literal((String)"\u8f7d\u5165\u9884\u8bbe"));
+            super(Component.literal("\u8f7d\u5165\u9884\u8bbe"));
             this.presets = presets;
             this.callback = callback;
         }
@@ -575,11 +575,11 @@ extends Screen {
                 String name = this.presets[idx];
                 this.addRenderableWidget(Button.builder(Component.literal((String)name), b -> this.callback.accept(name)).bounds(cx - btnW / 2, startY + i * 22, btnW, 20).build());
             }
-            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u5173\u95ed"), b -> this.onClose()).bounds(cx - 30, startY + maxVis * 22 + 8, 60, 20).build());
+            this.addRenderableWidget(Button.builder(Component.literal("\u00a7c\u5173\u95ed"), b -> this.onClose()).bounds(cx - 30, startY + maxVis * 22 + 8, 60, 20).build());
         }
 
         public void render(GuiGraphics g, int mx, int my, float pt) {
-            this.fillGradient(g);
+            this.renderBackground(g);
             g.drawString(this.font, "\u00a7l\u9009\u62e9\u9884\u8bbe:", this.width / 2 - 40, this.height / 2 - Math.min(this.presets.length, 8) * 22 / 2 - 20, 0xFFFFFF);
             super.render(g, mx, my, pt);
         }
@@ -588,8 +588,8 @@ extends Screen {
             return false;
         }
 
-        public boolean m_6050_(double mx, double my, double delta) {
-            this.scrollOffset = Math.max(0.0, Math.min((this.presets.length - 1), this.scrollOffset - delta));
+        public boolean mouseScrolled(double mx, double my, double delta) {
+            this.scrollOffset = (int)Math.max(0.0, Math.min((this.presets.length - 1), this.scrollOffset - delta));
             this.rebuildWidgets();
             return true;
         }

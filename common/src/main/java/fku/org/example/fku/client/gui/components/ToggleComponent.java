@@ -48,7 +48,7 @@ extends GuiComponent {
         FeatureHotkeyManager.IHotkeyInterface hk;
         String fn = this.getFeatureName();
         if (fn != null && (hk = FeatureHotkeyManager.getInstance().getHotkey(fn)).getHotkeyKey() >= 0) {
-            text = (String)text + " \u00a77[" + hk.getHotkeyName() + "]";
+            text = text + " \u00a77[" + hk.getHotkeyName() + "]";
         }
         return text;
     }
@@ -76,7 +76,7 @@ extends GuiComponent {
         boolean enabled = this.isEnabled();
         GuiRenderHelper.drawComponentBackground(g, this.x, this.y, this.width, this.height, enabled, this.currentAlpha);
         String displayStr = this.hotkeyAppend(this.label + ": " + (enabled ? "ON" : "OFF"));
-        int textAlpha = (255.0f * this.currentAlpha);
+        int textAlpha = (int)(255.0f * this.currentAlpha);
         int textColor = enabled ? textAlpha << 24 | config.getTextColor() & 0xFFFFFF : textAlpha << 24 | 0xAAAAAA;
         g.drawString(Minecraft.getInstance().font, displayStr, this.x + 5, this.y + (this.height - 8) / 2, textColor);
     }

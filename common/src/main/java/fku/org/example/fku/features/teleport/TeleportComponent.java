@@ -52,16 +52,16 @@ extends ToggleComponent {
         if (btn == 1) {
             LocalPlayer p = Minecraft.getInstance().player;
             if (p != null) {
-                p.m_5661_(Component.literal((String)""), false);
-                p.m_5661_(Component.literal((String)"\u00a76===== \u00a7e\u77ac\u79fb \u00a76====="), false);
-                p.m_5661_(Component.literal((String)"\u00a77\u4f7f\u7528 /fku tp <x> <y> <z> [snap] \u77ac\u79fb"), false);
-                p.m_5661_(Component.literal((String)"\u00a77snap \u4e3a true/false\uff0c\u5f00\u542f\u843d\u70b9\u5438\u9644"), false);
-                p.m_5661_(Component.literal((String)"\u00a77\u4f8b\u5982: /fku tp ~ ~5 ~ true \u5411\u4e0a\u77ac\u79fb5\u683c"), false);
-                p.m_5661_(Component.literal((String)"\u00a77   /fku tp ~ ~ ~ false \u51c6\u661f\u77ac\u79fb"), false);
-                p.m_5661_(Component.literal((String)"\u00a77   /fku tp 100 64 100 false \u4f20\u9001\u5230\u5750\u6807"), false);
-                p.m_5661_(Component.literal((String)"\u00a77\u901a\u8fc7\u5feb\u6377\u6307\u4ee4\u7ed1\u5b9a\u70ed\u952e\uff0c\u5feb\u901f\u6267\u884c"), false);
-                p.m_5661_(Component.literal((String)"\u00a77[\u4e2d\u952e] \u7ed1\u5b9a/\u66f4\u6539\u5f00\u5173\u70ed\u952e"), false);
-                p.m_5661_(Component.literal((String)""), false);
+                p.displayClientMessage(Component.literal((String)""), false);
+                p.displayClientMessage(Component.literal((String)"\u00a76===== \u00a7e\u77ac\u79fb \u00a76====="), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77\u4f7f\u7528 /fku tp <x> <y> <z> [snap] \u77ac\u79fb"), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77snap \u4e3a true/false\uff0c\u5f00\u542f\u843d\u70b9\u5438\u9644"), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77\u4f8b\u5982: /fku tp ~ ~5 ~ true \u5411\u4e0a\u77ac\u79fb5\u683c"), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77   /fku tp ~ ~ ~ false \u51c6\u661f\u77ac\u79fb"), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77   /fku tp 100 64 100 false \u4f20\u9001\u5230\u5750\u6807"), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77\u901a\u8fc7\u5feb\u6377\u6307\u4ee4\u7ed1\u5b9a\u70ed\u952e\uff0c\u5feb\u901f\u6267\u884c"), false);
+                p.displayClientMessage(Component.literal((String)"\u00a77[\u4e2d\u952e] \u7ed1\u5b9a/\u66f4\u6539\u5f00\u5173\u70ed\u952e"), false);
+                p.displayClientMessage(Component.literal((String)""), false);
             }
             return true;
         }

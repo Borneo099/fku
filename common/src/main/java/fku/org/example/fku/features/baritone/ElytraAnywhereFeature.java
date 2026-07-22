@@ -71,7 +71,7 @@ public class ElytraAnywhereFeature {
             wasElytraEquipped = false;
             return;
         }
-        boolean hasElytra = mc.player.m_6844_(EquipmentSlot.CHEST).m_150930_(Items.f_42741_);
+        boolean hasElytra = mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
         if (hasGoal && wasElytraEquipped && !hasElytra && BaritoneBridge.isAvailable()) {
             BaritoneBridge.stop();
             hasGoal = false;

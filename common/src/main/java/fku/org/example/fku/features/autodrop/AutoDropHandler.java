@@ -36,26 +36,26 @@ public class AutoDropHandler {
         }
         LocalPlayer localPlayer = (LocalPlayer)player;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.f_91072_ == null) {
+        if (mc.gameMode == null) {
             return;
         }
-        AbstractContainerMenu menu = localPlayer.f_36096_;
-        if (!menu.m_142621_().m_41619_()) {
+        AbstractContainerMenu menu = localPlayer.containerMenu;
+        if (!menu.getCarried().isEmpty()) {
             return;
         }
-        for (int i = 0; i < menu.f_38839_.size(); ++i) {
+        for (int i = 0; i < menu.slots.size(); ++i) {
             String itemId;
             int playerSlotIndex;
             ItemStack stack;
-            Slot slot = (Slot)menu.f_38839_.get(i);
-            if (slot.f_40218_ != localPlayer.m_150109_() || (stack = slot.m_7993_()).m_41619_() || (playerSlotIndex = slot.getSlotIndex()) < 0 || playerSlotIndex > 35 || !config.isBlacklisted(itemId = AutoDropHandler.getItemId(stack))) continue;
-            mc.f_91072_.m_171799_(menu.f_38840_, i, 1, ClickType.THROW, (Player)localPlayer);
+            Slot slot = (Slot)menu.slots.get(i);
+            if (slot.container != localPlayer.getInventory() || (stack = slot.getItem()).isEmpty() || (playerSlotIndex = slot.getSlotIndex()) < 0 || playerSlotIndex > 35 || !config.isBlacklisted(itemId = AutoDropHandler.getItemId(stack))) continue;
+            mc.gameMode.handleInventoryMouseClick(menu.containerId, i, 1, ClickType.THROW, (Player)localPlayer);
             return;
         }
     }
 
     public static String getItemId(ItemStack stack) {
-        return ForgeRegistries.ITEMS.getKey(stack.m_41720_()).toString();
+        return ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
     }
 }
 

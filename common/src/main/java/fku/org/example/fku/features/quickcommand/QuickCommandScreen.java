@@ -26,7 +26,7 @@ extends Screen {
     private int listeningRow = -1;
 
     public QuickCommandScreen() {
-        super(Component.literal((String)"\u5feb\u6377\u6307\u4ee4\u914d\u7f6e"));
+        super(Component.literal("\u5feb\u6377\u6307\u4ee4\u914d\u7f6e"));
         this.cfg = QuickCommandConfig.getInstance();
     }
 
@@ -44,21 +44,21 @@ extends Screen {
         for (int i = 0; i < this.cfg.commands.size(); ++i) {
             QuickCommandConfig.CommandEntry cmd = this.cfg.commands.get(i);
             Row r = new Row();
-            r.input = new EditBox(this.font, cx + 10, ly, 140, 16, Component.literal((String)""));
-            r.input.m_94199_(Short.MAX_VALUE);
-            r.input.m_94144_(cmd.enabled ? cmd.command : "\u00a77(\u5df2\u7981\u7528)");
-            r.input.m_94186_(cmd.enabled);
-            this.m_7787_(r.input);
+            r.input = new EditBox(this.font, cx + 10, ly, 140, 16, Component.literal(""));
+            r.input.setMaxLength(Short.MAX_VALUE);
+            r.input.setValue(cmd.enabled ? cmd.command : "\u00a77(\u5df2\u7981\u7528)");
+            r.input.setEditable(cmd.enabled);
+            this.addWidget(r.input);
             int fi = i;
             r.toggle = Button.builder(Component.literal((String)(cmd.enabled ? "\u00a7a\u2713" : "\u00a7c\u00d7")), b -> {
                 cmd.enabled = !cmd.enabled;
                 r.toggle.setMessage(Component.literal((String)(cmd.enabled ? "\u00a7a\u2713" : "\u00a7c\u00d7")));
-                r.input.m_94186_(cmd.enabled);
+                r.input.setEditable(cmd.enabled);
                 if (cmd.enabled) {
-                    r.input.m_94144_(cmd.command);
+                    r.input.setValue(cmd.command);
                 } else {
-                    cmd.command = r.input.m_94155_();
-                    r.input.m_94144_("\u00a77(\u5df2\u7981\u7528)");
+                    cmd.command = r.input.getValue();
+                    r.input.setValue("\u00a77(\u5df2\u7981\u7528)");
                 }
                 QuickCommandScreen quickCommandScreen = this;
                 quickCommandScreen.cfg.save();
@@ -67,14 +67,14 @@ extends Screen {
             String hkText = QuickCommandScreen.hotkeyDisplay(cmd.hotkeyKey, cmd.hotkeyModifiers);
             r.bindBtn = Button.builder(Component.literal((String)("\u00a7e" + hkText)), b -> {
                 this.listeningRow = fi;
-                r.bindBtn.setMessage(Component.literal((String)"\u00a7a\u6309\u4e0b\u6309\u952e."));
+                r.bindBtn.setMessage(Component.literal("\u00a7a\u6309\u4e0b\u6309\u952e."));
             }).bounds(cx + 182, ly, 100, 16).build();
             this.addRenderableWidget(r.bindBtn);
-            r.up = Button.builder(Component.literal((String)"\u25b2"), b -> this.move(fi, -1)).bounds(cx + 286, ly, 16, 16).build();
+            r.up = Button.builder(Component.literal("\u25b2"), b -> this.move(fi, -1)).bounds(cx + 286, ly, 16, 16).build();
             this.addRenderableWidget(r.up);
-            r.down = Button.builder(Component.literal((String)"\u25bc"), b -> this.move(fi, 1)).bounds(cx + 303, ly, 16, 16).build();
+            r.down = Button.builder(Component.literal("\u25bc"), b -> this.move(fi, 1)).bounds(cx + 303, ly, 16, 16).build();
             this.addRenderableWidget(r.down);
-            this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u00d7"), b -> {
+            this.addRenderableWidget(Button.builder(Component.literal("\u00a7c\u00d7"), b -> {
                 this.cfg.commands.remove(fi);
                 QuickCommandScreen quickCommandScreen = this;
                 quickCommandScreen.cfg.save();
@@ -84,13 +84,13 @@ extends Screen {
             ly += 22;
         }
         int ly2 = ly;
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a+ \u6dfb\u52a0"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7a+ \u6dfb\u52a0"), b -> {
             this.cfg.commands.add(new QuickCommandConfig.CommandEntry());
             QuickCommandScreen quickCommandScreen = this;
             quickCommandScreen.cfg.save();
             this.resize();
         }).bounds(cx + 10, ly2, 70, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7c\u5220\u9664\u6700\u540e\u4e00\u884c"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7c\u5220\u9664\u6700\u540e\u4e00\u884c"), b -> {
             if (!this.cfg.commands.isEmpty()) {
                 this.cfg.commands.remove(this.cfg.commands.size() - 1);
                 QuickCommandScreen quickCommandScreen = this;
@@ -99,7 +99,7 @@ extends Screen {
             }
         }).bounds(cx + 85, ly2, 90, 18).build());
         int btnY = y + this.totalH() - 28;
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u5173\u95ed"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u4fdd\u5b58\u5e76\u5173\u95ed"), b -> {
             this.saveAll();
             this.onClose();
         }).bounds(cx + 205 - 50, btnY, 100, 20).build());
@@ -108,7 +108,7 @@ extends Screen {
     private void saveAll() {
         for (int i = 0; i < this.cfg.commands.size() && i < this.rows.size(); ++i) {
             QuickCommandConfig.CommandEntry cmd = this.cfg.commands.get(i);
-            String val = this.rows.get(i).input.m_94155_();
+            String val = this.rows.get(i).input.getValue();
             if (!cmd.enabled || val.startsWith("\u00a77")) continue;
             cmd.command = val;
         }
@@ -148,14 +148,14 @@ extends Screen {
         if ((mods & 4) != 0) {
             sb.append("Alt+");
         }
-        sb.append(InputConstants.m_84827_(key, 0).m_84875_().getString());
+        sb.append(InputConstants.getKey(key, 0).getDisplayName().getString());
         return sb.toString();
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.listeningRow >= 0 && this.listeningRow < this.rows.size()) {
             QuickCommandConfig.CommandEntry cmd = this.cfg.commands.get(this.listeningRow);
-            long win = Minecraft.getInstance().getWindow().m_85439_();
+            long win = Minecraft.getInstance().getWindow().getWindow();
             boolean shift = GLFW.glfwGetKey(win, 340) == 1 || GLFW.glfwGetKey(win, 344) == 1;
             boolean ctrl = GLFW.glfwGetKey(win, 341) == 1 || GLFW.glfwGetKey(win, 345) == 1;
             boolean alt = GLFW.glfwGetKey(win, 342) == 1 || GLFW.glfwGetKey(win, 346) == 1;
@@ -177,7 +177,7 @@ extends Screen {
             return true;
         }
         for (Row r : this.rows) {
-            if (!r.input.m_93696_() || !r.input.m_7933_(keyCode, scanCode, modifiers)) continue;
+            if (!r.input.isFocused() || !r.input.keyPressed(keyCode, scanCode, modifiers)) continue;
             return true;
         }
         if (keyCode == 256) {
@@ -185,11 +185,11 @@ extends Screen {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 410) / 2;
         int y = (this.height - this.totalH()) / 2;
         int h = this.totalH();

@@ -34,7 +34,7 @@ public class SuperDistanceInteraction {
     private static final SuperDistanceInteraction INSTANCE = new SuperDistanceInteraction();
     private static final UUID RANGE_MODIFIER_UUID = UUID.fromString("a0b8e4f2-1c3d-5e6f-7a8b-9c0d1e2f3a4b");
     private static final String RANGE_MODIFIER_NAME = "WorldEdit super range";
-    private ItemStack originalHelmet = ItemStack.f_41583_;
+    private ItemStack originalHelmet = ItemStack.EMPTY;
     private boolean helmetEquipped = false;
     private int originalSelectedSlot = -1;
 
@@ -50,17 +50,17 @@ public class SuperDistanceInteraction {
         if (SuperDistanceInteraction.mc.player == null) {
             return;
         }
-        this.originalHelmet = SuperDistanceInteraction.mc.player.m_6844_(EquipmentSlot.HEAD).m_41777_();
-        ItemStack button = new ItemStack((ItemLike)Items.f_42084_, 1);
+        this.originalHelmet = SuperDistanceInteraction.mc.player.getItemBySlot(EquipmentSlot.HEAD).copy();
+        ItemStack button = new ItemStack((ItemLike)Items.OAK_BUTTON, 1);
         AttributeModifier modifier = new AttributeModifier(RANGE_MODIFIER_UUID, RANGE_MODIFIER_NAME, 9999.0, AttributeModifier.Operation.ADDITION);
-        button.m_41643_((Attribute)ForgeMod.BLOCK_REACH.get(), modifier, EquipmentSlot.HEAD);
-        SuperDistanceInteraction.mc.player.m_8061_(EquipmentSlot.HEAD, button);
-        if (SuperDistanceInteraction.mc.player.m_150110_().f_35937_) {
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCreativeModeSlotPacket(5, button));
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCreativeModeSlotPacket(103, button));
+        button.addAttributeModifier((Attribute)ForgeMod.BLOCK_REACH.get(), modifier, EquipmentSlot.HEAD);
+        SuperDistanceInteraction.mc.player.setItemSlot(EquipmentSlot.HEAD, button);
+        if (SuperDistanceInteraction.mc.player.getAbilities().instabuild) {
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundSetCreativeModeSlotPacket(5, button));
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundSetCreativeModeSlotPacket(103, button));
         }
-        if ((attr = SuperDistanceInteraction.mc.player.m_21051_((Attribute)ForgeMod.BLOCK_REACH.get())) != null && !attr.m_22109_(modifier)) {
-            attr.m_22118_(modifier);
+        if ((attr = SuperDistanceInteraction.mc.player.getAttribute((Attribute)ForgeMod.BLOCK_REACH.get())) != null && !attr.hasModifier(modifier)) {
+            attr.addTransientModifier(modifier);
         }
         this.helmetEquipped = true;
         Fku.LOGGER.info("[WorldEdit] \u8d85\u8fdc\u8ddd\u79bb\u4ea4\u4e92\u5df2\u6fc0\u6d3b (BLOCK_REACH +9999)");
@@ -70,15 +70,15 @@ public class SuperDistanceInteraction {
         if (SuperDistanceInteraction.mc.player == null) {
             return;
         }
-        AttributeInstance attr = SuperDistanceInteraction.mc.player.m_21051_((Attribute)ForgeMod.BLOCK_REACH.get());
+        AttributeInstance attr = SuperDistanceInteraction.mc.player.getAttribute((Attribute)ForgeMod.BLOCK_REACH.get());
         if (attr != null) {
-            attr.m_22120_(RANGE_MODIFIER_UUID);
+            attr.removeModifier(RANGE_MODIFIER_UUID);
         }
-        SuperDistanceInteraction.mc.player.m_8061_(EquipmentSlot.HEAD, this.originalHelmet);
-        if (SuperDistanceInteraction.mc.player.m_150110_().f_35937_) {
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCreativeModeSlotPacket(5, this.originalHelmet));
+        SuperDistanceInteraction.mc.player.setItemSlot(EquipmentSlot.HEAD, this.originalHelmet);
+        if (SuperDistanceInteraction.mc.player.getAbilities().instabuild) {
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundSetCreativeModeSlotPacket(5, this.originalHelmet));
         }
-        this.originalHelmet = ItemStack.f_41583_;
+        this.originalHelmet = ItemStack.EMPTY;
         this.helmetEquipped = false;
         Fku.LOGGER.info("[WorldEdit] \u8d85\u8fdc\u8ddd\u79bb\u4ea4\u4e92\u5df2\u505c\u7528");
     }
@@ -87,7 +87,7 @@ public class SuperDistanceInteraction {
         double range;
         Vec3 lookVec;
         Vec3 endPos;
-        if (SuperDistanceInteraction.mc.player == null || SuperDistanceInteraction.mc.f_91073_ == null) {
+        if (SuperDistanceInteraction.mc.player == null || SuperDistanceInteraction.mc.level == null) {
             return false;
         }
         if (!this.helmetEquipped) {
@@ -97,26 +97,26 @@ public class SuperDistanceInteraction {
         if (!cfg.enabled) {
             return false;
         }
-        this.originalSelectedSlot = SuperDistanceInteraction.mc.player.m_150109_().f_35977_;
-        Vec3 eyePos = SuperDistanceInteraction.mc.player.m_20299_(1.0f);
+        this.originalSelectedSlot = SuperDistanceInteraction.mc.player.getInventory().selected;
+        Vec3 eyePos = SuperDistanceInteraction.mc.player.getEyePosition(1.0f);
         BlockHitResult hitResult = this.customRayTrace(eyePos, endPos = eyePos.add((lookVec = SuperDistanceInteraction.mc.player.getLookAngle()).scale(range = cfg.rangeMultiplier)));
-        if (hitResult == null || hitResult.m_6662_() == HitResult.Type.MISS) {
+        if (hitResult == null || hitResult.getType() == HitResult.Type.MISS) {
             this.restoreSlot();
             return false;
         }
-        BlockPos targetPos = hitResult.m_82425_();
+        BlockPos targetPos = hitResult.getBlockPos();
         if (button == 0) {
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
             int seq = this.getSequence();
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, targetPos, hitResult.m_82434_(), seq));
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, targetPos, hitResult.m_82434_(), seq));
-            SuperDistanceInteraction.mc.f_91073_.m_46961_(targetPos, false);
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, targetPos, hitResult.getDirection(), seq));
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, targetPos, hitResult.getDirection(), seq));
+            SuperDistanceInteraction.mc.level.destroyBlock(targetPos, false);
         } else if (button == 1) {
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
-            Vec3 blockCenter = Vec3.m_82512_((Vec3i)targetPos);
-            Vec3 hitVec = blockCenter.add(Vec3.m_82528_((Vec3i)hitResult.m_82434_().m_122436_()).scale(0.5));
-            BlockHitResult placeHit = new BlockHitResult(hitVec, hitResult.m_82434_(), targetPos, false);
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(hand != null ? hand : InteractionHand.MAIN_HAND, placeHit, this.getSequence()));
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+            Vec3 blockCenter = Vec3.atCenterOf((Vec3i)targetPos);
+            Vec3 hitVec = blockCenter.add(Vec3.atLowerCornerOf((Vec3i)hitResult.getDirection().getNormal()).scale(0.5));
+            BlockHitResult placeHit = new BlockHitResult(hitVec, hitResult.getDirection(), targetPos, false);
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(hand != null ? hand : InteractionHand.MAIN_HAND, placeHit, this.getSequence()));
         }
         if (cfg.autoRestoreSlot) {
             this.restoreSlot();
@@ -125,26 +125,26 @@ public class SuperDistanceInteraction {
     }
 
     private BlockHitResult customRayTrace(Vec3 start, Vec3 end) {
-        if (SuperDistanceInteraction.mc.f_91073_ == null) {
+        if (SuperDistanceInteraction.mc.level == null) {
             return null;
         }
-        return SuperDistanceInteraction.mc.f_91073_.m_45547_(new ClipContext(start, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, (Entity)SuperDistanceInteraction.mc.player));
+        return SuperDistanceInteraction.mc.level.clip(new ClipContext(start, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, (Entity)SuperDistanceInteraction.mc.player));
     }
 
     private int getSequence() {
-        if (SuperDistanceInteraction.mc.f_91073_ == null) {
+        if (SuperDistanceInteraction.mc.level == null) {
             return 0;
         }
-        BlockStatePredictionHandler handler = ((ClientLevelAccessor)SuperDistanceInteraction.mc.f_91073_).getBlockStatePredictionHandler_CU();
-        handler.m_233855_();
-        int num = handler.m_233871_();
+        BlockStatePredictionHandler handler = ((ClientLevelAccessor)SuperDistanceInteraction.mc.level).getBlockStatePredictionHandler_CU();
+        handler.startPredicting();
+        int num = handler.currentSequence();
         handler.close();
         return num;
     }
 
     private void restoreSlot() {
         if (this.originalSelectedSlot >= 0 && SuperDistanceInteraction.mc.player != null) {
-            SuperDistanceInteraction.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(this.originalSelectedSlot));
+            SuperDistanceInteraction.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(this.originalSelectedSlot));
             this.originalSelectedSlot = -1;
         }
     }

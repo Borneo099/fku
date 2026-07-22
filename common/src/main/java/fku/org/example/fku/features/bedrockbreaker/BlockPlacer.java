@@ -23,22 +23,22 @@ public class BlockPlacer {
     public static BlockPlacePlan createPacketPlan(BlockPos pos, BlockPlacingMethod method) {
         BlockHitResult hit;
         if (method == BlockPlacingMethod.FROM_HORIZONTAL) {
-            BlockPos clickPos = pos.m_121945_(Direction.UP);
-            Vec3 clickLoc = Vec3.m_82512_((Vec3i)clickPos).add(Vec3.m_82528_((Vec3i)Direction.DOWN.m_122436_()).scale(0.5));
+            BlockPos clickPos = pos.relative(Direction.UP);
+            Vec3 clickLoc = Vec3.atCenterOf((Vec3i)clickPos).add(Vec3.atLowerCornerOf((Vec3i)Direction.DOWN.getNormal()).scale(0.5));
             hit = new BlockHitResult(clickLoc, Direction.DOWN, clickPos, false);
         } else {
             Direction clickFace = BlockPlacer.getDirection(method);
-            BlockPos clickPos = pos.m_121945_(clickFace.m_122424_());
+            BlockPos clickPos = pos.relative(clickFace.getOpposite());
             if (clickPos.equals(pos)) {
                 for (Direction d : Direction.values()) {
-                    BlockPos adjacent = pos.m_121945_(d);
+                    BlockPos adjacent = pos.relative(d);
                     if (adjacent.equals(pos)) continue;
                     clickPos = adjacent;
-                    clickFace = d.m_122424_();
+                    clickFace = d.getOpposite();
                     break;
                 }
             }
-            Vec3 clickLoc = Vec3.m_82512_((Vec3i)clickPos).add(Vec3.m_82528_((Vec3i)clickFace.m_122436_()).scale(0.5));
+            Vec3 clickLoc = Vec3.atCenterOf((Vec3i)clickPos).add(Vec3.atLowerCornerOf((Vec3i)clickFace.getNormal()).scale(0.5));
             hit = new BlockHitResult(clickLoc, clickFace, clickPos, false);
         }
         return new BlockPlacePlan(hit, method);
@@ -46,12 +46,12 @@ public class BlockPlacer {
 
     private static Direction getDirection(BlockPlacingMethod method) {
         return switch (method) {
-            case BlockPlacingMethod.FACING_TOP -> Direction.UP;
-            case BlockPlacingMethod.FACING_BOTTOM -> Direction.DOWN;
-            case BlockPlacingMethod.FACING_NORTH -> Direction.NORTH;
-            case BlockPlacingMethod.FACING_SOUTH -> Direction.SOUTH;
-            case BlockPlacingMethod.FACING_EAST -> Direction.EAST;
-            case BlockPlacingMethod.FACING_WEST -> Direction.WEST;
+            case FACING_TOP -> Direction.UP;
+            case FACING_BOTTOM -> Direction.DOWN;
+            case FACING_NORTH -> Direction.NORTH;
+            case FACING_SOUTH -> Direction.SOUTH;
+            case FACING_EAST -> Direction.EAST;
+            case FACING_WEST -> Direction.WEST;
             default -> Direction.UP;
         };
     }
@@ -73,20 +73,20 @@ public class BlockPlacer {
             if (BlockPlacer.mc.player == null) {
                 return CompletableFuture.completedFuture(null);
             }
-            BlockPlacer.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(fakeYaw, fakePitch, BlockPlacer.mc.player.m_20096_()));
-            BlockPlacer.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerCommandPacket((Entity)BlockPlacer.mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
-            BlockPlacer.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, this.hitResult, this.getSequenceNumber()));
-            BlockPlacer.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerCommandPacket((Entity)BlockPlacer.mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
+            BlockPlacer.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(fakeYaw, fakePitch, BlockPlacer.mc.player.onGround()));
+            BlockPlacer.mc.player.connection.send((Packet)new ServerboundPlayerCommandPacket((Entity)BlockPlacer.mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+            BlockPlacer.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, this.hitResult, this.getSequenceNumber()));
+            BlockPlacer.mc.player.connection.send((Packet)new ServerboundPlayerCommandPacket((Entity)BlockPlacer.mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
             return CompletableFuture.completedFuture(null);
         }
 
         private int getSequenceNumber() {
-            if (BlockPlacer.mc.f_91073_ == null) {
+            if (BlockPlacer.mc.level == null) {
                 return 0;
             }
-            BlockStatePredictionHandler handler = ((ClientLevelAccessor)BlockPlacer.mc.f_91073_).getBlockStatePredictionHandler_CU();
-            handler.m_233855_();
-            int num = handler.m_233871_();
+            BlockStatePredictionHandler handler = ((ClientLevelAccessor)BlockPlacer.mc.level).getBlockStatePredictionHandler_CU();
+            handler.startPredicting();
+            int num = handler.currentSequence();
             handler.close();
             return num;
         }

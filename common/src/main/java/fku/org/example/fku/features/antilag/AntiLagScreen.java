@@ -55,19 +55,19 @@ extends Screen {
         }).bounds(cx + 10, this.cy(30), 160, 18).build();
         this.addRenderableWidget(this.serverModeButton);
         this.rangeInput = new EditBox(this.font, cx + 80, this.cy(70), 60, 14, Component.literal((String)""));
-        this.rangeInput.m_94144_(String.format("%.1f", this.cfg.range));
-        this.rangeInput.m_94199_(6);
-        this.rangeInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.rangeInput.setValue(String.format("%.1f", this.cfg.range));
+        this.rangeInput.setMaxLength(6);
+        this.rangeInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
         this.addRenderableWidget(this.rangeInput);
         this.limitInput = new EditBox(this.font, cx + 80, this.cy(96), 50, 14, Component.literal((String)""));
-        this.limitInput.m_94144_(String.valueOf(this.cfg.limitPerSecond));
-        this.limitInput.m_94199_(5);
-        this.limitInput.m_94153_(s -> s.matches("\\d*"));
+        this.limitInput.setValue(String.valueOf(this.cfg.limitPerSecond));
+        this.limitInput.setMaxLength(5);
+        this.limitInput.setFilter(s -> s.matches("\\d*"));
         this.addRenderableWidget(this.limitInput);
         this.moveDistInput = new EditBox(this.font, cx + 80, this.cy(122), 50, 14, Component.literal((String)""));
-        this.moveDistInput.m_94144_(String.format("%.2f", this.cfg.moveDistance));
-        this.moveDistInput.m_94199_(5);
-        this.moveDistInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.moveDistInput.setValue(String.format("%.2f", this.cfg.moveDistance));
+        this.moveDistInput.setMaxLength(5);
+        this.moveDistInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
         this.addRenderableWidget(this.moveDistInput);
         this.vclipModeButton = Button.builder(Component.literal((String)("\u8131\u56f0\u65b9\u5411: " + this.getVclipLabel(this.cfg.searchVclipMode))), btn -> {
             String next = this.cycleVclipMode(this.cfg.searchVclipMode);
@@ -76,9 +76,9 @@ extends Screen {
         }).bounds(cx + 10, this.cy(134), 150, 18).build();
         this.addRenderableWidget(this.vclipModeButton);
         this.vclipStepInput = new EditBox(this.font, cx + 80, this.cy(174), 50, 14, Component.literal((String)""));
-        this.vclipStepInput.m_94144_(String.format("%.1f", this.cfg.searchFindStep));
-        this.vclipStepInput.m_94199_(5);
-        this.vclipStepInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
+        this.vclipStepInput.setValue(String.format("%.1f", this.cfg.searchFindStep));
+        this.vclipStepInput.setMaxLength(5);
+        this.vclipStepInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
         this.addRenderableWidget(this.vclipStepInput);
         this.backButton = Button.builder(Component.literal((String)("\u53cd\u62c9\u56de\u6a21\u5f0f: " + (this.cfg.back ? "\u5f00" : "\u5173"))), btn -> {
             this.cfg.setBack(!this.cfg.back);
@@ -133,16 +133,16 @@ extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    public boolean m_5534_(char codePoint, int modifiers) {
-        return super.m_5534_(codePoint, modifiers);
+    public boolean charTyped(char codePoint, int modifiers) {
+        return super.charTyped(codePoint, modifiers);
     }
 
     private String getVersionLabel(String mode) {
@@ -181,28 +181,28 @@ extends Screen {
 
     private void saveConfig() {
         try {
-            double r = Double.parseDouble(this.rangeInput.m_94155_());
+            double r = Double.parseDouble(this.rangeInput.getValue());
             this.cfg.setRange(Math.max(0.1, Math.min(2000.0, r)));
         }
         catch (NumberFormatException r) {
             // ignored
         }
         try {
-            int l = Integer.parseInt(this.limitInput.m_94155_());
+            int l = Integer.parseInt(this.limitInput.getValue());
             this.cfg.setLimitPerSecond(Math.max(1, Math.min(10000, l)));
         }
         catch (NumberFormatException l) {
             // ignored
         }
         try {
-            double d = Double.parseDouble(this.moveDistInput.m_94155_());
+            double d = Double.parseDouble(this.moveDistInput.getValue());
             this.cfg.setMoveDistance(Math.max(0.01, Math.min(1.0, d)));
         }
         catch (NumberFormatException d) {
             // ignored
         }
         try {
-            double s = Double.parseDouble(this.vclipStepInput.m_94155_());
+            double s = Double.parseDouble(this.vclipStepInput.getValue());
             this.cfg.setSearchFindStep(Math.max(0.1, Math.min(5.0, s)));
         }
         catch (NumberFormatException numberFormatException) {

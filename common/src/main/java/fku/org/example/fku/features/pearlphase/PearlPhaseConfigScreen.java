@@ -38,7 +38,7 @@ extends Screen {
     private Button noFrontButton;
 
     public PearlPhaseConfigScreen() {
-        super(Component.literal((String)"\u73cd\u73e0\u5361\u5899\u914d\u7f6e"));
+        super(Component.literal("\u73cd\u73e0\u5361\u5899\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -54,9 +54,9 @@ extends Screen {
             btn.setMessage(Component.literal((String)(this.cfg.noClipEnabled ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed")));
         });
         this.addRenderableWidget(this.noClipButton);
-        this.speedField = new EditBox(this.font, cx + 150, cy + 76, 100, 16, Component.literal((String)"\u79fb\u52a8\u500d\u7387"));
-        this.speedField.m_94144_(String.valueOf(this.cfg.speed));
-        this.speedField.m_94151_(s -> {
+        this.speedField = new EditBox(this.font, cx + 150, cy + 76, 100, 16, Component.literal("\u79fb\u52a8\u500d\u7387"));
+        this.speedField.setValue(String.valueOf(this.cfg.speed));
+        this.speedField.setResponder(s -> {
             try {
                 this.cfg.setSpeed(Double.parseDouble(s));
             }
@@ -65,9 +65,9 @@ extends Screen {
             }
         });
         this.addRenderableWidget(this.speedField);
-        this.baseSpeedField = new EditBox(this.font, cx + 150, cy + 99, 100, 16, Component.literal((String)"\u57fa\u7840\u901f\u5ea6"));
-        this.baseSpeedField.m_94144_(String.valueOf(this.cfg.baseSpeed));
-        this.baseSpeedField.m_94151_(s -> {
+        this.baseSpeedField = new EditBox(this.font, cx + 150, cy + 99, 100, 16, Component.literal("\u57fa\u7840\u901f\u5ea6"));
+        this.baseSpeedField.setValue(String.valueOf(this.cfg.baseSpeed));
+        this.baseSpeedField.setResponder(s -> {
             try {
                 this.cfg.setBaseSpeed(Double.parseDouble(s));
             }
@@ -76,9 +76,9 @@ extends Screen {
             }
         });
         this.addRenderableWidget(this.baseSpeedField);
-        this.aimTimeField = new EditBox(this.font, cx + 150, cy + 122, 100, 16, Component.literal((String)"\u7784\u51c6\u65f6\u95f4"));
-        this.aimTimeField.m_94144_(String.valueOf(this.cfg.aimTime));
-        this.aimTimeField.m_94151_(s -> {
+        this.aimTimeField = new EditBox(this.font, cx + 150, cy + 122, 100, 16, Component.literal("\u7784\u51c6\u65f6\u95f4"));
+        this.aimTimeField.setValue(String.valueOf(this.cfg.aimTime));
+        this.aimTimeField.setResponder(s -> {
             try {
                 this.cfg.setAimTime(Integer.parseInt(s));
             }
@@ -87,9 +87,9 @@ extends Screen {
             }
         });
         this.addRenderableWidget(this.aimTimeField);
-        this.maxWaitField = new EditBox(this.font, cx + 150, cy + 145, 100, 16, Component.literal((String)"\u7b49\u5f85Tick"));
-        this.maxWaitField.m_94144_(String.valueOf(this.cfg.maxWaitTicks));
-        this.maxWaitField.m_94151_(s -> {
+        this.maxWaitField = new EditBox(this.font, cx + 150, cy + 145, 100, 16, Component.literal("\u7b49\u5f85Tick"));
+        this.maxWaitField.setValue(String.valueOf(this.cfg.maxWaitTicks));
+        this.maxWaitField.setResponder(s -> {
             try {
                 this.cfg.setMaxWaitTicks(Integer.parseInt(s));
             }
@@ -98,9 +98,9 @@ extends Screen {
             }
         });
         this.addRenderableWidget(this.maxWaitField);
-        this.edgeOffsetField = new EditBox(this.font, cx + 150, cy + 168, 100, 16, Component.literal((String)"\u8fb9\u7f18\u504f\u79fb"));
-        this.edgeOffsetField.m_94144_(String.valueOf(this.cfg.edgeOffset));
-        this.edgeOffsetField.m_94151_(s -> {
+        this.edgeOffsetField = new EditBox(this.font, cx + 150, cy + 168, 100, 16, Component.literal("\u8fb9\u7f18\u504f\u79fb"));
+        this.edgeOffsetField.setValue(String.valueOf(this.cfg.edgeOffset));
+        this.edgeOffsetField.setResponder(s -> {
             try {
                 this.cfg.setEdgeOffset(Double.parseDouble(s));
             }
@@ -119,26 +119,26 @@ extends Screen {
             btn.setMessage(Component.literal((String)(this.cfg.noFront ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed")));
         });
         this.addRenderableWidget(this.noFrontButton);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5173\u95ed"), btn -> this.onClose()).bounds(cx + 100, cy + 245, 80, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5173\u95ed"), btn -> this.onClose()).bounds(cx + 100, cy + 245, 80, 20).build());
     }
 
-    public boolean m_6050_(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         int cx = (this.width - 290) / 2;
         int cy2 = (this.height - 280) / 2;
         if (mouseX >= cx && mouseX <= (cx + 290) && mouseY >= cy2 && mouseY <= (cy2 + 280)) {
-            this.scrollOffset = Math.max(0, this.scrollOffset - (delta * 20.0));
+            this.scrollOffset = (int)Math.max(0, this.scrollOffset - (delta * 20.0));
             this.init();
             return true;
         }
-        return super.m_6050_(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         int cx = (this.width - 290) / 2;
         int cy = (this.height - 280) / 2 - this.scrollOffset;
-        guiGraphics.m_280588_(cx + 2, cy + 5, cx + 290 - 2, cy + 280 - 5);
+        guiGraphics.enableScissor(cx + 2, cy + 5, cx + 290 - 2, cy + 280 - 5);
         guiGraphics.drawString(this.font, "\u00a7l\u73cd\u73e0\u5361\u5899\u914d\u7f6e", cx, cy + 10, 0xFFFFFF);
         this.drawLabel(guiGraphics, cx, cy + 30, "\u81ea\u52a8\u6295\u63b7\uff1a\u770b\u5411\u5899\u58c1\u65f6\u81ea\u52a8\u6295\u63b7\u73cd\u73e0");
         this.drawLabel(guiGraphics, cx, cy + 53, "NoClip\uff1a\u5361\u5165\u65b9\u5757\u540e\u542f\u7528\u7a7f\u5899");
@@ -149,7 +149,7 @@ extends Screen {
         this.drawLabel(guiGraphics, cx, cy + 168, "\u8fb9\u7f18\u504f\u79fb\uff080.0001~0.1\uff09");
         this.drawLabel(guiGraphics, cx, cy + 191, "\u79fb\u9664\u7a92\u606f\u8d34\u56fe");
         this.drawLabel(guiGraphics, cx, cy + 214, "\u7981\u7528\u524d\u65b9\u7b2c\u4e09\u4eba\u79f0");
-        guiGraphics.m_280618_();
+        guiGraphics.disableScissor();
     }
 
     private void drawLabel(GuiGraphics gui, int cx, int y, String text) {
@@ -161,12 +161,12 @@ extends Screen {
         return Button.builder(Component.literal((String)text), (Button.OnPress)onClick).bounds(x, y, 80, 16).build();
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256 || keyCode == 257) {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public void onClose() {

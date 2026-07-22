@@ -40,7 +40,7 @@ extends Screen {
     private int listScroll = 0;
 
     public StructureLocatorScreen() {
-        super(Component.literal((String)"\u7ed3\u6784\u5b9a\u4f4d"));
+        super(Component.literal("\u7ed3\u6784\u5b9a\u4f4d"));
     }
 
     protected void init() {
@@ -48,9 +48,9 @@ extends Screen {
         this.cx = (this.width - 260) / 2;
         this.cy = (this.height - 290) / 2;
         StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
-        this.seedInput = new EditBox(this.font, this.cx + 10, this.cy + 52, 240, 16, Component.literal((String)"\u79cd\u5b50"));
-        this.seedInput.m_94144_(cfg.manualSeed);
-        this.seedInput.m_94199_(32);
+        this.seedInput = new EditBox(this.font, this.cx + 10, this.cy + 52, 240, 16, Component.literal("\u79cd\u5b50"));
+        this.seedInput.setValue(cfg.manualSeed);
+        this.seedInput.setMaxLength(32);
         this.addRenderableWidget(this.seedInput);
         this.fetchSeedBtn = this.mkBtn("\u00a7e\u53d6\u79cd\u5b50 (/seed)", this.cx + 10, this.cy + 72, 240, 16, () -> StructureLocatorFeature.requestSeed());
         String cur = this.idxOk(cfg.targetIndex) ? StructureLocatorFeature.TARGETS.get(cfg.targetIndex).name : "?";
@@ -111,7 +111,7 @@ extends Screen {
     }
 
     private Button mkBtn(String text, int x, int y, int w, int h, Runnable action) {
-        Button b = Button.builder(Component.literal((String)text), b2 -> action.run()).bounds(x, y, w, h).build();
+        Button b = Button.builder(Component.literal(text), b2 -> action.run()).bounds(x, y, w, h).build();
         this.addRenderableWidget(b);
         return b;
     }
@@ -134,25 +134,25 @@ extends Screen {
         for (int i = start = Math.max(0, Math.min(this.listScroll, targets.size() - maxVis)); i < targets.size() && i < start + maxVis; ++i) {
             int idx = i;
             boolean sel = idx == StructureLocatorConfig.getInstance().targetIndex;
-            Button btn = Button.builder(Component.literal((String)((sel ? "\u00a76\u25b6 " : "  ") + targets.get(i).name)), b -> {
+            Button btn = Button.builder(Component.literal(((sel ? "\u00a76\u25b6 " : "  ") + targets.get(i).name)), b -> {
                 StructureLocatorConfig c = StructureLocatorConfig.getInstance();
                 c.targetIndex = idx;
                 c.save();
                 this.showList = false;
-                this.targetBtn.setMessage(Component.literal((String)("\u00a7f" + ((StructureLocatorFeature.Target)targets.get(idx)).name + "  \u00a77\u25b6")));
+                this.targetBtn.setMessage(Component.literal(("\u00a7f" + ((StructureLocatorFeature.Target)targets.get(idx)).name + "  \u00a77\u25b6")));
             }).bounds(lx + 4, ly + (i - start) * itemH, 142, itemH).build();
             this.structButtons.add(btn);
         }
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
         GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 260, 290, false);
         g.drawString(this.font, "\u00a7l\u00a76\u7ed3\u6784\u5b9a\u4f4d", this.cx + 10, this.cy + 8, 0xFFFFFF);
         g.drawString(this.font, "\u00a77\u79cd\u5b50: " + this.seedStr(cfg), this.cx + 10, this.cy + 28, 0xFFFFFF);
         g.drawString(this.font, "\u00a77\u624b\u52a8\u79cd\u5b50 (\u7559\u7a7a\u7528\u6355\u83b7\u7684):", this.cx + 10, this.cy + 40, 0xCCCCCC);
-        g.m_280509_(this.cx + 10, this.cy + 94, this.cx + 260 - 10, this.cy + 95, -12303292);
+        g.fill(this.cx + 10, this.cy + 94, this.cx + 260 - 10, this.cy + 95, -12303292);
         g.drawString(this.font, "\u00a77\u76ee\u6807\u7ed3\u6784:", this.cx + 10, this.cy + 100, 0xCCCCCC);
         g.drawString(this.font, "\u00a77\u641c\u7d22\u8303\u56f4: \u00a7f" + cfg.searchRadius + " \u00a77\u533a\u57df", this.cx + 10, this.cy + 142, 0xCCCCCC);
         g.drawString(this.font, "\u00a77\u6807\u8bb0\u6e05\u9664\u8ddd\u79bb: \u00a7f" + cfg.markClearDistance + " \u00a77\u683c", this.cx + 10, this.cy + 162, 0xCCCCCC);
@@ -163,7 +163,7 @@ extends Screen {
             int lh = Math.min(StructureLocatorFeature.TARGETS.size() * 13 + 20, 270);
             GuiRenderHelper.drawPanelBackground(g, lx, ly, 150, lh, false);
             g.drawString(this.font, "\u00a77\u9009\u62e9\u7ed3\u6784", lx + 6, ly + 6, 0xCCCCCC);
-            g.m_280509_(lx + 4, ly + 16, lx + 150 - 4, ly + 17, -12303292);
+            g.fill(lx + 4, ly + 16, lx + 150 - 4, ly + 17, -12303292);
             for (Button b : this.structButtons) {
                 b.render(g, mx, my, pt);
             }
@@ -184,8 +184,8 @@ extends Screen {
     public boolean mouseClicked(double mx, double my, int button) {
         if (button == 0 && this.showList) {
             for (Button b : this.structButtons) {
-                if (!(mx >= b.m_252754_()) || !(mx <= (b.m_252754_() + b.m_5711_())) || !(my >= b.m_252907_()) || !(my <= (b.m_252907_() + b.m_93694_()))) continue;
-                b.m_5691_();
+                if (!(mx >= b.getX()) || !(mx <= (b.getX() + b.getWidth())) || !(my >= b.getY()) || !(my <= (b.getY() + b.getHeight()))) continue;
+                b.onPress();
                 return true;
             }
             int lx = this.cx + 260 + 4;
@@ -196,41 +196,41 @@ extends Screen {
         }
         if (button == 0 && this.seedInput != null) {
             this.seedInput.mouseClicked(mx, my, button);
-            if (mx >= this.seedInput.m_252754_() && mx <= (this.seedInput.m_252754_() + this.seedInput.m_5711_()) && my >= this.seedInput.m_252907_() && my <= (this.seedInput.m_252907_() + this.seedInput.m_93694_())) {
+            if (mx >= this.seedInput.getX() && mx <= (this.seedInput.getX() + this.seedInput.getWidth()) && my >= this.seedInput.getY() && my <= (this.seedInput.getY() + this.seedInput.getHeight())) {
                 StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
-                cfg.manualSeed = this.seedInput.m_94155_().trim();
+                cfg.manualSeed = this.seedInput.getValue().trim();
                 cfg.save();
             }
         }
         return super.mouseClicked(mx, my, button);
     }
 
-    public boolean m_6050_(double mx, double my, double delta) {
+    public boolean mouseScrolled(double mx, double my, double delta) {
         if (this.showList && mx >= (this.cx + 260 + 4) && mx <= (this.cx + 260 + 4 + 150) && my >= (this.cy + 20) && my <= (this.cy + 290)) {
             int maxVis = Math.min(StructureLocatorFeature.TARGETS.size(), Math.max(1, 18));
-            this.listScroll = Math.max(0.0, Math.min((StructureLocatorFeature.TARGETS.size() - maxVis), this.listScroll - delta));
+            this.listScroll = (int)Math.max(0.0, Math.min((StructureLocatorFeature.TARGETS.size() - maxVis), this.listScroll - delta));
             this.rebuildStructList();
             return true;
         }
-        return super.m_6050_(mx, my, delta);
+        return super.mouseScrolled(mx, my, delta);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.onClose();
             return true;
         }
-        if (this.seedInput != null && this.seedInput.m_93696_()) {
+        if (this.seedInput != null && this.seedInput.isFocused()) {
             if (keyCode == 257 || keyCode == 335) {
-                this.seedInput.m_93692_(false);
+                this.seedInput.setFocused(false);
                 StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
-                cfg.manualSeed = this.seedInput.m_94155_().trim();
+                cfg.manualSeed = this.seedInput.getValue().trim();
                 cfg.save();
                 return true;
             }
-            return this.seedInput.m_7933_(keyCode, scanCode, modifiers);
+            return this.seedInput.keyPressed(keyCode, scanCode, modifiers);
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public boolean isPauseScreen() {

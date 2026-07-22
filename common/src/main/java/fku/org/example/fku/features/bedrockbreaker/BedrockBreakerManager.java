@@ -93,13 +93,13 @@ public class BedrockBreakerManager {
     }
 
     public void process() {
-        if (this.mc.player == null || this.mc.f_91073_ == null || this.mc.f_91077_ == null) {
+        if (this.mc.player == null || this.mc.level == null || this.mc.hitResult == null) {
             return;
         }
-        if (this.mc.f_91077_.m_6662_() != HitResult.Type.BLOCK) {
+        if (this.mc.hitResult.getType() != HitResult.Type.BLOCK) {
             return;
         }
-        BlockPos pos = ((BlockHitResult)this.mc.f_91077_).m_82425_();
+        BlockPos pos = ((BlockHitResult)this.mc.hitResult).getBlockPos();
         if (!this.isValidBlock(pos)) {
             return;
         }
@@ -109,33 +109,33 @@ public class BedrockBreakerManager {
         if (this.state == State.INIT) {
             this.start(pos);
         } else {
-            this.queue.add(pos.m_7949_());
+            this.queue.add(pos.immutable());
         }
     }
 
     public void processNearby() {
         int maxY;
-        if (this.mc.player == null || this.mc.f_91073_ == null) {
+        if (this.mc.player == null || this.mc.level == null) {
             return;
         }
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
         int range = cfg.autoFindRange > 0 ? cfg.autoFindRange : 5;
-        BlockPos playerPos = this.mc.player.m_20183_();
-        int minY = Math.max(this.mc.f_91073_.m_141937_(), playerPos.m_123342_() - range);
-        for (int y = maxY = Math.min(this.mc.f_91073_.m_151558_(), playerPos.m_123342_() + range); y >= minY; --y) {
+        BlockPos playerPos = this.mc.player.blockPosition();
+        int minY = Math.max(this.mc.level.getMinBuildHeight(), playerPos.getY() - range);
+        for (int y = maxY = Math.min(this.mc.level.getMaxBuildHeight(), playerPos.getY() + range); y >= minY; --y) {
             boolean layerHasTarget = false;
             ArrayList<BlockPos> layerTargets = new ArrayList<BlockPos>();
-            for (int x = playerPos.m_123341_() - range; x <= playerPos.m_123341_() + range; ++x) {
-                for (int z = playerPos.m_123343_() - range; z <= playerPos.m_123343_() + range; ++z) {
+            for (int x = playerPos.getX() - range; x <= playerPos.getX() + range; ++x) {
+                for (int z = playerPos.getZ() - range; z <= playerPos.getZ() + range; ++z) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (!this.isValidBlock(pos)) continue;
                     layerHasTarget = true;
-                    layerTargets.add(pos.m_7949_());
+                    layerTargets.add(pos.immutable());
                 }
             }
             if (!layerHasTarget) continue;
-            Vec3 eyePos = this.mc.player.m_20299_(1.0f);
-            layerTargets.sort(Comparator.comparingDouble(p -> p.m_203193_((Position)eyePos)));
+            Vec3 eyePos = this.mc.player.getEyePosition(1.0f);
+            layerTargets.sort(Comparator.comparingDouble(p -> p.distToCenterSqr((Position)eyePos)));
             for (BlockPos pos : layerTargets) {
                 if (pos.equals(this.bedrockPos) || this.queue.contains(pos)) continue;
                 this.queue.add(pos);
@@ -145,8 +145,8 @@ public class BedrockBreakerManager {
 
     public String getStatus() {
         return switch (this.state) {
-            case State.BREAK_PISTON_PROGRESS -> this.state + " " + Math.round(this.blockDestroyProgress * 100.0f) + "%";
-            case State.BREAK_REMAINING_PISTON_PROGRESS -> this.state + " " + Math.round(this.blockDestroyProgress * 100.0f) + "%";
+            case BREAK_PISTON_PROGRESS -> this.state + " " + Math.round(this.blockDestroyProgress * 100.0f) + "%";
+            case BREAK_REMAINING_PISTON_PROGRESS -> this.state + " " + Math.round(this.blockDestroyProgress * 100.0f) + "%";
             default -> this.state.toString();
         };
     }
@@ -160,7 +160,7 @@ public class BedrockBreakerManager {
     }
 
     public void tick() {
-        if (this.mc.player == null || this.mc.f_91073_ == null) {
+        if (this.mc.player == null || this.mc.level == null) {
             return;
         }
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
@@ -174,10 +174,10 @@ public class BedrockBreakerManager {
             ++this.cleanupPistonTicks;
             if (this.cleanupPistonTicks == 1) {
                 this.cleanupPistonSeq = this.getSequenceNumber();
-                this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.cleanupPistonPos, Direction.DOWN, this.cleanupPistonSeq));
+                this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.cleanupPistonPos, Direction.DOWN, this.cleanupPistonSeq));
             } else if (this.cleanupPistonTicks >= 3) {
-                this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.cleanupPistonPos, Direction.DOWN, this.cleanupPistonSeq));
-                this.mc.f_91073_.m_46961_(this.cleanupPistonPos, false);
+                this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.cleanupPistonPos, Direction.DOWN, this.cleanupPistonSeq));
+                this.mc.level.destroyBlock(this.cleanupPistonPos, false);
                 this.cleanupPistonPos = null;
                 this.cleanupPistonTicks = 0;
             }
@@ -200,14 +200,14 @@ public class BedrockBreakerManager {
 
     private void handleStart() {
         PlacementCandidate best;
-        assert (this.mc.player != null && this.mc.f_91073_ != null);
+        assert (this.mc.player != null && this.mc.level != null);
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
         for (Direction face : Direction.values()) {
-            BlockPos adjacentPos = this.bedrockPos.m_121945_(face);
-            BlockState adjState = this.mc.f_91073_.m_8055_(adjacentPos);
-            if (adjState.m_60734_() != Blocks.f_50164_ || !((Boolean)adjState.m_61143_((Property)LeverBlock.f_54622_)).booleanValue()) continue;
-            BlockHitResult leverHit = new BlockHitResult(Vec3.m_82512_((Vec3i)adjacentPos).add(Vec3.m_82528_((Vec3i)face.m_122424_().m_122436_()).scale(0.5)), face.m_122424_(), adjacentPos, false);
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, leverHit, this.getSequenceNumber()));
+            BlockPos adjacentPos = this.bedrockPos.relative(face);
+            BlockState adjState = this.mc.level.getBlockState(adjacentPos);
+            if (adjState.getBlock() != Blocks.LEVER || !((Boolean)adjState.getValue((Property)LeverBlock.POWERED)).booleanValue()) continue;
+            BlockHitResult leverHit = new BlockHitResult(Vec3.atCenterOf((Vec3i)adjacentPos).add(Vec3.atLowerCornerOf((Vec3i)face.getOpposite().getNormal()).scale(0.5)), face.getOpposite(), adjacentPos, false);
+            this.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, leverHit, this.getSequenceNumber()));
             break;
         }
         if ((best = this.findBestPistonPlacement()) == null) {
@@ -217,7 +217,7 @@ public class BedrockBreakerManager {
                     if (!this.canPlacePiston(this.bedrockPos, d)) continue;
                     this.pistonDirection = d;
                     this.pistonFacing = d;
-                    this.pistonPos = this.bedrockPos.m_121945_(d);
+                    this.pistonPos = this.bedrockPos.relative(d);
                     break;
                 }
                 if (this.pistonDirection != null && this.tryPlaceHelperBlocks()) {
@@ -234,49 +234,49 @@ public class BedrockBreakerManager {
         this.pistonPos = best.pistonPos;
         this.leverPos = best.leverPos;
         this.leverPlaceHitResult = best.leverHit;
-        int pistonSlot = best.facing.m_122424_().m_122434_() == Direction.Axis.Y ? this.ensureInHotbar(Items.f_41869_) : this.findPistonSlot();
+        int pistonSlot = best.facing.getOpposite().getAxis() == Direction.Axis.Y ? this.ensureInHotbar(Items.PISTON) : this.findPistonSlot();
         if (pistonSlot < 0) {
             this.reset("\u80cc\u5305\u627e\u4e0d\u5230\u6d3b\u585e");
             return;
         }
-        if (best.facing.m_122434_() == Direction.Axis.Y) {
+        if (best.facing.getAxis() == Direction.Axis.Y) {
             BlockPlacingMethod method = BlockPlacingMethod.facing(best.facing);
             this.calculateFakeRotation(method);
-            Vec3 clickLoc = Vec3.m_82512_((Vec3i)this.bedrockPos).add(Vec3.m_82528_((Vec3i)best.bodyDir.m_122436_()).scale(0.5));
+            Vec3 clickLoc = Vec3.atCenterOf((Vec3i)this.bedrockPos).add(Vec3.atLowerCornerOf((Vec3i)best.bodyDir.getNormal()).scale(0.5));
             BlockHitResult hit = new BlockHitResult(clickLoc, best.bodyDir, this.bedrockPos, false);
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(pistonSlot));
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.m_20096_()));
+            this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(pistonSlot));
+            this.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.onGround()));
             this.sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, this.getSequenceNumber());
             this.state = State.PLACE_LEVER;
         } else {
             BlockPlacingMethod method = BlockPlacingMethod.facing(best.facing);
             this.calculateFakeRotation(method);
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.m_20096_()));
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(pistonSlot));
+            this.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.onGround()));
+            this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(pistonSlot));
             this.state = State.WAIT_Y_HEAD_ROT_SYNC;
         }
     }
 
     private void handlePlaceLever() {
-        assert (this.mc.player != null && this.mc.f_91073_ != null);
-        int leverSlot = this.ensureInHotbar(Items.f_41966_);
+        assert (this.mc.player != null && this.mc.level != null);
+        int leverSlot = this.ensureInHotbar(Items.LEVER);
         if (leverSlot < 0) {
             this.reset("\u80cc\u5305\u627e\u4e0d\u5230\u62c9\u6746");
             return;
         }
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(leverSlot));
+        this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(leverSlot));
         this.sendUseItemOnSneak(InteractionHand.MAIN_HAND, this.leverPlaceHitResult, this.getSequenceNumber());
         this.state = State.BREAK_PISTON_START;
         this.state.handle(this);
     }
 
     private void handleWaitYHeadRotSync() {
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
+        assert (this.mc.level != null && this.mc.player != null);
         BlockPlacingMethod method = BlockPlacingMethod.facing(this.pistonFacing);
         this.calculateFakeRotation(method);
-        Vec3 clickLoc = Vec3.m_82512_((Vec3i)this.bedrockPos).add(Vec3.m_82528_((Vec3i)this.pistonDirection.m_122436_()).scale(0.5));
+        Vec3 clickLoc = Vec3.atCenterOf((Vec3i)this.bedrockPos).add(Vec3.atLowerCornerOf((Vec3i)this.pistonDirection.getNormal()).scale(0.5));
         BlockHitResult hit = new BlockHitResult(clickLoc, this.pistonDirection, this.bedrockPos, false);
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.m_20096_()));
+        this.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.onGround()));
         this.sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, this.getSequenceNumber());
         this.state = State.PLACE_LEVER;
     }
@@ -286,29 +286,29 @@ public class BedrockBreakerManager {
         Direction reverseFacing;
         BlockPlacingMethod revMethod;
         Rotation revRot;
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
+        assert (this.mc.level != null && this.mc.player != null);
         this.tickCount = 0;
-        if (this.pistonDirection.m_122424_().m_122434_() != Direction.Axis.Y && (revRot = (revMethod = BlockPlacingMethod.facing(reverseFacing = this.pistonDirection.m_122424_())).getTargetRotation()) != null) {
-            float revYaw = Float.isNaN(revRot.yRot()) ? this.mc.player.m_146908_() : revRot.yRot();
-            float revPitch = Float.isNaN(revRot.xRot()) ? this.mc.player.m_146909_() : revRot.xRot();
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(revYaw, revPitch, this.mc.player.m_20096_()));
+        if (this.pistonDirection.getOpposite().getAxis() != Direction.Axis.Y && (revRot = (revMethod = BlockPlacingMethod.facing(reverseFacing = this.pistonDirection.getOpposite())).getTargetRotation()) != null) {
+            float revYaw = Float.isNaN(revRot.yRot()) ? this.mc.player.getYRot() : revRot.yRot();
+            float revPitch = Float.isNaN(revRot.xRot()) ? this.mc.player.getXRot() : revRot.xRot();
+            this.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(revYaw, revPitch, this.mc.player.onGround()));
         }
         if ((pickaxeSlot = this.findPickaxe()) >= 0) {
-            this.mc.player.m_150109_().f_35977_ = pickaxeSlot;
+            this.mc.player.getInventory().selected = pickaxeSlot;
         }
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(this.mc.player.m_150109_().f_35977_));
+        this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(this.mc.player.getInventory().selected));
         this.blockDestroyProgress = this.getPistonDestroyProgress();
         this.blockDestroySeqNumber = this.getSequenceNumber();
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.pistonPos, Direction.UP, this.blockDestroySeqNumber));
+        this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.pistonPos, Direction.UP, this.blockDestroySeqNumber));
         this.state = State.BREAK_PISTON_PROGRESS;
         this.tickCount = 0;
     }
 
     private void handleBreakPistonProgress() {
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
+        assert (this.mc.level != null && this.mc.player != null);
         this.blockDestroyProgress += this.getPistonDestroyProgress();
         if (this.blockDestroyProgress >= 1.0f) {
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.m_82512_((Vec3i)this.leverPos), Direction.UP, this.leverPos, false), this.getSequenceNumber()));
+            this.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf((Vec3i)this.leverPos), Direction.UP, this.leverPos, false), this.getSequenceNumber()));
             this.state = State.WAIT_PISTON_EXTEND;
             this.tickCount = 0;
         } else if (this.tickCount > 50) {
@@ -317,28 +317,28 @@ public class BedrockBreakerManager {
     }
 
     private void handleWaitPistonExtend() {
-        assert (this.mc.player != null && this.mc.f_91073_ != null);
+        assert (this.mc.player != null && this.mc.level != null);
         Direction actualPistonDir = null;
         for (Direction d : Direction.values()) {
-            if (this.mc.f_91073_.m_8055_(this.pistonPos.m_121945_(d)).m_60734_() != Blocks.f_50040_) continue;
+            if (this.mc.level.getBlockState(this.pistonPos.relative(d)).getBlock() != Blocks.PISTON_HEAD) continue;
             actualPistonDir = d;
             break;
         }
         if (actualPistonDir != null) {
             if (!this.reverseRotSent) {
-                Direction reverseFacing = this.pistonDirection.m_122424_();
+                Direction reverseFacing = this.pistonDirection.getOpposite();
                 BlockPlacingMethod revMethod = BlockPlacingMethod.facing(reverseFacing);
                 Rotation revRot = revMethod.getTargetRotation();
                 if (revRot != null) {
-                    float revYaw = Float.isNaN(revRot.yRot()) ? this.mc.player.m_146908_() : revRot.yRot();
-                    float revPitch = Float.isNaN(revRot.xRot()) ? this.mc.player.m_146909_() : revRot.xRot();
-                    this.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(revYaw, revPitch, this.mc.player.m_20096_()));
+                    float revYaw = Float.isNaN(revRot.yRot()) ? this.mc.player.getYRot() : revRot.yRot();
+                    float revPitch = Float.isNaN(revRot.xRot()) ? this.mc.player.getXRot() : revRot.xRot();
+                    this.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(revYaw, revPitch, this.mc.player.onGround()));
                 }
                 this.reverseRotSent = true;
                 return;
             }
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.m_82512_((Vec3i)this.leverPos), Direction.UP, this.leverPos, false), this.getSequenceNumber()));
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.pistonPos, Direction.UP, this.blockDestroySeqNumber));
+            this.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf((Vec3i)this.leverPos), Direction.UP, this.leverPos, false), this.getSequenceNumber()));
+            this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.pistonPos, Direction.UP, this.blockDestroySeqNumber));
             this.state = State.PLACE_REVERSE_PISTON;
             this.state.handle(this);
         } else if (this.tickCount > 10) {
@@ -347,47 +347,47 @@ public class BedrockBreakerManager {
     }
 
     private void handlePlaceReversePiston() {
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
-        int pistonSlot = this.pistonDirection.m_122434_() == Direction.Axis.Y ? this.ensureInHotbar(Items.f_41869_) : this.findPistonSlot();
+        assert (this.mc.level != null && this.mc.player != null);
+        int pistonSlot = this.pistonDirection.getAxis() == Direction.Axis.Y ? this.ensureInHotbar(Items.PISTON) : this.findPistonSlot();
         if (pistonSlot < 0) {
-            this.reset(this.pistonDirection.m_122434_() == Direction.Axis.Y ? "\u80cc\u5305\u627e\u4e0d\u5230\u666e\u901a\u6d3b\u585e\uff08\u53cd\u5411\u5782\u76f4\u9700\u8981\u666e\u901a\u6d3b\u585e\uff09" : "\u80cc\u5305\u627e\u4e0d\u5230\u53ef\u7528\u6d3b\u585e");
+            this.reset(this.pistonDirection.getAxis() == Direction.Axis.Y ? "\u80cc\u5305\u627e\u4e0d\u5230\u666e\u901a\u6d3b\u585e\uff08\u53cd\u5411\u5782\u76f4\u9700\u8981\u666e\u901a\u6d3b\u585e\uff09" : "\u80cc\u5305\u627e\u4e0d\u5230\u53ef\u7528\u6d3b\u585e");
             return;
         }
-        Direction reverseFacing = this.pistonDirection.m_122424_();
+        Direction reverseFacing = this.pistonDirection.getOpposite();
         BlockPos clickPos = this.bedrockPos;
         Direction clickFace = this.pistonDirection;
-        Vec3 clickLoc = Vec3.m_82512_((Vec3i)clickPos).add(Vec3.m_82528_((Vec3i)clickFace.m_122436_()).scale(0.5));
+        Vec3 clickLoc = Vec3.atCenterOf((Vec3i)clickPos).add(Vec3.atLowerCornerOf((Vec3i)clickFace.getNormal()).scale(0.5));
         BlockHitResult hit = new BlockHitResult(clickLoc, clickFace, clickPos, false);
         BlockPlacingMethod method = BlockPlacingMethod.facing(reverseFacing);
         this.calculateFakeRotation(method);
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.m_20096_()));
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(pistonSlot));
+        this.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(this.fakeYaw, this.fakePitch, this.mc.player.onGround()));
+        this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(pistonSlot));
         this.sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, this.getSequenceNumber());
-        this.mc.f_91073_.m_46961_(this.pistonPos, false);
-        this.mc.f_91073_.m_46961_(this.pistonPos.m_121945_(this.pistonFacing), false);
+        this.mc.level.destroyBlock(this.pistonPos, false);
+        this.mc.level.destroyBlock(this.pistonPos.relative(this.pistonFacing), false);
         this.state = State.WAIT_BEDROCK_BREAK;
         this.tickCount = 0;
     }
 
     private void handleWaitBedrockBreak() {
-        assert (this.mc.player != null && this.mc.f_91073_ != null);
-        if (this.mc.f_91073_.m_8055_(this.bedrockPos).m_60795_() && !this.mc.f_91073_.m_8055_(this.pistonPos.m_121945_(this.pistonFacing)).m_60713_(Blocks.f_50110_)) {
+        assert (this.mc.player != null && this.mc.level != null);
+        if (this.mc.level.getBlockState(this.bedrockPos).isAir() && !this.mc.level.getBlockState(this.pistonPos.relative(this.pistonFacing)).is(Blocks.MOVING_PISTON)) {
             BlockPlacer.BlockPlacePlan repPlan;
             int repSlot;
             Block replaceBlock;
             BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-            if (cfg.replaceBlockId != null && !cfg.replaceBlockId.isEmpty() && (replaceBlock = (Block)ForgeRegistries.BLOCKS.getValue(new ResourceLocation(cfg.replaceBlockId))) != null && replaceBlock != Blocks.f_50016_ && (repSlot = this.findItem(replaceBlock.m_5456_())) >= 0 && (repPlan = BlockPlacer.createPacketPlan(this.bedrockPos, BlockPlacingMethod.FROM_HORIZONTAL)) != null) {
-                this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(repSlot));
-                repPlan.apply(this.mc.player.m_146908_(), this.mc.player.m_146909_());
+            if (cfg.replaceBlockId != null && !cfg.replaceBlockId.isEmpty() && (replaceBlock = (Block)ForgeRegistries.BLOCKS.getValue(new ResourceLocation(cfg.replaceBlockId))) != null && replaceBlock != Blocks.AIR && (repSlot = this.findItem(replaceBlock.asItem())) >= 0 && (repPlan = BlockPlacer.createPacketPlan(this.bedrockPos, BlockPlacingMethod.FROM_HORIZONTAL)) != null) {
+                this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(repSlot));
+                repPlan.apply(this.mc.player.getYRot(), this.mc.player.getXRot());
             }
             if (cfg.cleanupHelpers && !this.helperBlockPositions.isEmpty()) {
                 for (BlockPos helperPos : this.helperBlockPositions) {
-                    if (this.mc.f_91073_.m_8055_(helperPos).m_60795_()) continue;
+                    if (this.mc.level.getBlockState(helperPos).isAir()) continue;
                     this.mineBlock(helperPos);
                 }
                 this.helperBlockPositions.clear();
             }
-            this.state = this.mc.f_91073_.m_8055_(this.leverPos).m_60713_(Blocks.f_50164_) ? State.BREAK_REMAINING_LEVER_START : State.BREAK_REMAINING_PISTON_START;
+            this.state = this.mc.level.getBlockState(this.leverPos).is(Blocks.LEVER) ? State.BREAK_REMAINING_LEVER_START : State.BREAK_REMAINING_PISTON_START;
             this.state.handle(this);
             this.tickCount = 0;
         } else if (this.tickCount > 20) {
@@ -406,7 +406,7 @@ public class BedrockBreakerManager {
         assert (this.mc.player != null);
         this.blockDestroyProgress = this.getLeverDestroyProgress();
         this.blockDestroySeqNumber = this.getSequenceNumber();
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.leverPos, Direction.DOWN, this.blockDestroySeqNumber));
+        this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.leverPos, Direction.DOWN, this.blockDestroySeqNumber));
         this.state = State.BREAK_REMAINING_LEVER_PROGRESS;
     }
 
@@ -414,7 +414,7 @@ public class BedrockBreakerManager {
         assert (this.mc.player != null);
         this.blockDestroyProgress += this.getLeverDestroyProgress();
         if (this.blockDestroyProgress >= 1.0f) {
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.leverPos, Direction.DOWN, this.blockDestroySeqNumber));
+            this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.leverPos, Direction.DOWN, this.blockDestroySeqNumber));
             this.state = State.BREAK_REMAINING_PISTON_START;
             this.state.handle(this);
         } else if (this.tickCount > 30) {
@@ -427,28 +427,28 @@ public class BedrockBreakerManager {
         assert (this.mc.player != null);
         int pickaxeSlot = this.findPickaxe();
         if (pickaxeSlot >= 0) {
-            this.mc.player.m_150109_().f_35977_ = pickaxeSlot;
+            this.mc.player.getInventory().selected = pickaxeSlot;
         }
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(this.mc.player.m_150109_().f_35977_));
+        this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(this.mc.player.getInventory().selected));
         this.blockDestroyProgress = this.getPistonDestroyProgress();
         this.blockDestroySeqNumber = this.getSequenceNumber();
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.pistonPos, Direction.DOWN, this.blockDestroySeqNumber));
+        this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, this.pistonPos, Direction.DOWN, this.blockDestroySeqNumber));
         this.state = State.BREAK_REMAINING_PISTON_PROGRESS;
         this.tickCount = 0;
     }
 
     private void handleBreakRemainingPistonProgress() {
-        assert (this.mc.player != null && this.mc.f_91073_ != null);
+        assert (this.mc.player != null && this.mc.level != null);
         this.blockDestroyProgress += this.getPistonDestroyProgress();
         if (this.blockDestroyProgress >= 1.0f) {
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.pistonPos, Direction.DOWN, this.blockDestroySeqNumber));
-            this.mc.f_91073_.m_46961_(this.pistonPos, false);
-            BlockPos pistonHeadPos = this.pistonPos.m_121945_(this.pistonFacing);
-            if (!this.mc.f_91073_.m_8055_(pistonHeadPos).m_60795_()) {
-                this.mc.f_91073_.m_46961_(pistonHeadPos, false);
+            this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, this.pistonPos, Direction.DOWN, this.blockDestroySeqNumber));
+            this.mc.level.destroyBlock(this.pistonPos, false);
+            BlockPos pistonHeadPos = this.pistonPos.relative(this.pistonFacing);
+            if (!this.mc.level.getBlockState(pistonHeadPos).isAir()) {
+                this.mc.level.destroyBlock(pistonHeadPos, false);
                 this.mineBlock(pistonHeadPos);
             }
-            if (this.leverPos != null && this.mc.f_91073_.m_8055_(this.leverPos).m_60713_(Blocks.f_50164_)) {
+            if (this.leverPos != null && this.mc.level.getBlockState(this.leverPos).is(Blocks.LEVER)) {
                 this.mineBlock(this.leverPos);
             }
             this.reset(null);
@@ -462,38 +462,38 @@ public class BedrockBreakerManager {
 
     private boolean findLocationForLever() {
         BlockPos possibleLeverPos;
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
+        assert (this.mc.level != null && this.mc.player != null);
         this.leverPos = null;
-        BlockPos pistonHeadPos_ = this.pistonPos.m_121945_(this.pistonFacing);
+        BlockPos pistonHeadPos_ = this.pistonPos.relative(this.pistonFacing);
         for (Direction direction : this.sortByDistance(this.bedrockPos, Direction.values())) {
-            Direction[] hit;
+            BlockHitResult hit = null;
             BlockState leverBlockState;
-            possibleLeverPos = this.bedrockPos.m_121945_(direction);
-            if (direction == this.pistonDirection || possibleLeverPos.equals(pistonHeadPos_) || !this.mc.f_91073_.m_8055_(possibleLeverPos).m_247087_() || !this.mc.f_91073_.m_6425_(possibleLeverPos).m_76178_() || !this.isValidY(possibleLeverPos.m_123342_()) || this.isInvalidLeverSupport(this.bedrockPos) || (leverBlockState = Blocks.f_50164_.m_5573_(new BlockPlaceContext((Player)this.mc.player, InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.f_41966_, 1), (BlockHitResult)(hit = new BlockHitResult(Vec3.m_82512_((Vec3i)this.bedrockPos).add(Vec3.m_82528_((Vec3i)direction.m_122436_()).scale(0.5)), direction, this.bedrockPos, false))))) == null || !this.isLeverStateMatch(leverBlockState, direction)) continue;
+            possibleLeverPos = this.bedrockPos.relative(direction);
+            if (direction == this.pistonDirection || possibleLeverPos.equals(pistonHeadPos_) || !this.mc.level.getBlockState(possibleLeverPos).canBeReplaced() || !this.mc.level.getFluidState(possibleLeverPos).isEmpty() || !this.isValidY(possibleLeverPos.getY()) || this.isInvalidLeverSupport(this.bedrockPos) || (leverBlockState = Blocks.LEVER.getStateForPlacement(new BlockPlaceContext((Player)this.mc.player, InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.LEVER, 1), hit = new BlockHitResult(Vec3.atCenterOf((Vec3i)this.bedrockPos).add(Vec3.atLowerCornerOf((Vec3i)direction.getNormal()).scale(0.5)), direction, this.bedrockPos, false)))) == null || !this.isLeverStateMatch(leverBlockState, direction)) continue;
             this.leverPos = possibleLeverPos;
             this.leverPlaceHitResult = hit;
             return true;
         }
         for (Direction direction : this.sortByDistance(this.pistonPos, Direction.values())) {
-            if (direction == this.pistonDirection || direction == this.pistonDirection.m_122424_() || direction == this.pistonFacing || !this.mc.f_91073_.m_8055_(possibleLeverPos = this.pistonPos.m_121945_(direction)).m_247087_() || !this.mc.f_91073_.m_6425_(possibleLeverPos).m_76178_() || !this.isValidY(possibleLeverPos.m_123342_())) continue;
+            if (direction == this.pistonDirection || direction == this.pistonDirection.getOpposite() || direction == this.pistonFacing || !this.mc.level.getBlockState(possibleLeverPos = this.pistonPos.relative(direction)).canBeReplaced() || !this.mc.level.getFluidState(possibleLeverPos).isEmpty() || !this.isValidY(possibleLeverPos.getY())) continue;
             for (Direction dir : this.sortByDistance(possibleLeverPos, Direction.values())) {
                 BlockHitResult hit;
                 BlockState leverBlockState;
-                BlockPos possibleSupportPos = possibleLeverPos.m_121945_(dir);
-                if (possibleSupportPos.equals(this.pistonPos) || this.mc.f_91073_.m_8055_(possibleSupportPos).m_247087_() || this.isInvalidLeverSupport(possibleSupportPos) || (leverBlockState = Blocks.f_50164_.m_5573_(new BlockPlaceContext((Player)this.mc.player, InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.f_41966_, 1), hit = new BlockHitResult(Vec3.m_82512_((Vec3i)possibleSupportPos).add(Vec3.m_82528_((Vec3i)dir.m_122424_().m_122436_()).scale(0.5)), dir.m_122424_(), possibleSupportPos, false)))) == null || !this.isLeverStateMatch(leverBlockState, dir.m_122424_())) continue;
+                BlockPos possibleSupportPos = possibleLeverPos.relative(dir);
+                if (possibleSupportPos.equals(this.pistonPos) || this.mc.level.getBlockState(possibleSupportPos).canBeReplaced() || this.isInvalidLeverSupport(possibleSupportPos) || (leverBlockState = Blocks.LEVER.getStateForPlacement(new BlockPlaceContext((Player)this.mc.player, InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.LEVER, 1), hit = new BlockHitResult(Vec3.atCenterOf((Vec3i)possibleSupportPos).add(Vec3.atLowerCornerOf((Vec3i)dir.getOpposite().getNormal()).scale(0.5)), dir.getOpposite(), possibleSupportPos, false)))) == null || !this.isLeverStateMatch(leverBlockState, dir.getOpposite())) continue;
                 this.leverPos = possibleLeverPos;
                 this.leverPlaceHitResult = hit;
                 return true;
             }
         }
-        BlockPos pistonHeadPos = this.pistonPos.m_121945_(this.pistonFacing);
+        BlockPos pistonHeadPos = this.pistonPos.relative(this.pistonFacing);
         for (Direction lateral : this.getPistonHeadLateralDirections()) {
             BlockPos supportPos;
-            BlockPos candidatePos = pistonHeadPos.m_121945_(lateral);
-            if (!this.mc.f_91073_.m_8055_(candidatePos).m_247087_() || !this.mc.f_91073_.m_6425_(candidatePos).m_76178_() || !this.isValidY(candidatePos.m_123342_()) || (supportPos = this.pistonPos.m_121945_(lateral)).equals(pistonHeadPos) || this.mc.f_91073_.m_8055_(supportPos).m_247087_() || this.isInvalidLeverSupport(supportPos)) continue;
+            BlockPos candidatePos = pistonHeadPos.relative(lateral);
+            if (!this.mc.level.getBlockState(candidatePos).canBeReplaced() || !this.mc.level.getFluidState(candidatePos).isEmpty() || !this.isValidY(candidatePos.getY()) || (supportPos = this.pistonPos.relative(lateral)).equals(pistonHeadPos) || this.mc.level.getBlockState(supportPos).canBeReplaced() || this.isInvalidLeverSupport(supportPos)) continue;
             Direction clickFace = this.pistonFacing;
-            BlockHitResult hit = new BlockHitResult(Vec3.m_82512_((Vec3i)supportPos).add(Vec3.m_82528_((Vec3i)clickFace.m_122436_()).scale(0.5)), clickFace, supportPos, false);
-            BlockState leverBlockState = Blocks.f_50164_.m_5573_(new BlockPlaceContext((Player)this.mc.player, InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.f_41966_, 1), hit));
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf((Vec3i)supportPos).add(Vec3.atLowerCornerOf((Vec3i)clickFace.getNormal()).scale(0.5)), clickFace, supportPos, false);
+            BlockState leverBlockState = Blocks.LEVER.getStateForPlacement(new BlockPlaceContext((Player)this.mc.player, InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.LEVER, 1), hit));
             if (leverBlockState == null || !this.isLeverStateMatch(leverBlockState, clickFace)) continue;
             this.leverPos = candidatePos;
             this.leverPlaceHitResult = hit;
@@ -503,70 +503,70 @@ public class BedrockBreakerManager {
     }
 
     private boolean isInvalidLeverSupport(BlockPos supportPos) {
-        if (this.mc.f_91073_ == null) {
+        if (this.mc.level == null) {
             return true;
         }
-        BlockState state = this.mc.f_91073_.m_8055_(supportPos);
-        Block block = state.m_60734_();
+        BlockState state = this.mc.level.getBlockState(supportPos);
+        Block block = state.getBlock();
         return block instanceof PistonBaseBlock || block instanceof DoorBlock || block instanceof TrapDoorBlock || block instanceof StairBlock || block instanceof SlabBlock || block instanceof ComposterBlock;
     }
 
     private boolean isLeverStateMatch(BlockState state, Direction direction) {
         return switch (direction) {
-            case Direction.UP -> {
-                if (state.m_61143_((Property)LeverBlock.f_53179_) == AttachFace.FLOOR) {
+            case UP -> {
+                if (state.getValue(LeverBlock.FACE) == AttachFace.FLOOR) {
                     yield true;
                 }
                 yield false;
             }
-            case Direction.DOWN -> {
-                if (state.m_61143_((Property)LeverBlock.f_53179_) == AttachFace.CEILING) {
+            case DOWN -> {
+                if (state.getValue(LeverBlock.FACE) == AttachFace.CEILING) {
                     yield true;
                 }
                 yield false;
             }
-            default -> state.m_61143_((Property)LeverBlock.f_53179_) == AttachFace.WALL && state.m_61143_((Property)LeverBlock.f_54117_) == direction;
+            default -> state.getValue(LeverBlock.FACE) == AttachFace.WALL && state.getValue(LeverBlock.FACING) == direction;
         };
     }
 
     private float getPistonDestroyProgress() {
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
-        return Blocks.f_50039_.m_49966_().m_60625_((Player)this.mc.player, (BlockGetter)this.mc.f_91073_, this.pistonPos);
+        assert (this.mc.level != null && this.mc.player != null);
+        return Blocks.PISTON.defaultBlockState().getDestroyProgress((Player)this.mc.player, (BlockGetter)this.mc.level, this.pistonPos);
     }
 
     private float getLeverDestroyProgress() {
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
-        return Blocks.f_50164_.m_49966_().m_60625_((Player)this.mc.player, (BlockGetter)this.mc.f_91073_, this.leverPos);
+        assert (this.mc.level != null && this.mc.player != null);
+        return Blocks.LEVER.defaultBlockState().getDestroyProgress((Player)this.mc.player, (BlockGetter)this.mc.level, this.leverPos);
     }
 
     private void calculateFakeRotation(BlockPlacingMethod method) {
         Rotation targetRot = method.getTargetRotation();
         if (targetRot != null) {
-            this.fakeYaw = Float.isNaN(targetRot.yRot()) ? this.mc.player.m_146908_() : targetRot.yRot();
-            this.fakePitch = Float.isNaN(targetRot.xRot()) ? this.mc.player.m_146909_() : targetRot.xRot();
+            this.fakeYaw = Float.isNaN(targetRot.yRot()) ? this.mc.player.getYRot() : targetRot.yRot();
+            this.fakePitch = Float.isNaN(targetRot.xRot()) ? this.mc.player.getXRot() : targetRot.xRot();
         }
     }
 
     private boolean isValidBlock(BlockPos pos) {
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-        if (this.mc.f_91073_ == null) {
+        if (this.mc.level == null) {
             return false;
         }
         if (cfg.allBlocks) {
             return true;
         }
         Block target = (Block)ForgeRegistries.BLOCKS.getValue(new ResourceLocation(cfg.targetBlockId));
-        return target != null && this.mc.f_91073_.m_8055_(pos).m_60713_(target);
+        return target != null && this.mc.level.getBlockState(pos).is(target);
     }
 
     private Direction[] getPistonHeadLateralDirections() {
         if (this.pistonFacing == null) {
             return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
         }
-        if (this.pistonFacing.m_122434_() == Direction.Axis.Y) {
+        if (this.pistonFacing.getAxis() == Direction.Axis.Y) {
             return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
         }
-        Direction.Axis axis = this.pistonFacing.m_122434_();
+        Direction.Axis axis = this.pistonFacing.getAxis();
         if (axis == Direction.Axis.X) {
             return new Direction[]{Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH};
         }
@@ -575,52 +575,52 @@ public class BedrockBreakerManager {
 
     private boolean tryPlaceHelperBlocks() {
         BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
-        assert (this.mc.f_91073_ != null && this.mc.player != null);
+        assert (this.mc.level != null && this.mc.player != null);
         String[] blockIds = cfg.helperBlockList.split(",");
         ArrayList<Direction> searchDirs = new ArrayList<Direction>();
-        if (this.pistonDirection.m_122434_() == Direction.Axis.Y) {
+        if (this.pistonDirection.getAxis() == Direction.Axis.Y) {
             searchDirs.addAll(Arrays.asList(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST));
         } else {
             searchDirs.add(Direction.UP);
             searchDirs.add(Direction.DOWN);
             for (Direction d2 : Arrays.asList(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST)) {
-                if (d2.m_122434_() == this.pistonDirection.m_122434_()) continue;
+                if (d2.getAxis() == this.pistonDirection.getAxis()) continue;
                 searchDirs.add(d2);
             }
         }
-        searchDirs.sort(Comparator.comparingDouble(d -> this.mc.player.m_20238_(Vec3.m_82512_((Vec3i)this.bedrockPos.m_121945_(d)))));
+        searchDirs.sort(Comparator.comparingDouble(d -> this.mc.player.distanceToSqr(Vec3.atCenterOf((Vec3i)this.bedrockPos.relative(d)))));
         for (Direction dir : searchDirs) {
-            BlockPos helperPos = this.bedrockPos.m_121945_(dir);
-            if (!this.mc.f_91073_.m_8055_(helperPos).m_247087_() || !this.isValidY(helperPos.m_123342_())) continue;
+            BlockPos helperPos = this.bedrockPos.relative(dir);
+            if (!this.mc.level.getBlockState(helperPos).canBeReplaced() || !this.isValidY(helperPos.getY())) continue;
             boolean placed = false;
             for (String blockId : blockIds) {
                 Item helperItem;
                 int hotbarSlot;
                 Block helperBlock;
-                if ((blockId = blockId.trim()).isEmpty() || (helperBlock = (Block)ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId))) == null || helperBlock == Blocks.f_50016_ || !helperBlock.m_49966_().m_280296_() || (hotbarSlot = this.ensureInHotbar(helperItem = helperBlock.m_5456_())) < 0) continue;
-                Vec3 clickLoc = Vec3.m_82512_((Vec3i)this.bedrockPos).add(Vec3.m_82528_((Vec3i)dir.m_122436_()).scale(0.5));
+                if ((blockId = blockId.trim()).isEmpty() || (helperBlock = (Block)ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId))) == null || helperBlock == Blocks.AIR || !helperBlock.defaultBlockState().isSolid() || (hotbarSlot = this.ensureInHotbar(helperItem = helperBlock.asItem())) < 0) continue;
+                Vec3 clickLoc = Vec3.atCenterOf((Vec3i)this.bedrockPos).add(Vec3.atLowerCornerOf((Vec3i)dir.getNormal()).scale(0.5));
                 BlockHitResult hit = new BlockHitResult(clickLoc, dir, this.bedrockPos, false);
-                this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(hotbarSlot));
+                this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(hotbarSlot));
                 this.sendUseItemOnSneak(InteractionHand.MAIN_HAND, hit, this.getSequenceNumber());
-                this.mc.f_91073_.m_46597_(helperPos, helperBlock.m_49966_());
+                this.mc.level.setBlockAndUpdate(helperPos, helperBlock.defaultBlockState());
                 placed = true;
                 break;
             }
             if (!placed) continue;
-            this.helperBlockPositions.add(helperPos.m_7949_());
+            this.helperBlockPositions.add(helperPos.immutable());
             if (this.findLocationForLever() && this.leverPos != null) {
                 return true;
             }
             this.mineBlock(helperPos);
-            this.helperBlockPositions.remove(helperPos.m_7949_());
+            this.helperBlockPositions.remove(helperPos.immutable());
         }
         return false;
     }
 
     private void sendUseItemOnSneak(InteractionHand hand, BlockHitResult hitResult, int sequence) {
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerCommandPacket((Entity)this.mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(hand, hitResult, sequence));
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerCommandPacket((Entity)this.mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
+        this.mc.player.connection.send((Packet)new ServerboundPlayerCommandPacket((Entity)this.mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+        this.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(hand, hitResult, sequence));
+        this.mc.player.connection.send((Packet)new ServerboundPlayerCommandPacket((Entity)this.mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
     }
 
     private int ensureInHotbar(Item item) {
@@ -631,28 +631,28 @@ public class BedrockBreakerManager {
         if (this.mc.player == null) {
             return -1;
         }
-        Inventory inventory = this.mc.player.m_150109_();
+        Inventory inventory = this.mc.player.getInventory();
         for (int i = 9; i < 36; ++i) {
-            if (!inventory.m_8020_(i).m_150930_(item)) continue;
+            if (!inventory.getItem(i).is(item)) continue;
             int targetSlot = -1;
             for (int j = 0; j < 9; ++j) {
-                if (!inventory.m_8020_(j).m_41619_()) continue;
+                if (!inventory.getItem(j).isEmpty()) continue;
                 targetSlot = j;
                 break;
             }
             if (targetSlot < 0) {
-                targetSlot = inventory.f_35977_;
+                targetSlot = inventory.selected;
             }
             int containerSlot = i;
             int hotbarContainerSlot = 36 + targetSlot;
-            int serverStateId = this.mc.player.f_36096_.m_182424_();
+            int serverStateId = this.mc.player.containerMenu.getStateId();
             int stateId = Math.max(serverStateId, this.predictedContainerStateId);
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(0, stateId, containerSlot, targetSlot, ClickType.SWAP, ItemStack.f_41583_, (Int2ObjectMap)new Int2ObjectOpenHashMap(Map.of(containerSlot, inventory.m_8020_(targetSlot).m_41777_(), hotbarContainerSlot, inventory.m_8020_(i).m_41777_()))));
+            this.mc.player.connection.send((Packet)new ServerboundContainerClickPacket(0, stateId, containerSlot, targetSlot, ClickType.SWAP, ItemStack.EMPTY, (Int2ObjectMap)new Int2ObjectOpenHashMap(Map.of(containerSlot, inventory.getItem(targetSlot).copy(), hotbarContainerSlot, inventory.getItem(i).copy()))));
             this.predictedContainerStateId = stateId + 1;
-            ItemStack temp = inventory.m_8020_(targetSlot).m_41777_();
-            inventory.f_35974_.set(targetSlot, inventory.m_8020_(i).m_41777_());
-            inventory.f_35974_.set(i, temp);
-            inventory.f_35977_ = targetSlot;
+            ItemStack temp = inventory.getItem(targetSlot).copy();
+            inventory.items.set(targetSlot, inventory.getItem(i).copy());
+            inventory.items.set(i, temp);
+            inventory.selected = targetSlot;
             return targetSlot;
         }
         return -1;
@@ -660,37 +660,37 @@ public class BedrockBreakerManager {
 
     private int findItem(Item item) {
         assert (this.mc.player != null);
-        Inventory inventory = this.mc.player.m_150109_();
+        Inventory inventory = this.mc.player.getInventory();
         for (int i = 0; i < 9; ++i) {
-            if (!inventory.m_8020_(i).m_150930_(item)) continue;
+            if (!inventory.getItem(i).is(item)) continue;
             return i;
         }
         return -1;
     }
 
     private int findPistonSlot() {
-        int slot = this.ensureInHotbar(Items.f_41869_);
+        int slot = this.ensureInHotbar(Items.PISTON);
         if (slot >= 0) {
             return slot;
         }
-        slot = this.ensureInHotbar(Items.f_41862_);
+        slot = this.ensureInHotbar(Items.STICKY_PISTON);
         return slot;
     }
 
     private int findPistonSlotPreferSticky() {
-        int slot = this.ensureInHotbar(Items.f_41862_);
+        int slot = this.ensureInHotbar(Items.STICKY_PISTON);
         if (slot >= 0) {
             return slot;
         }
-        slot = this.ensureInHotbar(Items.f_41869_);
+        slot = this.ensureInHotbar(Items.PISTON);
         return slot;
     }
 
     private int countItem(Item item) {
         int count = 0;
         for (int i = 0; i < 36; ++i) {
-            if (!this.mc.player.m_150109_().m_8020_(i).m_150930_(item)) continue;
-            count += this.mc.player.m_150109_().m_8020_(i).m_41613_();
+            if (!this.mc.player.getInventory().getItem(i).is(item)) continue;
+            count += this.mc.player.getInventory().getItem(i).getCount();
         }
         return count;
     }
@@ -698,69 +698,69 @@ public class BedrockBreakerManager {
     private int findPickaxe() {
         int i;
         assert (this.mc.player != null);
-        Inventory inventory = this.mc.player.m_150109_();
+        Inventory inventory = this.mc.player.getInventory();
         for (i = 0; i < 9; ++i) {
-            if (!inventory.m_8020_(i).m_204131_().anyMatch(tag -> tag == ItemTags.f_271360_)) continue;
+            if (!inventory.getItem(i).getTags().anyMatch(tag -> tag == ItemTags.PICKAXES)) continue;
             return i;
         }
         for (i = 9; i < 36; ++i) {
-            if (!inventory.m_8020_(i).m_204131_().anyMatch(tag -> tag == ItemTags.f_271360_)) continue;
+            if (!inventory.getItem(i).getTags().anyMatch(tag -> tag == ItemTags.PICKAXES)) continue;
             int targetSlot = -1;
             for (int j = 0; j < 9; ++j) {
-                if (!inventory.m_8020_(j).m_41619_()) continue;
+                if (!inventory.getItem(j).isEmpty()) continue;
                 targetSlot = j;
                 break;
             }
             if (targetSlot < 0) {
-                targetSlot = inventory.f_35977_;
+                targetSlot = inventory.selected;
             }
             int containerSlot = i;
             int hotbarContainerSlot = 36 + targetSlot;
-            int serverStateId = this.mc.player.f_36096_.m_182424_();
+            int serverStateId = this.mc.player.containerMenu.getStateId();
             int stateId = Math.max(serverStateId, this.predictedContainerStateId);
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(0, stateId, containerSlot, targetSlot, ClickType.SWAP, ItemStack.f_41583_, (Int2ObjectMap)new Int2ObjectOpenHashMap(Map.of(containerSlot, inventory.m_8020_(targetSlot).m_41777_(), hotbarContainerSlot, inventory.m_8020_(i).m_41777_()))));
+            this.mc.player.connection.send((Packet)new ServerboundContainerClickPacket(0, stateId, containerSlot, targetSlot, ClickType.SWAP, ItemStack.EMPTY, (Int2ObjectMap)new Int2ObjectOpenHashMap(Map.of(containerSlot, inventory.getItem(targetSlot).copy(), hotbarContainerSlot, inventory.getItem(i).copy()))));
             this.predictedContainerStateId = stateId + 1;
-            ItemStack temp = inventory.m_8020_(targetSlot).m_41777_();
-            inventory.f_35974_.set(targetSlot, inventory.m_8020_(i).m_41777_());
-            inventory.f_35974_.set(i, temp);
-            inventory.f_35977_ = targetSlot;
+            ItemStack temp = inventory.getItem(targetSlot).copy();
+            inventory.items.set(targetSlot, inventory.getItem(i).copy());
+            inventory.items.set(i, temp);
+            inventory.selected = targetSlot;
             return targetSlot;
         }
         return -1;
     }
 
     private void mineBlock(BlockPos pos) {
-        if (this.mc.player == null || this.mc.f_91073_ == null) {
+        if (this.mc.player == null || this.mc.level == null) {
             return;
         }
-        if (this.mc.f_91073_.m_8055_(pos).m_60795_()) {
+        if (this.mc.level.getBlockState(pos).isAir()) {
             return;
         }
         int seq = this.getSequenceNumber();
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
-        this.mc.f_91073_.m_46961_(pos, false);
+        this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+        this.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+        this.mc.level.destroyBlock(pos, false);
     }
 
     private int getSequenceNumber() {
-        assert (this.mc.f_91073_ != null);
-        BlockStatePredictionHandler handler = ((ClientLevelAccessor)this.mc.f_91073_).getBlockStatePredictionHandler_CU();
-        handler.m_233855_();
-        int num = handler.m_233871_();
+        assert (this.mc.level != null);
+        BlockStatePredictionHandler handler = ((ClientLevelAccessor)this.mc.level).getBlockStatePredictionHandler_CU();
+        handler.startPredicting();
+        int num = handler.currentSequence();
         handler.close();
         return num;
     }
 
     private boolean isValidY(int y) {
-        assert (this.mc.f_91073_ != null);
-        DimensionType dimension = this.mc.f_91073_.m_6042_();
-        return dimension.f_156647_() <= y && y < dimension.f_156647_() + dimension.f_156648_();
+        assert (this.mc.level != null);
+        DimensionType dimension = this.mc.level.dimensionType();
+        return dimension.minY() <= y && y < dimension.minY() + dimension.height();
     }
 
-    private Direction[] sortByDistance(BlockPos origin, Direction . directions) {
+    private Direction[] sortByDistance(BlockPos origin, Direction... directions) {
         assert (this.mc.player != null);
-        Vec3 eyePos = this.mc.player.m_20299_(1.0f);
-        return (Direction[])Arrays.stream(directions).map(d -> new AbstractMap.SimpleEntry<Direction, Double>((Direction)d, origin.m_121945_(d).m_203193_((Position)eyePos))).sorted(Comparator.comparingDouble(Map.Entry::getValue)).map(Map.Entry::getKey).toArray(Direction[]::new);
+        Vec3 eyePos = this.mc.player.getEyePosition(1.0f);
+        return (Direction[])Arrays.stream(directions).map(d -> new AbstractMap.SimpleEntry<Direction, Double>((Direction)d, origin.relative(d).distToCenterSqr((Position)eyePos))).sorted(Comparator.comparingDouble(Map.Entry::getValue)).map(Map.Entry::getKey).toArray(Direction[]::new);
     }
 
     private Direction[] sortByPriority(Direction[] directions) {
@@ -771,45 +771,45 @@ public class BedrockBreakerManager {
         }
         boolean horizontalFirst = "HORIZONTAL_FIRST".equals(priority);
         return (Direction[])Arrays.stream(directions).sorted(Comparator.comparingInt(d -> {
-            boolean isHorizontal = d.m_122434_().m_122479_();
+            boolean isHorizontal = d.getAxis().isHorizontal();
             return horizontalFirst ? (isHorizontal ? 0 : 1) : (isHorizontal ? 1 : 0);
         })).toArray(Direction[]::new);
     }
 
     private boolean canPlacePiston(BlockPos bedrockPos, Direction d) {
-        assert (this.mc.f_91073_ != null);
-        BlockPos p1 = bedrockPos.m_121945_(d);
-        if (!this.mc.f_91073_.m_8055_(p1).m_247087_()) {
+        assert (this.mc.level != null);
+        BlockPos p1 = bedrockPos.relative(d);
+        if (!this.mc.level.getBlockState(p1).canBeReplaced()) {
             return false;
         }
-        BlockPos p2 = p1.m_121945_(d);
-        if (!this.mc.f_91073_.m_8055_(p2).m_247087_()) {
+        BlockPos p2 = p1.relative(d);
+        if (!this.mc.level.getBlockState(p2).canBeReplaced()) {
             return false;
         }
-        return this.isValidY(p2.m_123342_());
+        return this.isValidY(p2.getY());
     }
 
     private void selectSlot(int slot) {
         if (this.mc.player == null) {
             return;
         }
-        this.mc.player.m_150109_().f_35977_ = slot;
-        this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(slot));
+        this.mc.player.getInventory().selected = slot;
+        this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(slot));
     }
 
     private PlacementCandidate findBestPistonPlacement() {
-        assert (this.mc.player != null && this.mc.f_91073_ != null);
+        assert (this.mc.player != null && this.mc.level != null);
         Direction[] bodyDirs = new Direction[]{Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
         bodyDirs = this.sortByDistance(this.bedrockPos, bodyDirs);
         bodyDirs = this.sortByPriority(bodyDirs);
         PlacementCandidate[] candidates = new PlacementCandidate[3];
         for (Direction direction : bodyDirs) {
-            BlockPos pPos = this.bedrockPos.m_121945_(direction);
-            if (!this.mc.f_91073_.m_8055_(pPos).m_247087_() || !this.isValidY(pPos.m_123342_())) continue;
+            BlockPos pPos = this.bedrockPos.relative(direction);
+            if (!this.mc.level.getBlockState(pPos).canBeReplaced() || !this.isValidY(pPos.getY())) continue;
             Direction[] facings = new Direction[]{Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
             for (Direction f : facings = this.sortByDistance(pPos, facings)) {
-                BlockPos extPos = pPos.m_121945_(f);
-                if (!this.mc.f_91073_.m_8055_(extPos).m_247087_() || !this.isValidY(extPos.m_123342_())) continue;
+                BlockPos extPos = pPos.relative(f);
+                if (!this.mc.level.getBlockState(extPos).canBeReplaced() || !this.isValidY(extPos.getY())) continue;
                 Direction savedBodyDir = this.pistonDirection;
                 Direction savedFacing = this.pistonFacing;
                 BlockPos savedPistonPos = this.pistonPos;
@@ -830,9 +830,9 @@ public class BedrockBreakerManager {
                 this.leverPlaceHitResult = savedLeverHit;
                 if (!leverFound || foundLeverPos == null) continue;
                 AABB pistonBodyBox = new AABB(pPos);
-                if (this.mc.player.m_20191_().m_82381_(pistonBodyBox)) continue;
+                if (this.mc.player.getBoundingBox().intersects(pistonBodyBox)) continue;
                 AABB extendBox = new AABB(extPos);
-                int score = this.mc.player.m_20191_().m_82381_(extendBox) ? 2 : 0;
+                int score = this.mc.player.getBoundingBox().intersects(extendBox) ? 2 : 0;
                 PlacementCandidate cand = new PlacementCandidate(direction, f, pPos, foundLeverPos, foundLeverHit, score);
                 if (score == 0) {
                     return cand;
@@ -849,7 +849,7 @@ public class BedrockBreakerManager {
     }
 
     private void start(BlockPos pos) {
-        if (this.mc.f_91073_ == null) {
+        if (this.mc.level == null) {
             return;
         }
         if (!this.isValidBlock(pos)) {
@@ -869,17 +869,17 @@ public class BedrockBreakerManager {
     }
 
     private void reset(String message, boolean cleanup) {
-        if (cleanup && this.mc.player != null && this.mc.f_91073_ != null) {
+        if (cleanup && this.mc.player != null && this.mc.level != null) {
             BedrockBreakerConfig cfg = BedrockBreakerConfig.getInstance();
             if (cfg.cleanupHelpers && !this.helperBlockPositions.isEmpty()) {
                 for (BlockPos helperPos : this.helperBlockPositions) {
-                    if (this.mc.f_91073_.m_8055_(helperPos).m_60795_()) continue;
+                    if (this.mc.level.getBlockState(helperPos).isAir()) continue;
                     this.mineBlock(helperPos);
                 }
                 this.helperBlockPositions.clear();
             }
-            if (this.pistonPos != null && !this.mc.f_91073_.m_8055_(this.pistonPos).m_60795_()) {
-                this.cleanupPistonPos = this.pistonPos.m_7949_();
+            if (this.pistonPos != null && !this.mc.level.getBlockState(this.pistonPos).isAir()) {
+                this.cleanupPistonPos = this.pistonPos.immutable();
                 this.cleanupPistonTicks = 0;
             }
             if (this.leverPos != null) {
@@ -900,10 +900,10 @@ public class BedrockBreakerManager {
         this.predictedContainerStateId = -1;
         this.queue.clear();
         if (this.mc.player != null) {
-            this.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(this.mc.player.m_150109_().f_35977_));
+            this.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(this.mc.player.getInventory().selected));
         }
         if (message != null && this.mc.player != null) {
-            this.mc.player.m_5661_(Component.literal((String)("\u00a7c[\u57fa\u5ca9\u7834\u574f\u5668] " + message)), true);
+            this.mc.player.displayClientMessage(Component.literal((String)("\u00a7c[\u57fa\u5ca9\u7834\u574f\u5668] " + message)), true);
         }
     }
 

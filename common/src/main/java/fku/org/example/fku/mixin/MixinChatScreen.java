@@ -19,7 +19,7 @@ public abstract class MixinChatScreen {
         if (text != null && text.startsWith("//")) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) {
-                mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] \u00a7f" + text)), false);
+                mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] \u00a7f" + text)), false);
             }
             CommandRegistry.getInstance().execute(text);
             cir.cancel();

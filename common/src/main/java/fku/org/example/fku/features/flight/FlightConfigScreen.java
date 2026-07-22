@@ -27,28 +27,28 @@ extends Screen {
     private Button antiKickBtn;
 
     public FlightConfigScreen() {
-        super(Component.literal((String)"\u98de\u884c\u914d\u7f6e"));
+        super(Component.literal("\u98de\u884c\u914d\u7f6e"));
     }
 
     protected void init() {
         FlightConfig cfg = FlightConfig.getInstance();
         int cx = (this.width - 280) / 2;
         int cy = (this.height - 230) / 2;
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u6c34\u5e73\u901f\u5ea6:"), b -> {}).bounds(cx + 5, cy + 8, 70, 18).build());
-        this.speedInput = new EditBox(this.font, cx + 80, cy + 8, 50, 16, Component.literal((String)""));
-        this.speedInput.m_94144_(String.format("%.2f", cfg.flySpeed));
-        this.speedInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
-        this.m_7787_(this.speedInput);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5782\u76f4\u901f\u5ea6:"), b -> {}).bounds(cx + 145, cy + 8, 70, 18).build());
-        this.vertInput = new EditBox(this.font, cx + 220, cy + 8, 50, 16, Component.literal((String)""));
-        this.vertInput.m_94144_(String.format("%.2f", cfg.verticalSpeed));
-        this.vertInput.m_94153_(s -> s.matches("\\d*\\.?\\d*"));
-        this.m_7787_(this.vertInput);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u53cc\u51fb\u7a97\u53e3:"), b -> {}).bounds(cx + 5, cy + 33, 70, 18).build());
-        this.tapInput = new EditBox(this.font, cx + 80, cy + 33, 50, 16, Component.literal((String)""));
-        this.tapInput.m_94144_(String.valueOf(cfg.doubleTapWindow));
-        this.tapInput.m_94153_(s -> s.matches("\\d*"));
-        this.m_7787_(this.tapInput);
+        this.addRenderableWidget(Button.builder(Component.literal("\u6c34\u5e73\u901f\u5ea6:"), b -> {}).bounds(cx + 5, cy + 8, 70, 18).build());
+        this.speedInput = new EditBox(this.font, cx + 80, cy + 8, 50, 16, Component.literal(""));
+        this.speedInput.setValue(String.format("%.2f", cfg.flySpeed));
+        this.speedInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
+        this.addWidget(this.speedInput);
+        this.addRenderableWidget(Button.builder(Component.literal("\u5782\u76f4\u901f\u5ea6:"), b -> {}).bounds(cx + 145, cy + 8, 70, 18).build());
+        this.vertInput = new EditBox(this.font, cx + 220, cy + 8, 50, 16, Component.literal(""));
+        this.vertInput.setValue(String.format("%.2f", cfg.verticalSpeed));
+        this.vertInput.setFilter(s -> s.matches("\\d*\\.?\\d*"));
+        this.addWidget(this.vertInput);
+        this.addRenderableWidget(Button.builder(Component.literal("\u53cc\u51fb\u7a97\u53e3:"), b -> {}).bounds(cx + 5, cy + 33, 70, 18).build());
+        this.tapInput = new EditBox(this.font, cx + 80, cy + 33, 50, 16, Component.literal(""));
+        this.tapInput.setValue(String.valueOf(cfg.doubleTapWindow));
+        this.tapInput.setFilter(s -> s.matches("\\d*"));
+        this.addWidget(this.tapInput);
         int ly = cy + 60;
         int sp = 20;
         int lx = cx + 10;
@@ -60,7 +60,7 @@ extends Screen {
         this.particleBtn = this.toggle(lx, ly + sp * 2, "\u7c92\u5b50\u6548\u679c", cfg.particleEffect, v -> cfg.setParticleEffect((boolean)v));
         this.soundBtn = this.toggle(rx, ly + sp * 2, "\u97f3\u6548\u53cd\u9988", cfg.soundFeedback, v -> cfg.setSoundFeedback((boolean)v));
         this.antiKickBtn = this.toggle(lx, ly + sp * 3, "\u9632\u8e22", cfg.antiKick, v -> cfg.setAntiKick((boolean)v));
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u8fd4\u56de"), b -> this.saveAndClose()).bounds(cx + 140 - 30, cy + 230 - 28, 60, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u8fd4\u56de"), b -> this.saveAndClose()).bounds(cx + 140 - 30, cy + 230 - 28, 60, 18).build());
     }
 
     private Button toggle(int x, int y, String label, boolean cur, Consumer<Boolean> setter) {
@@ -71,7 +71,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 280) / 2;
         int cy = (this.height - 230) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, 280, 230, false);
@@ -101,34 +101,34 @@ extends Screen {
         return super.mouseClicked(mx, my, btn);
     }
 
-    public boolean m_7933_(int k, int s, int m) {
-        if (this.speedInput != null && this.speedInput.m_93696_()) {
-            return this.speedInput.m_7933_(k, s, m);
+    public boolean keyPressed(int k, int s, int m) {
+        if (this.speedInput != null && this.speedInput.isFocused()) {
+            return this.speedInput.keyPressed(k, s, m);
         }
-        if (this.vertInput != null && this.vertInput.m_93696_()) {
-            return this.vertInput.m_7933_(k, s, m);
+        if (this.vertInput != null && this.vertInput.isFocused()) {
+            return this.vertInput.keyPressed(k, s, m);
         }
-        if (this.tapInput != null && this.tapInput.m_93696_()) {
-            return this.tapInput.m_7933_(k, s, m);
+        if (this.tapInput != null && this.tapInput.isFocused()) {
+            return this.tapInput.keyPressed(k, s, m);
         }
         if (k == 256) {
             this.saveAndClose();
             return true;
         }
-        return super.m_7933_(k, s, m);
+        return super.keyPressed(k, s, m);
     }
 
-    public boolean m_5534_(char c, int m) {
-        if (this.speedInput != null && this.speedInput.m_93696_()) {
-            return this.speedInput.m_5534_(c, m);
+    public boolean charTyped(char c, int m) {
+        if (this.speedInput != null && this.speedInput.isFocused()) {
+            return this.speedInput.charTyped(c, m);
         }
-        if (this.vertInput != null && this.vertInput.m_93696_()) {
-            return this.vertInput.m_5534_(c, m);
+        if (this.vertInput != null && this.vertInput.isFocused()) {
+            return this.vertInput.charTyped(c, m);
         }
-        if (this.tapInput != null && this.tapInput.m_93696_()) {
-            return this.tapInput.m_5534_(c, m);
+        if (this.tapInput != null && this.tapInput.isFocused()) {
+            return this.tapInput.charTyped(c, m);
         }
-        return super.m_5534_(c, m);
+        return super.charTyped(c, m);
     }
 
     public void onClose() {
@@ -142,19 +142,19 @@ extends Screen {
     private void saveAndClose() {
         FlightConfig cfg = FlightConfig.getInstance();
         try {
-            cfg.setFlySpeed(Double.parseDouble(this.speedInput.m_94155_().trim()));
+            cfg.setFlySpeed(Double.parseDouble(this.speedInput.getValue().trim()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            cfg.setVerticalSpeed(Double.parseDouble(this.vertInput.m_94155_().trim()));
+            cfg.setVerticalSpeed(Double.parseDouble(this.vertInput.getValue().trim()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored
         }
         try {
-            cfg.setDoubleTapWindow(Integer.parseInt(this.tapInput.m_94155_().trim()));
+            cfg.setDoubleTapWindow(Integer.parseInt(this.tapInput.getValue().trim()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored

@@ -81,7 +81,7 @@ public class FastJoinFeature {
             return;
         }
         FastJoinConfig cfg = FastJoinConfig.getInstance();
-        int current = (Integer)mc.f_91066_.m_231984_().m_231551_();
+        int current = (Integer)mc.options.renderDistance().get();
         if (lockedRd > 0 && !recovering) {
             if (current != lockedRd) {
                 FastJoinFeature.setRd(lockedRd);
@@ -95,7 +95,7 @@ public class FastJoinFeature {
             recovering = false;
             lockedRd = targetRd;
             if (cfg.showLoadingProgress && mc.player != null) {
-                mc.player.m_5661_(Component.literal((String)("\u00a7a[FastJoin] \u00a77\u89c6\u8ddd\u5df2\u6062\u590d\u81f3 " + targetRd + " \u533a\u5757")), true);
+                mc.player.displayClientMessage(Component.literal((String)("\u00a7a[FastJoin] \u00a77\u89c6\u8ddd\u5df2\u6062\u590d\u81f3 " + targetRd + " \u533a\u5757")), true);
             }
             return;
         }
@@ -120,7 +120,7 @@ public class FastJoinFeature {
             int newRd = Math.min(current + speed, targetRd);
             FastJoinFeature.setRd(newRd);
             if (cfg.showLoadingProgress && mc.player != null) {
-                mc.player.m_5661_(Component.literal((String)("\u00a76[FastJoin] \u00a77\u89c6\u8ddd: " + newRd + "/" + targetRd)), true);
+                mc.player.displayClientMessage(Component.literal((String)("\u00a76[FastJoin] \u00a77\u89c6\u8ddd: " + newRd + "/" + targetRd)), true);
             }
         }
     }
@@ -130,7 +130,7 @@ public class FastJoinFeature {
         if (mc == null) {
             return;
         }
-        mc.f_91066_.m_231984_().m_231514_(rd);
+        mc.options.renderDistance().set(rd);
     }
 
     public static void fallbackToExtreme() {
@@ -150,7 +150,7 @@ public class FastJoinFeature {
         targetRd = Math.max(2, cfg.targetRenderDistance);
         Minecraft mc = FastJoinFeature.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)"\u00a7c[FastJoin] \u8d85\u65f6\u56de\u9000\uff0c\u8bf7\u91cd\u65b0\u8fde\u63a5"), false);
+            mc.player.displayClientMessage(Component.literal((String)"\u00a7c[FastJoin] \u8d85\u65f6\u56de\u9000\uff0c\u8bf7\u91cd\u65b0\u8fde\u63a5"), false);
         }
     }
 
@@ -163,7 +163,7 @@ public class FastJoinFeature {
         if (mc == null || !recovering || targetRd <= 1) {
             return 100;
         }
-        return Math.min(100, (Integer)mc.f_91066_.m_231984_().m_231551_() * 100 / targetRd);
+        return Math.min(100, (Integer)mc.options.renderDistance().get() * 100 / targetRd);
     }
 }
 

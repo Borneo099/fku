@@ -72,21 +72,21 @@ public class ClipboardManager {
         this.copiedStates.clear();
         this.copiedBlockEntityData.clear();
         this.origin = min;
-        this.selWidth = max.m_123341_() - min.m_123341_() + 1;
-        this.selHeight = max.m_123342_() - min.m_123342_() + 1;
-        this.selLength = max.m_123343_() - min.m_123343_() + 1;
+        this.selWidth = max.getX() - min.getX() + 1;
+        this.selHeight = max.getY() - min.getY() + 1;
+        this.selLength = max.getZ() - min.getZ() + 1;
         int count = 0;
-        for (int y = min.m_123342_(); y <= max.m_123342_(); ++y) {
-            for (int x = min.m_123341_(); x <= max.m_123341_(); ++x) {
-                for (int z = min.m_123343_(); z <= max.m_123343_(); ++z) {
+        for (int y = min.getY(); y <= max.getY(); ++y) {
+            for (int x = min.getX(); x <= max.getX(); ++x) {
+                for (int z = min.getZ(); z <= max.getZ(); ++z) {
                     BlockPos pos;
                     BlockState state;
-                    if (ClipboardManager.mc.f_91073_ == null || (state = ClipboardManager.mc.f_91073_.m_8055_(pos = new BlockPos(x, y, z))).m_60795_()) continue;
+                    if (ClipboardManager.mc.level == null || (state = ClipboardManager.mc.level.getBlockState(pos = new BlockPos(x, y, z))).isAir()) continue;
                     this.copiedPositions.add(pos);
                     this.copiedStates.add(state);
-                    BlockEntity be = ClipboardManager.mc.f_91073_.m_7702_(pos);
+                    BlockEntity be = ClipboardManager.mc.level.getBlockEntity(pos);
                     if (be != null) {
-                        this.copiedBlockEntityData.add(be.m_187480_());
+                        this.copiedBlockEntityData.add(be.saveWithFullMetadata());
                     } else {
                         this.copiedBlockEntityData.add(new CompoundTag());
                     }
@@ -107,12 +107,12 @@ public class ClipboardManager {
         ArrayList<BlockPos> pastePositions = new ArrayList<BlockPos>();
         ArrayList<BlockState> pasteStates = new ArrayList<BlockState>();
         ArrayList<Object> pasteData = new ArrayList<Object>();
-        int dx = targetOrigin.m_123341_() - this.origin.m_123341_();
-        int dy = targetOrigin.m_123342_() - this.origin.m_123342_();
-        int dz = targetOrigin.m_123343_() - this.origin.m_123343_();
+        int dx = targetOrigin.getX() - this.origin.getX();
+        int dy = targetOrigin.getY() - this.origin.getY();
+        int dz = targetOrigin.getZ() - this.origin.getZ();
         for (int i = 0; i < this.copiedPositions.size(); ++i) {
             BlockPos originalPos = this.copiedPositions.get(i);
-            BlockPos newPos = originalPos.m_7918_(dx, dy, dz);
+            BlockPos newPos = originalPos.offset(dx, dy, dz);
             pastePositions.add(newPos);
             pasteStates.add(this.copiedStates.get(i));
             pasteData.add(i < this.copiedBlockEntityData.size() ? this.copiedBlockEntityData.get(i) : new CompoundTag());
@@ -145,17 +145,17 @@ public class ClipboardManager {
         if (!schematicsDir.exists()) {
             schematicsDir.mkdirs();
         }
-        int w = max.m_123341_() - min.m_123341_() + 1;
-        int h = max.m_123342_() - min.m_123342_() + 1;
-        int l = max.m_123343_() - min.m_123343_() + 1;
+        int w = max.getX() - min.getX() + 1;
+        int h = max.getY() - min.getY() + 1;
+        int l = max.getZ() - min.getZ() + 1;
         HashMap<String, Integer> palette = new HashMap<String, Integer>();
         ArrayList<BlockState> paletteList = new ArrayList<BlockState>();
-        for (int y = min.m_123342_(); y <= max.m_123342_(); ++y) {
-            for (int x = min.m_123341_(); x <= max.m_123341_(); ++x) {
-                for (int z = min.m_123343_(); z <= max.m_123343_(); ++z) {
+        for (int y = min.getY(); y <= max.getY(); ++y) {
+            for (int x = min.getX(); x <= max.getX(); ++x) {
+                for (int z = min.getZ(); z <= max.getZ(); ++z) {
                     String key;
                     BlockState state;
-                    if (ClipboardManager.mc.f_91073_ == null || (state = ClipboardManager.mc.f_91073_.m_8055_(new BlockPos(x, y, z))).m_60795_() || palette.containsKey(key = this.stateToString(state))) continue;
+                    if (ClipboardManager.mc.level == null || (state = ClipboardManager.mc.level.getBlockState(new BlockPos(x, y, z))).isAir() || palette.containsKey(key = this.stateToString(state))) continue;
                     palette.put(key, palette.size());
                     paletteList.add(state);
                 }
@@ -163,7 +163,7 @@ public class ClipboardManager {
         }
         if (!palette.containsKey("minecraft:air")) {
             palette.put("minecraft:air", palette.size());
-            paletteList.add(Blocks.f_50016_.m_49966_());
+            paletteList.add(Blocks.AIR.defaultBlockState());
         }
         int[] blockData = new int[w * h * l];
         ArrayList<CompoundTag> tileEntitiesList = new ArrayList<CompoundTag>();
@@ -171,42 +171,42 @@ public class ClipboardManager {
             for (int z = 0; z < l; ++z) {
                 for (int x = 0; x < w; ++x) {
                     int index = y * w * l + z * w + x;
-                    BlockPos pos = min.m_7918_(x, y, z);
-                    if (ClipboardManager.mc.f_91073_ == null) continue;
-                    BlockState state = ClipboardManager.mc.f_91073_.m_8055_(pos);
+                    BlockPos pos = min.offset(x, y, z);
+                    if (ClipboardManager.mc.level == null) continue;
+                    BlockState state = ClipboardManager.mc.level.getBlockState(pos);
                     String key = this.stateToString(state);
                     blockData[index] = palette.getOrDefault(key, 0);
-                    BlockEntity be = ClipboardManager.mc.f_91073_.m_7702_(pos);
+                    BlockEntity be = ClipboardManager.mc.level.getBlockEntity(pos);
                     if (be == null) continue;
-                    CompoundTag te = be.m_187480_();
-                    te.m_128405_("x", x);
-                    te.m_128405_("y", y);
-                    te.m_128405_("z", z);
+                    CompoundTag te = be.saveWithFullMetadata();
+                    te.putInt("x", x);
+                    te.putInt("y", y);
+                    te.putInt("z", z);
                     tileEntitiesList.add(te);
                 }
             }
         }
         CompoundTag root = new CompoundTag();
-        root.m_128405_("Version", 2);
-        root.m_128405_("DataVersion", SharedConstants.m_183709_().m_183476_().m_193006_());
-        root.m_128376_("Width", w);
-        root.m_128376_("Height", h);
-        root.m_128376_("Length", l);
+        root.putInt("Version", 2);
+        root.putInt("DataVersion", SharedConstants.getCurrentVersion().getDataVersion().getVersion());
+        root.putShort("Width", (short)w);
+        root.putShort("Height", (short)h);
+        root.putShort("Length", (short)l);
         CompoundTag paletteTag = new CompoundTag();
-        for (Map.Entry entry : palette.entrySet()) {
-            paletteTag.m_128405_((String)entry.getKey(), ((Integer)entry.getValue()).intValue());
+        for (Map.Entry<String, Integer> entry : palette.entrySet()) {
+            paletteTag.putInt(entry.getKey(), entry.getValue());
         }
-        root.m_128365_("Palette", (Tag)paletteTag);
-        root.m_128385_("BlockData", blockData);
+        root.put("Palette", paletteTag);
+        root.putIntArray("BlockData", blockData);
         ListTag teList = new ListTag();
         for (CompoundTag te : tileEntitiesList) {
             teList.add(te);
         }
-        root.m_128365_("BlockEntities", (Tag)teList);
-        File file = new File(schematicsDir, (String)(name.endsWith(".schematic") ? name : name + ".schematic"));
+        root.put("BlockEntities", teList);
+        File file = new File(schematicsDir, name.endsWith(".schematic") ? name : name + ".schematic");
         FileOutputStream fos = new FileOutputStream(file);
         try {
-            NbtIo.m_128947_((CompoundTag)root, (OutputStream)fos);
+            NbtIo.writeCompressed((CompoundTag)root, (OutputStream)fos);
             this.sendMessage("\u00a7a\u5df2\u4fdd\u5b58: " + file.getName() + " (" + blockData.length + " \u65b9\u5757)");
             bl = true;
         }
@@ -240,32 +240,32 @@ public class ClipboardManager {
         catch (Exception e) {
             schematicsDir = new File("config/fku/schematics");
         }
-        File file = new File(schematicsDir, (String)(name.endsWith(".schematic") ? name : name + ".schematic"));
+        File file = new File(schematicsDir, name.endsWith(".schematic") ? name : name + ".schematic");
         if (!file.exists()) {
             this.sendMessage("\u00a7c\u6587\u4ef6\u4e0d\u5b58\u5728: " + file.getName());
             return false;
         }
         FileInputStream fis = new FileInputStream(file);
         try {
-            CompoundTag root = NbtIo.m_128939_((InputStream)fis);
-            int w = root.m_128448_("Width");
-            int h = root.m_128448_("Height");
-            int l = root.m_128448_("Length");
-            int[] blockData = root.m_128465_("BlockData");
-            CompoundTag paletteTag = root.m_128469_("Palette");
+            CompoundTag root = NbtIo.readCompressed((InputStream)fis);
+            int w = root.getShort("Width");
+            int h = root.getShort("Height");
+            int l = root.getShort("Length");
+            int[] blockData = root.getIntArray("BlockData");
+            CompoundTag paletteTag = root.getCompound("Palette");
             HashMap<Integer, String> reversePalette = new HashMap<Integer, String>();
-            for (String key : paletteTag.m_128431_()) {
-                reversePalette.put(paletteTag.m_128451_(key), key);
+            for (String key : paletteTag.getAllKeys()) {
+                reversePalette.put(paletteTag.getInt(key), key);
             }
             HashMap<BlockPos, CompoundTag> teMap = new HashMap<BlockPos, CompoundTag>();
-            if (root.m_128425_("BlockEntities", 9)) {
-                ListTag teList = root.m_128437_("BlockEntities", 10);
+            if (root.contains("BlockEntities", 9)) {
+                ListTag teList = root.getList("BlockEntities", 10);
                 for (int i = 0; i < teList.size(); ++i) {
-                    CompoundTag te = teList.m_128728_(i);
-                    BlockPos tePos = new BlockPos(te.m_128451_("x"), te.m_128451_("y"), te.m_128451_("z"));
-                    te.m_128473_("x");
-                    te.m_128473_("y");
-                    te.m_128473_("z");
+                    CompoundTag te = teList.getCompound(i);
+                    BlockPos tePos = new BlockPos(te.getInt("x"), te.getInt("y"), te.getInt("z"));
+                    te.remove("x");
+                    te.remove("y");
+                    te.remove("z");
                     teMap.put(tePos, te);
                 }
             }
@@ -279,20 +279,20 @@ public class ClipboardManager {
                         String stateStr;
                         BlockState state;
                         int index = y * w * l + z * w + x;
-                        if (index >= blockData.length || (state = this.stringToState(stateStr = reversePalette.getOrDefault(paletteIndex = blockData[index], "minecraft:air"))) == null || state.m_60795_()) continue;
+                        if (index >= blockData.length || (state = this.stringToState(stateStr = reversePalette.getOrDefault(paletteIndex = blockData[index], "minecraft:air"))) == null || state.isAir()) continue;
                         BlockPos pos = new BlockPos(x, y, z);
                         this.copiedPositions.add(pos);
                         this.copiedStates.add(state);
                         BlockPos teKey = new BlockPos(x, y, z);
                         if (teMap.containsKey(teKey)) {
-                            this.copiedBlockEntityData.add(((CompoundTag)teMap.get(teKey)).m_6426_());
+                            this.copiedBlockEntityData.add(((CompoundTag)teMap.get(teKey)).copy());
                             continue;
                         }
                         this.copiedBlockEntityData.add(new CompoundTag());
                     }
                 }
             }
-            this.origin = BlockPos.f_121853_;
+            this.origin = BlockPos.ZERO;
             this.selWidth = w;
             this.selHeight = h;
             this.selLength = l;
@@ -322,16 +322,16 @@ public class ClipboardManager {
 
     private String stateToString(BlockState state) {
         StringBuilder sb = new StringBuilder();
-        sb.append(ForgeRegistries.BLOCKS.getKey(state.m_60734_()));
-        ImmutableMap values = state.m_61148_();
+        sb.append(ForgeRegistries.BLOCKS.getKey(state.getBlock()));
+        ImmutableMap<Property<?>, Comparable<?>> values = state.getValues();
         if (!values.isEmpty()) {
             sb.append("[");
             boolean first = true;
-            for (Map.Entry entry : values.entrySet()) {
+            for (Map.Entry<Property<?>, Comparable<?>> entry : values.entrySet()) {
                 if (!first) {
                     sb.append(",");
                 }
-                sb.append(((Property)entry.getKey()).m_61708_()).append("=").append(((Comparable)entry.getValue()).toString());
+                sb.append(entry.getKey().getName()).append("=").append(entry.getValue().toString());
                 first = false;
             }
             sb.append("]");
@@ -348,17 +348,17 @@ public class ClipboardManager {
             if (bracket >= 0) {
                 blockId = str.substring(0, bracket);
             }
-            if ((block = (Block)ForgeRegistries.BLOCKS.getValue(ResourceLocation.m_135820_((String)blockId))) == null) {
+            if ((block = (Block)ForgeRegistries.BLOCKS.getValue(ResourceLocation.tryParse((String)blockId))) == null) {
                 return null;
             }
-            BlockState state = block.m_49966_();
+            BlockState state = block.defaultBlockState();
             if (bracket >= 0 && !(propertiesPart = str.substring(bracket + 1, str.length() - 1)).isEmpty()) {
                 for (String prop : propertiesPart.split(",")) {
                     Optional opt;
                     Property propDef;
                     String[] kv = prop.split("=", 2);
-                    if (kv.length != 2 || (propDef = block.m_49965_().m_61081_(kv[0])) == null || !(opt = propDef.m_6215_(kv[1])).isPresent()) continue;
-                    state = (BlockState)state.m_61124_(propDef, (Comparable)opt.get());
+                    if (kv.length != 2 || (propDef = block.getStateDefinition().getProperty(kv[0])) == null || !(opt = propDef.getValue(kv[1])).isPresent()) continue;
+                    state = (BlockState)state.setValue(propDef, (Comparable)opt.get());
                 }
             }
             return state;
@@ -370,23 +370,23 @@ public class ClipboardManager {
 
     public static float[] getPlacementYawPitch(BlockState state) {
         Direction facing = null;
-        if (state.m_61138_((Property)BlockStateProperties.f_61372_)) {
-            facing = (Direction)state.m_61143_((Property)BlockStateProperties.f_61372_);
-        } else if (state.m_61138_((Property)BlockStateProperties.f_61374_)) {
-            facing = (Direction)state.m_61143_((Property)BlockStateProperties.f_61374_);
-        } else if (state.m_61138_((Property)BlockStateProperties.f_61373_)) {
-            facing = (Direction)state.m_61143_((Property)BlockStateProperties.f_61373_);
+        if (state.hasProperty((Property)BlockStateProperties.FACING)) {
+            facing = (Direction)state.getValue((Property)BlockStateProperties.FACING);
+        } else if (state.hasProperty((Property)BlockStateProperties.HORIZONTAL_FACING)) {
+            facing = (Direction)state.getValue((Property)BlockStateProperties.HORIZONTAL_FACING);
+        } else if (state.hasProperty((Property)BlockStateProperties.FACING_HOPPER)) {
+            facing = (Direction)state.getValue((Property)BlockStateProperties.FACING_HOPPER);
         }
         if (facing == null) {
             return new float[]{Float.NaN, Float.NaN};
         }
         float yaw = switch (facing) {
-            case Direction.SOUTH -> 0.0f;
-            case Direction.WEST -> 90.0f;
-            case Direction.NORTH -> 180.0f;
-            case Direction.EAST -> -90.0f;
-            case Direction.DOWN -> Float.NaN;
-            case Direction.UP -> Float.NaN;
+            case SOUTH -> 0.0f;
+            case WEST -> 90.0f;
+            case NORTH -> 180.0f;
+            case EAST -> -90.0f;
+            case DOWN -> Float.NaN;
+            case UP -> Float.NaN;
             default -> Float.NaN;
         };
         float pitch = 0.0f;
@@ -399,18 +399,18 @@ public class ClipboardManager {
     }
 
     public static Direction getPlacementFace(BlockState state) {
-        if (state.m_61138_((Property)BlockStateProperties.f_61372_)) {
-            return ((Direction)state.m_61143_((Property)BlockStateProperties.f_61372_)).m_122424_();
+        if (state.hasProperty((Property)BlockStateProperties.FACING)) {
+            return ((Direction)state.getValue((Property)BlockStateProperties.FACING)).getOpposite();
         }
-        if (state.m_61138_((Property)BlockStateProperties.f_61374_)) {
-            return (Direction)state.m_61143_((Property)BlockStateProperties.f_61374_);
+        if (state.hasProperty((Property)BlockStateProperties.HORIZONTAL_FACING)) {
+            return (Direction)state.getValue((Property)BlockStateProperties.HORIZONTAL_FACING);
         }
         return Direction.UP;
     }
 
     private void sendMessage(String msg) {
         if (ClipboardManager.mc.player != null) {
-            ClipboardManager.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
+            ClipboardManager.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
         }
     }
 

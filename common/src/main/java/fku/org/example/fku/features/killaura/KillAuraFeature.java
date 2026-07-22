@@ -43,36 +43,36 @@ public class KillAuraFeature {
             return;
         }
         KillAuraConfig cfg = KillAuraConfig.getInstance();
-        if (!cfg.enabled || mc.player == null || mc.f_91073_ == null) {
+        if (!cfg.enabled || mc.player == null || mc.level == null) {
             return;
         }
-        if (cfg.attackCooldown && (cooldown = mc.player.m_36403_(0.5f)) < 0.9f) {
+        if (cfg.attackCooldown && (cooldown = mc.player.getAttackStrengthScale(0.5f)) < 0.9f) {
             return;
         }
         if (++tickCounter % (cfg.delay + 1) != 0) {
             return;
         }
         double r = cfg.range;
-        AABB box = mc.player.m_20191_().m_82400_(r);
+        AABB box = mc.player.getBoundingBox().inflate(r);
         ArrayList<LivingEntity> targets = new ArrayList<LivingEntity>();
         double bestScore = Double.MAX_VALUE;
         LivingEntity singleTarget = null;
-        List all = mc.f_91073_.m_6443_(LivingEntity.class, box, e -> {
+        List all = mc.level.getEntitiesOfClass(LivingEntity.class, box, e -> {
             Player p;
-            if (e == mc.player || !e.m_6084_()) {
+            if (e == mc.player || !e.isAlive()) {
                 return false;
             }
-            if (e instanceof Player && (p = (Player)e).m_5833_()) {
+            if (e instanceof Player && (p = (Player)e).isSpectator()) {
                 return false;
             }
             if (cfg.playersOnly && !(e instanceof Player)) {
                 return false;
             }
-            if (e.m_20280_((Entity)mc.player) > r * r) {
+            if (e.distanceToSqr((Entity)mc.player) > r * r) {
                 return false;
             }
             if (!cfg.whitelist.isEmpty()) {
-                String id = BuiltInRegistries.f_256780_.m_7981_(e.m_6095_()).toString();
+                String id = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
                 return cfg.whitelist.contains(id);
             }
             return true;
@@ -80,8 +80,9 @@ public class KillAuraFeature {
         if (cfg.multiTarget) {
             targets.addAll(all);
         } else {
-            for (LivingEntity entity : all) {
-                double score = cfg.targetMode == 1 ? (entity.m_21223_() / Math.max(entity.m_21233_(), 1.0f)) : mc.player.m_20280_((Entity)entity);
+            for (Object entityObj : all) {
+                LivingEntity entity = (LivingEntity)entityObj;
+                double score = cfg.targetMode == 1 ? (entity.getHealth() / Math.max(entity.getMaxHealth(), 1.0f)) : mc.player.distanceToSqr((Entity)entity);
                 if (!(score < bestScore)) continue;
                 bestScore = score;
                 singleTarget = entity;
@@ -95,25 +96,25 @@ public class KillAuraFeature {
         }
         for (LivingEntity target : targets) {
             if (cfg.autoRotate && target == targets.get(0)) {
-                Vec3 diff = target.m_20191_().m_82399_().subtract(mc.player.m_20299_(1.0f));
-                float yaw = Math.toDegrees(Math.atan2(-diff.x, diff.z));
-                float pitch = Math.toDegrees(Math.atan2(diff.y, Math.sqrt(diff.x * diff.x + diff.z * diff.z)));
-                mc.player.m_146922_(yaw);
-                mc.player.m_146926_(pitch);
+                Vec3 diff = target.getBoundingBox().getCenter().subtract(mc.player.getEyePosition(1.0f));
+                float yaw = (float)Math.toDegrees(Math.atan2(-diff.x, diff.z));
+                float pitch = (float)Math.toDegrees(Math.atan2(diff.y, Math.sqrt(diff.x * diff.x + diff.z * diff.z)));
+                mc.player.setYRot(yaw);
+                mc.player.setXRot(pitch);
             }
             if (cfg.autoSwitch) {
-                int cur = mc.player.m_150109_().f_35977_;
-                if (!(mc.player.m_150109_().m_8020_(cur).m_41720_() instanceof SwordItem)) {
+                int cur = mc.player.getInventory().selected;
+                if (!(mc.player.getInventory().getItem(cur).getItem() instanceof SwordItem)) {
                     for (int i = 0; i < 9; ++i) {
-                        if (!(mc.player.m_150109_().m_8020_(i).m_41720_() instanceof SwordItem)) continue;
-                        mc.player.m_150109_().f_35977_ = i;
+                        if (!(mc.player.getInventory().getItem(i).getItem() instanceof SwordItem)) continue;
+                        mc.player.getInventory().selected = i;
                         break;
                     }
                 }
             }
-            mc.player.f_108617_.m_104955_((Packet)ServerboundInteractPacket.m_179605_(target, (boolean)mc.player.m_6144_()));
+            mc.player.connection.send((Packet)ServerboundInteractPacket.createAttackPacket(target, (boolean)mc.player.isShiftKeyDown()));
         }
-        mc.player.m_6674_(mc.player.m_7655_());
+        mc.player.swing(mc.player.getUsedItemHand());
     }
 }
 

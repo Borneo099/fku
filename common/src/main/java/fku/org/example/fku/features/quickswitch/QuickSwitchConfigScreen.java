@@ -23,7 +23,7 @@ extends Screen {
     private Button saveBtn;
 
     public QuickSwitchConfigScreen() {
-        super(Component.literal((String)"\u9b3c\u624b\u79d2\u5207\u914d\u7f6e"));
+        super(Component.literal("\u9b3c\u624b\u79d2\u5207\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -31,37 +31,37 @@ extends Screen {
         this.cx = (this.width - 300) / 2;
         this.cy = (this.height - 220) / 2;
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
-        this.modeBtn = Button.builder(Component.literal((String)("\u6a21\u5f0f: " + QuickSwitchConfigScreen.modeLabel(cfg.mode))), b -> {
+        this.modeBtn = Button.builder(Component.literal("\u6a21\u5f0f: " + QuickSwitchConfigScreen.modeLabel(cfg.mode)), b -> {
             cfg.mode = QuickSwitchConfigScreen.cycleMode(cfg.mode);
             cfg.save();
-            b.setMessage(Component.literal((String)("\u6a21\u5f0f: " + QuickSwitchConfigScreen.modeLabel(cfg.mode))));
+            b.setMessage(Component.literal("\u6a21\u5f0f: " + QuickSwitchConfigScreen.modeLabel(cfg.mode)));
         }).bounds(this.cx + 10, this.cy + 30, 130, 18).build();
         this.addRenderableWidget(this.modeBtn);
-        this.visualBtn = Button.builder(Component.literal((String)("\u89c6\u89c9\u53cd\u9988: " + (cfg.visualFeedback ? "\u5f00" : "\u5173"))), b -> {
+        this.visualBtn = Button.builder(Component.literal("\u89c6\u89c9\u53cd\u9988: " + (cfg.visualFeedback ? "\u5f00" : "\u5173")), b -> {
             cfg.visualFeedback = !cfg.visualFeedback;
             cfg.save();
-            b.setMessage(Component.literal((String)("\u89c6\u89c9\u53cd\u9988: " + (cfg.visualFeedback ? "\u5f00" : "\u5173"))));
+            b.setMessage(Component.literal("\u89c6\u89c9\u53cd\u9988: " + (cfg.visualFeedback ? "\u5f00" : "\u5173")));
         }).bounds(this.cx + 150, this.cy + 30, 130, 18).build();
         this.addRenderableWidget(this.visualBtn);
-        this.customItemsInput = new EditBox(this.font, this.cx + 10, this.cy + 75, 280, 16, Component.literal((String)"\u7269\u54c1\u5217\u8868"));
-        this.customItemsInput.m_94199_(100000);
-        this.customItemsInput.m_94144_(cfg.customItems);
+        this.customItemsInput = new EditBox(this.font, this.cx + 10, this.cy + 75, 280, 16, Component.literal("\u7269\u54c1\u5217\u8868"));
+        this.customItemsInput.setMaxLength(100000);
+        this.customItemsInput.setValue(cfg.customItems);
         this.addRenderableWidget(this.customItemsInput);
-        this.rttDelayBox = new EditBox(this.font, this.cx + 10, this.cy + 110, 100, 16, Component.literal((String)"\u5ef6\u8fdf(ms)"));
-        this.rttDelayBox.m_94199_(5);
-        this.rttDelayBox.m_94144_(String.valueOf(cfg.rttDelay));
-        this.rttDelayBox.m_94153_(s -> s.matches("\\d*"));
+        this.rttDelayBox = new EditBox(this.font, this.cx + 10, this.cy + 110, 100, 16, Component.literal("\u5ef6\u8fdf(ms)"));
+        this.rttDelayBox.setMaxLength(5);
+        this.rttDelayBox.setValue(String.valueOf(cfg.rttDelay));
+        this.rttDelayBox.setFilter(s -> s.matches("\\d*"));
         this.addRenderableWidget(this.rttDelayBox);
-        this.addRenderableWidget(Button.builder(Component.literal((String)("\u4f18\u5148\u7ea7\u69fd\u4f4d: " + QuickSwitchConfigScreen.intArrStr(cfg.prioritySlots))), b -> {}).bounds(this.cx + 120, this.cy + 110, 160, 16).build());
-        this.saveBtn = Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> this.saveAndClose()).bounds(this.cx + 150 - 40, this.cy + 220 - 24, 80, 16).build();
+        this.addRenderableWidget(Button.builder(Component.literal("\u4f18\u5148\u7ea7\u69fd\u4f4d: " + QuickSwitchConfigScreen.intArrStr(cfg.prioritySlots)), b -> {}).bounds(this.cx + 120, this.cy + 110, 160, 16).build());
+        this.saveBtn = Button.builder(Component.literal("\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> this.saveAndClose()).bounds(this.cx + 150 - 40, this.cy + 220 - 24, 80, 16).build();
         this.addRenderableWidget(this.saveBtn);
     }
 
     private void saveAndClose() {
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
-        cfg.customItems = this.customItemsInput.m_94155_();
+        cfg.customItems = this.customItemsInput.getValue();
         try {
-            int v = Integer.parseInt(this.rttDelayBox.m_94155_().trim());
+            int v = Integer.parseInt(this.rttDelayBox.getValue().trim());
             cfg.rttDelay = v < 0 ? 0 : (v > 2000 ? 2000 : v);
         }
         catch (NumberFormatException numberFormatException) {
@@ -71,7 +71,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         QuickSwitchConfig cfg = QuickSwitchConfig.getInstance();
         GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 300, 220, false);
         g.drawString(this.font, "\u00a7l\u00a7bQuickSwitch \u9b3c\u624b\u79d2\u5207", this.cx + 10, this.cy + 10, 0xFFFFFF);
@@ -87,12 +87,12 @@ extends Screen {
         super.render(g, mx, my, pt);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.saveAndClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public void onClose() {

@@ -7,12 +7,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
-import java.lang.invoke.LambdaMetafactory;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -151,25 +149,17 @@ public class FeatureHotkeyManager {
 
         @Override
         public void setHotkeyKey(int key) {
-            FeatureHotkeyManager.this.hotkeys.computeIfAbsent((String)this.featureName, (Function<String, HotkeyEntry>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)Ljava/lang/Object;, lambda$setHotkeyKey$0(java.lang.String ), (Ljava/lang/String;)Lfku/org/example/fku/util/FeatureHotkeyManager$HotkeyEntry;)()).key = key;
+            FeatureHotkeyManager.this.hotkeys.computeIfAbsent(this.featureName, k -> new HotkeyEntry()).key = key;
         }
 
         @Override
         public void setHotkeyName(String name) {
-            FeatureHotkeyManager.this.hotkeys.computeIfAbsent((String)this.featureName, (Function<String, HotkeyEntry>)LambdaMetafactory.metafactory(null, null, null, (Ljava/lang/Object;)Ljava/lang/Object;, lambda$setHotkeyName$1(java.lang.String ), (Ljava/lang/String;)Lfku/org/example/fku/util/FeatureHotkeyManager$HotkeyEntry;)()).name = name;
+            FeatureHotkeyManager.this.hotkeys.computeIfAbsent(this.featureName, k -> new HotkeyEntry()).name = name;
         }
 
         @Override
         public void saveConfig() {
             FeatureHotkeyManager.this.save();
-        }
-
-        private static /* synthetic */ HotkeyEntry lambda$setHotkeyName$1(String k) {
-            return new HotkeyEntry();
-        }
-
-        private static /* synthetic */ HotkeyEntry lambda$setHotkeyKey$0(String k) {
-            return new HotkeyEntry();
         }
     }
 

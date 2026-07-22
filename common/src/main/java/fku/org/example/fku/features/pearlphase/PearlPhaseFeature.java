@@ -51,10 +51,10 @@ public class PearlPhaseFeature {
         if (!PearlPhaseConfig.getInstance().enabled) {
             return;
         }
-        int keyW = PearlPhaseFeature.mc.f_91066_.f_92085_.getKey().getValue();
-        int keyS = PearlPhaseFeature.mc.f_91066_.f_92087_.getKey().getValue();
-        int keyA = PearlPhaseFeature.mc.f_91066_.f_92086_.getKey().getValue();
-        int keyD = PearlPhaseFeature.mc.f_91066_.f_92088_.getKey().getValue();
+        int keyW = PearlPhaseFeature.mc.options.keyUp.getKey().getValue();
+        int keyS = PearlPhaseFeature.mc.options.keyDown.getKey().getValue();
+        int keyA = PearlPhaseFeature.mc.options.keyLeft.getKey().getValue();
+        int keyD = PearlPhaseFeature.mc.options.keyRight.getKey().getValue();
         if (event.getKey() == keyW) {
             boolean bl = savedUp = event.getAction() != 0;
         }
@@ -74,7 +74,7 @@ public class PearlPhaseFeature {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
-        if (PearlPhaseFeature.mc.player == null || PearlPhaseFeature.mc.f_91073_ == null) {
+        if (PearlPhaseFeature.mc.player == null || PearlPhaseFeature.mc.level == null) {
             return;
         }
         PearlPhaseConfig cfg = PearlPhaseConfig.getInstance();
@@ -82,8 +82,8 @@ public class PearlPhaseFeature {
             if (state != PhaseState.IDLE) {
                 PearlPhaseFeature.resetState();
             }
-            if (PearlPhaseFeature.mc.player.f_19794_) {
-                PearlPhaseFeature.mc.player.f_19794_ = false;
+            if (PearlPhaseFeature.mc.player.noPhysics) {
+                PearlPhaseFeature.mc.player.noPhysics = false;
             }
             wasInsideBlock = false;
             return;
@@ -96,7 +96,7 @@ public class PearlPhaseFeature {
             return;
         }
         if (wasInsideBlock && !inside) {
-            PearlPhaseFeature.mc.player.f_19794_ = false;
+            PearlPhaseFeature.mc.player.noPhysics = false;
             wasInsideBlock = false;
         }
         if (cfg.autoThrow) {
@@ -105,17 +105,17 @@ public class PearlPhaseFeature {
             PearlPhaseFeature.resetState();
         }
         if (cfg.removeOverlay) {
-            PearlPhaseFeature.mc.player.m_20242_(false);
+            PearlPhaseFeature.mc.player.setNoGravity(false);
         }
-        if (cfg.noFront && PearlPhaseFeature.mc.f_91066_.m_92176_() == CameraType.THIRD_PERSON_FRONT) {
-            PearlPhaseFeature.mc.f_91066_.m_92157_(CameraType.FIRST_PERSON);
+        if (cfg.noFront && PearlPhaseFeature.mc.options.getCameraType() == CameraType.THIRD_PERSON_FRONT) {
+            PearlPhaseFeature.mc.options.setCameraType(CameraType.FIRST_PERSON);
         }
     }
 
     private static void handleInsideBlock(LocalPlayer player, PearlPhaseConfig cfg) {
-        player.f_19794_ = cfg.noClipEnabled;
-        player.f_19789_ = 0.0f;
-        player.m_6853_(true);
+        player.noPhysics = cfg.noClipEnabled;
+        player.fallDistance = 0.0f;
+        player.setOnGround(true);
         double baseSpeed = cfg.baseSpeed;
         double finalSpeed = baseSpeed * cfg.speed;
         double forward = savedUp ? 1.0 : 0.0;
@@ -125,17 +125,17 @@ public class PearlPhaseFeature {
         double fwd = forward - backward;
         double strafe = left - right;
         if (fwd == 0.0 && strafe == 0.0) {
-            player.m_20334_(0.0, 0.0, 0.0);
+            player.setDeltaMovement(0.0, 0.0, 0.0);
             return;
         }
         if (fwd != 0.0 && strafe != 0.0) {
             fwd *= Math.sin(0.7853981633974483);
             strafe *= Math.cos(0.7853981633974483);
         }
-        float yaw = player.m_146908_();
+        float yaw = player.getYRot();
         double motionX = fwd * finalSpeed * -Math.sin(Math.toRadians(yaw)) + strafe * finalSpeed * Math.cos(Math.toRadians(yaw));
         double motionZ = fwd * finalSpeed * Math.cos(Math.toRadians(yaw)) - strafe * finalSpeed * -Math.sin(Math.toRadians(yaw));
-        player.m_20334_(motionX, forward > 0.0 ? finalSpeed * 0.5 : (backward > 0.0 ? -finalSpeed * 0.5 : 0.0), motionZ);
+        player.setDeltaMovement(motionX, forward > 0.0 ? finalSpeed * 0.5 : (backward > 0.0 ? -finalSpeed * 0.5 : 0.0), motionZ);
         state = PhaseState.INSIDE;
     }
 
@@ -145,7 +145,7 @@ public class PearlPhaseFeature {
         }
         switch (state) {
             case IDLE: {
-                if (PearlPhaseFeature.mc.f_91077_ == null || PearlPhaseFeature.mc.f_91077_.m_6662_() != HitResult.Type.BLOCK) {
+                if (PearlPhaseFeature.mc.hitResult == null || PearlPhaseFeature.mc.hitResult.getType() != HitResult.Type.BLOCK) {
                     PearlPhaseFeature.resetState();
                     return;
                 }
@@ -153,10 +153,10 @@ public class PearlPhaseFeature {
                     PearlPhaseFeature.resetState();
                     return;
                 }
-                BlockHitResult blockHit = (BlockHitResult)PearlPhaseFeature.mc.f_91077_;
-                BlockPos targetPos = blockHit.m_82425_();
-                BlockState targetState = PearlPhaseFeature.mc.f_91073_.m_8055_(targetPos);
-                if (targetState.m_60795_() || !targetState.m_280296_()) {
+                BlockHitResult blockHit = (BlockHitResult)PearlPhaseFeature.mc.hitResult;
+                BlockPos targetPos = blockHit.getBlockPos();
+                BlockState targetState = PearlPhaseFeature.mc.level.getBlockState(targetPos);
+                if (targetState.isAir() || !targetState.isSolid()) {
                     PearlPhaseFeature.resetState();
                     return;
                 }
@@ -204,30 +204,30 @@ public class PearlPhaseFeature {
     }
 
     private static boolean isInsideBlock(LocalPlayer player) {
-        if (PearlPhaseFeature.mc.f_91073_ == null) {
+        if (PearlPhaseFeature.mc.level == null) {
             return false;
         }
-        return PearlPhaseFeature.mc.f_91073_.m_186434_((Entity)player, player.m_20191_().m_82310_(0.001, 0.001, 0.001)).iterator().hasNext();
+        return PearlPhaseFeature.mc.level.getBlockCollisions((Entity)player, player.getBoundingBox().contract(0.001, 0.001, 0.001)).iterator().hasNext();
     }
 
     private static float[] calculateTargetAngle(BlockPos blockPos, double edgeOffset) {
-        if (PearlPhaseFeature.mc.player == null || PearlPhaseFeature.mc.f_91073_ == null) {
+        if (PearlPhaseFeature.mc.player == null || PearlPhaseFeature.mc.level == null) {
             return null;
         }
-        BlockState state = PearlPhaseFeature.mc.f_91073_.m_8055_(blockPos);
-        VoxelShape shape = state.m_60812_((BlockGetter)PearlPhaseFeature.mc.f_91073_, blockPos);
-        if (shape.m_83281_()) {
+        BlockState state = PearlPhaseFeature.mc.level.getBlockState(blockPos);
+        VoxelShape shape = state.getCollisionShape((BlockGetter)PearlPhaseFeature.mc.level, blockPos);
+        if (shape.isEmpty()) {
             return null;
         }
-        AABB bounds = shape.m_83215_();
-        double minX = blockPos.m_123341_() + bounds.f_82288_;
-        double maxX = blockPos.m_123341_() + bounds.f_82291_;
-        double minY = blockPos.m_123342_() + bounds.f_82289_;
-        double maxY = blockPos.m_123342_() + bounds.f_82292_;
-        double minZ = blockPos.m_123343_() + bounds.f_82290_;
-        double maxZ = blockPos.m_123343_() + bounds.f_82293_;
+        AABB bounds = shape.bounds();
+        double minX = blockPos.getX() + bounds.minX;
+        double maxX = blockPos.getX() + bounds.maxX;
+        double minY = blockPos.getY() + bounds.minY;
+        double maxY = blockPos.getY() + bounds.maxY;
+        double minZ = blockPos.getZ() + bounds.minZ;
+        double maxZ = blockPos.getZ() + bounds.maxZ;
         double eyeX = PearlPhaseFeature.mc.player.getX();
-        double eyeY = PearlPhaseFeature.mc.player.m_20188_();
+        double eyeY = PearlPhaseFeature.mc.player.getEyeY();
         double eyeZ = PearlPhaseFeature.mc.player.getZ();
         double lookX = PearlPhaseFeature.mc.player.getLookAngle().x;
         double lookY = PearlPhaseFeature.mc.player.getLookAngle().y;
@@ -253,8 +253,8 @@ public class PearlPhaseFeature {
         double dy = bestY - eyeY;
         double dz = bestZ - eyeZ;
         double horizontalDist = Math.sqrt(dx * dx + dz * dz);
-        float yaw = Math.toDegrees(Math.atan2(-dx, dz));
-        float pitch = (-Math.toDegrees(Math.atan2(dy, horizontalDist)));
+        float yaw = (float)Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float)(-Math.toDegrees(Math.atan2(dy, horizontalDist)));
         return new float[]{yaw, pitch};
     }
 
@@ -263,16 +263,16 @@ public class PearlPhaseFeature {
             return true;
         }
         if (Float.isNaN(smoothYaw)) {
-            smoothYaw = PearlPhaseFeature.mc.player.m_146908_();
-            smoothPitch = PearlPhaseFeature.mc.player.m_146909_();
+            smoothYaw = PearlPhaseFeature.mc.player.getYRot();
+            smoothPitch = PearlPhaseFeature.mc.player.getXRot();
         }
         int totalTicks = Math.max(1, aimTimeMs / 50);
         float progress = Math.min(1.0f, stateTick / totalTicks);
         float factor = 0.3f;
         smoothYaw += (targetYaw - smoothYaw) * factor;
         smoothPitch += (targetPitch - smoothPitch) * factor;
-        PearlPhaseFeature.mc.player.m_146922_(smoothYaw);
-        PearlPhaseFeature.mc.player.m_146926_(smoothPitch);
+        PearlPhaseFeature.mc.player.setYRot(smoothYaw);
+        PearlPhaseFeature.mc.player.setXRot(smoothPitch);
         return progress >= 1.0f || Math.abs(smoothYaw - targetYaw) < 0.1f;
     }
 
@@ -280,9 +280,9 @@ public class PearlPhaseFeature {
         if (PearlPhaseFeature.mc.player == null) {
             return false;
         }
-        for (int i = 0; i < PearlPhaseFeature.mc.player.m_150109_().m_6643_(); ++i) {
-            ItemStack stack = PearlPhaseFeature.mc.player.m_150109_().m_8020_(i);
-            if (stack.m_41619_() || stack.m_41720_() != Items.f_42584_) continue;
+        for (int i = 0; i < PearlPhaseFeature.mc.player.getInventory().getContainerSize(); ++i) {
+            ItemStack stack = PearlPhaseFeature.mc.player.getInventory().getItem(i);
+            if (stack.isEmpty() || stack.getItem() != Items.ENDER_PEARL) continue;
             return true;
         }
         return false;
@@ -294,31 +294,31 @@ public class PearlPhaseFeature {
         if (PearlPhaseFeature.mc.player == null) {
             return false;
         }
-        if (PearlPhaseFeature.mc.player.m_21205_().m_41720_() == Items.f_42584_) {
+        if (PearlPhaseFeature.mc.player.getMainHandItem().getItem() == Items.ENDER_PEARL) {
             return true;
         }
         for (i = 0; i < 9; ++i) {
-            stack = PearlPhaseFeature.mc.player.m_150109_().m_8020_(i);
-            if (stack.m_41619_() || stack.m_41720_() != Items.f_42584_) continue;
-            PearlPhaseFeature.mc.player.m_150109_().f_35977_ = i;
+            stack = PearlPhaseFeature.mc.player.getInventory().getItem(i);
+            if (stack.isEmpty() || stack.getItem() != Items.ENDER_PEARL) continue;
+            PearlPhaseFeature.mc.player.getInventory().selected = i;
             return true;
         }
-        for (i = 9; i < PearlPhaseFeature.mc.player.m_150109_().m_6643_(); ++i) {
-            stack = PearlPhaseFeature.mc.player.m_150109_().m_8020_(i);
-            if (stack.m_41619_() || stack.m_41720_() != Items.f_42584_) continue;
-            PearlPhaseFeature.mc.player.m_150109_().f_35977_ = 0;
-            PearlPhaseFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(PearlPhaseFeature.mc.player.m_146908_(), PearlPhaseFeature.mc.player.m_146909_(), PearlPhaseFeature.mc.player.m_20096_()));
+        for (i = 9; i < PearlPhaseFeature.mc.player.getInventory().getContainerSize(); ++i) {
+            stack = PearlPhaseFeature.mc.player.getInventory().getItem(i);
+            if (stack.isEmpty() || stack.getItem() != Items.ENDER_PEARL) continue;
+            PearlPhaseFeature.mc.player.getInventory().selected = 0;
+            PearlPhaseFeature.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(PearlPhaseFeature.mc.player.getYRot(), PearlPhaseFeature.mc.player.getXRot(), PearlPhaseFeature.mc.player.onGround()));
             return false;
         }
         return false;
     }
 
     private static void throwPearl() {
-        if (PearlPhaseFeature.mc.player == null || PearlPhaseFeature.mc.f_91072_ == null) {
+        if (PearlPhaseFeature.mc.player == null || PearlPhaseFeature.mc.gameMode == null) {
             return;
         }
-        PearlPhaseFeature.mc.f_91072_.m_233721_((Player)PearlPhaseFeature.mc.player, InteractionHand.MAIN_HAND);
-        PearlPhaseFeature.mc.player.m_6674_(InteractionHand.MAIN_HAND);
+        PearlPhaseFeature.mc.gameMode.useItem((Player)PearlPhaseFeature.mc.player, InteractionHand.MAIN_HAND);
+        PearlPhaseFeature.mc.player.swing(InteractionHand.MAIN_HAND);
     }
 
     private static void resetState() {
@@ -343,7 +343,7 @@ public class PearlPhaseFeature {
         if (!cfg.enabled) {
             PearlPhaseFeature.resetState();
             if (PearlPhaseFeature.mc.player != null) {
-                PearlPhaseFeature.mc.player.f_19794_ = false;
+                PearlPhaseFeature.mc.player.noPhysics = false;
             }
             wasInsideBlock = false;
         }

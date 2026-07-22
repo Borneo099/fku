@@ -60,7 +60,7 @@ public class LootFeature {
 
     public static void start() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.f_91073_ == null) {
+        if (mc.player == null || mc.level == null) {
             LootFeature.reset("\u542f\u52a8\u5931\u8d25\uff1a\u73a9\u5bb6\u6216\u4e16\u754c\u4e3a\u7a7a");
             return;
         }
@@ -174,7 +174,7 @@ public class LootFeature {
             }
             if (event.getKey() == 256) {
                 LootFeature.cancelKeyBind();
-                mc.player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u70ed\u952e\u7ed1\u5b9a\u5df2\u53d6\u6d88"), false);
+                mc.player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u70ed\u952e\u7ed1\u5b9a\u5df2\u53d6\u6d88"), false);
                 return;
             }
             cfg.setHotkeyKey(event.getKey());
@@ -198,7 +198,7 @@ public class LootFeature {
             }
             cfg.setHotkeyName(keyName);
             waitingKeyBind = false;
-            mc.player.m_5661_(Component.literal((String)("\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7a\u70ed\u952e\u5df2\u7ed1\u5b9a: \u00a7e" + keyName)), false);
+            mc.player.displayClientMessage(Component.literal((String)("\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7a\u70ed\u952e\u5df2\u7ed1\u5b9a: \u00a7e" + keyName)), false);
             if (onKeyBoundCallback != null) {
                 onKeyBoundCallback.run();
                 onKeyBoundCallback = null;
@@ -208,20 +208,20 @@ public class LootFeature {
     }
 
     private static void refreshContainerQueue(Minecraft mc) {
-        ClientLevel level = mc.f_91073_;
+        ClientLevel level = mc.level;
         if (level == null || mc.player == null) {
             return;
         }
         LootConfig config = LootConfig.getInstance();
-        BlockPos center = mc.player.m_20183_();
+        BlockPos center = mc.player.blockPosition();
         int radius = config.radius;
         for (int x = -radius; x <= radius; ++x) {
             for (int y = -radius; y <= radius; ++y) {
                 for (int z = -radius; z <= radius; ++z) {
                     BlockPos immutable;
-                    BlockPos pos = center.m_7918_(x, y, z);
-                    BlockEntity be = level.m_7702_(pos);
-                    if (!(be instanceof Container) || be instanceof EnderChestBlockEntity || visitedContainers.contains(immutable = pos.m_7949_()) || containerQueue.contains(immutable)) continue;
+                    BlockPos pos = center.offset(x, y, z);
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (!(be instanceof Container) || be instanceof EnderChestBlockEntity || visitedContainers.contains(immutable = pos.immutable()) || containerQueue.contains(immutable)) continue;
                     containerQueue.add(immutable);
                 }
             }
@@ -233,36 +233,36 @@ public class LootFeature {
             LootFeature.reset("\u5f53\u524d\u5bb9\u5668\u4e3a\u7a7a");
             return;
         }
-        ClientLevel level = mc.f_91073_;
+        ClientLevel level = mc.level;
         if (level == null) {
             LootFeature.reset("\u4e16\u754c\u4e3a\u7a7a");
             return;
         }
         BlockPos pos = currentContainer;
-        if (mc.player.m_20238_(Vec3.m_82512_((Vec3i)pos)) > 36.0) {
+        if (mc.player.distanceToSqr(Vec3.atCenterOf((Vec3i)pos)) > 36.0) {
             statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u8df3\u8fc7\u8ddd\u79bb\u8fc7\u8fdc\u7684\u5bb9\u5668";
             LootFeature.moveToNextContainer();
             return;
         }
-        Vec3 vec = Vec3.m_82512_((Vec3i)pos);
+        Vec3 vec = Vec3.atCenterOf((Vec3i)pos);
         BlockHitResult hit = new BlockHitResult(vec, Direction.UP, pos, false);
-        mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hit, 0));
+        mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hit, 0));
         tickCounter = 0;
         state = State.WAIT_OPEN;
-        statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u6253\u5f00\u5bb9\u5668 " + pos.m_123344_();
+        statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u6253\u5f00\u5bb9\u5668 " + pos.toShortString();
     }
 
     private static void handleWaitOpen(Minecraft mc) {
         if (++tickCounter < 3) {
             return;
         }
-        AbstractContainerMenu menu = mc.player.f_36096_;
-        if (menu == null || menu.f_38840_ == 0) {
+        AbstractContainerMenu menu = mc.player.containerMenu;
+        if (menu == null || menu.containerId == 0) {
             statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u5bb9\u5668\u6253\u5f00\u5931\u8d25\uff0c\u8df3\u8fc7";
             LootFeature.moveToNextContainer();
             return;
         }
-        containerSlotCount = menu.f_38839_.size() - 36;
+        containerSlotCount = menu.slots.size() - 36;
         if (containerSlotCount <= 0) {
             statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u65e0\u6548\u5bb9\u5668\uff0c\u8df3\u8fc7";
             LootFeature.moveToNextContainer();
@@ -277,8 +277,8 @@ public class LootFeature {
 
     private static void handleLoot(Minecraft mc) {
         Slot slot;
-        AbstractContainerMenu menu = mc.player.f_36096_;
-        if (menu == null || menu.f_38840_ == 0) {
+        AbstractContainerMenu menu = mc.player.containerMenu;
+        if (menu == null || menu.containerId == 0) {
             statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u5bb9\u5668\u5df2\u5173\u95ed";
             LootFeature.moveToNextContainer();
             return;
@@ -289,34 +289,34 @@ public class LootFeature {
             return;
         }
         if (overflowSlot == -2) {
-            mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(menu.f_38840_, menu.m_182424_(), -999, 0, ClickType.PICKUP, menu.m_142621_(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+            mc.player.connection.send((Packet)new ServerboundContainerClickPacket(menu.containerId, menu.getStateId(), -999, 0, ClickType.PICKUP, menu.getCarried(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
             overflowSlot = -1;
             ++currentSlotIndex;
             lastClickTime = System.currentTimeMillis();
             if (config.dropOverflow && !overflowNotified) {
                 overflowNotified = true;
-                mc.player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7e\u80cc\u5305\u5df2\u6ee1\uff0c\u6b63\u5728\u4e22\u5f03\u591a\u4f59\u7269\u54c1"), false);
+                mc.player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7e\u80cc\u5305\u5df2\u6ee1\uff0c\u6b63\u5728\u4e22\u5f03\u591a\u4f59\u7269\u54c1"), false);
             }
             statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u4e22\u5f03\u6ea2\u51fa\u7269\u54c1";
             return;
         }
         if (overflowSlot >= 0) {
-            slot = menu.m_38853_(overflowSlot);
-            if (slot != null && slot.m_6657_()) {
+            slot = menu.getSlot(overflowSlot);
+            if (slot != null && slot.hasItem()) {
                 if (config.dropOverflow) {
-                    mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(menu.f_38840_, menu.m_182424_(), overflowSlot, 0, ClickType.PICKUP, ItemStack.f_41583_, (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+                    mc.player.connection.send((Packet)new ServerboundContainerClickPacket(menu.containerId, menu.getStateId(), overflowSlot, 0, ClickType.PICKUP, ItemStack.EMPTY, (Int2ObjectMap)new Int2ObjectOpenHashMap()));
                     overflowSlot = -2;
                     lastClickTime = System.currentTimeMillis();
                     if (!overflowNotified) {
                         overflowNotified = true;
-                        mc.player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7e\u80cc\u5305\u5df2\u6ee1\uff0c\u6b63\u5728\u4e22\u5f03\u591a\u4f59\u7269\u54c1"), false);
+                        mc.player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7e\u80cc\u5305\u5df2\u6ee1\uff0c\u6b63\u5728\u4e22\u5f03\u591a\u4f59\u7269\u54c1"), false);
                     }
                     statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u62fe\u53d6\u6ea2\u51fa\u7269\u54c1";
                     return;
                 }
                 if (!overflowNotified) {
                     overflowNotified = true;
-                    mc.player.m_5661_(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u80cc\u5305\u5df2\u6ee1\uff01"), false);
+                    mc.player.displayClientMessage(Component.literal((String)"\u00a76[\u4e00\u952e\u53d6\u7269] \u00a7c\u80cc\u5305\u5df2\u6ee1\uff01"), false);
                 }
                 overflowSlot = -1;
                 currentSlotIndex = containerSlotCount;
@@ -326,7 +326,7 @@ public class LootFeature {
             }
             overflowSlot = -1;
         }
-        while (!(currentSlotIndex >= containerSlotCount || (slot = menu.m_38853_(currentSlotIndex)) != null && slot.m_6657_())) {
+        while (!(currentSlotIndex >= containerSlotCount || (slot = menu.getSlot(currentSlotIndex)) != null && slot.hasItem())) {
             ++currentSlotIndex;
         }
         if (currentSlotIndex >= containerSlotCount) {
@@ -335,7 +335,7 @@ public class LootFeature {
             overflowSlot = -1;
             return;
         }
-        mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(menu.f_38840_, menu.m_182424_(), currentSlotIndex, 0, ClickType.QUICK_MOVE, menu.m_142621_(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+        mc.player.connection.send((Packet)new ServerboundContainerClickPacket(menu.containerId, menu.getStateId(), currentSlotIndex, 0, ClickType.QUICK_MOVE, menu.getCarried(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
         lastClickTime = System.currentTimeMillis();
         statusMessage = "\u4e00\u952e\u53d6\u7269\uff1a\u5904\u7406\u7b2c " + (currentSlotIndex + 1) + "/" + containerSlotCount + " \u683c";
         if (config.dropOverflow) {
@@ -347,9 +347,9 @@ public class LootFeature {
 
     private static void handleClose(Minecraft mc) {
         LootConfig config = LootConfig.getInstance();
-        AbstractContainerMenu menu = mc.player.f_36096_;
-        if (menu != null && menu.f_38840_ != 0) {
-            mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClosePacket(menu.f_38840_));
+        AbstractContainerMenu menu = mc.player.containerMenu;
+        if (menu != null && menu.containerId != 0) {
+            mc.player.connection.send((Packet)new ServerboundContainerClosePacket(menu.containerId));
         }
         if (currentContainer != null) {
             visitedContainers.add(currentContainer);
@@ -383,8 +383,8 @@ public class LootFeature {
 
     private static void moveToNextContainer() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null && mc.player.f_36096_ != null && mc.player.f_36096_.f_38840_ != 0) {
-            mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClosePacket(mc.player.f_36096_.f_38840_));
+        if (mc.player != null && mc.player.containerMenu != null && mc.player.containerMenu.containerId != 0) {
+            mc.player.connection.send((Packet)new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
         }
         if (!containerQueue.isEmpty()) {
             currentContainer = containerQueue.poll();
@@ -407,8 +407,8 @@ public class LootFeature {
         statusMessage = "";
         try {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && mc.player.f_36096_ != null && mc.player.f_36096_.f_38840_ != 0) {
-                mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClosePacket(mc.player.f_36096_.f_38840_));
+            if (mc.player != null && mc.player.containerMenu != null && mc.player.containerMenu.containerId != 0) {
+                mc.player.connection.send((Packet)new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
             }
         }
         catch (Exception exception) {

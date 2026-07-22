@@ -30,7 +30,7 @@ public final class SeedBiomeSampler {
     public static synchronized boolean ensureReady() {
         if (vanilla == null) {
             try {
-                vanilla = VanillaRegistries.m_255371_();
+                vanilla = VanillaRegistries.createLookup();
             }
             catch (Throwable t) {
                 return false;
@@ -49,28 +49,28 @@ public final class SeedBiomeSampler {
             return null;
         }
         try {
-            TheEndBiomeSource source;
-            HolderLookup.RegistryLookup nss = vanilla.m_255025_(Registries.f_256932_);
-            HolderLookup.RegistryLookup noise = vanilla.m_255025_(Registries.f_256865_);
-            HolderLookup.RegistryLookup biomesLookup = vanilla.m_255025_(Registries.f_256952_);
-            HolderLookup.RegistryLookup params = vanilla.m_255025_(Registries.f_273919_);
-            RandomState rs = RandomState.m_255302_((NoiseGeneratorSettings)(switch (dim) {
-                case Dim.NETHER -> {
-                    Holder.Reference param = params.m_255043_(MultiNoiseBiomeSourceParameterLists.f_273830_);
+            BiomeSource source;
+            HolderLookup.RegistryLookup nss = vanilla.lookupOrThrow(Registries.NOISE_SETTINGS);
+            HolderLookup.RegistryLookup noise = vanilla.lookupOrThrow(Registries.NOISE);
+            HolderLookup.RegistryLookup biomesLookup = vanilla.lookupOrThrow(Registries.BIOME);
+            HolderLookup.RegistryLookup params = vanilla.lookupOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST);
+            RandomState rs = RandomState.create((NoiseGeneratorSettings)(switch (dim) {
+                case NETHER -> {
+                    Holder.Reference param = params.getOrThrow(MultiNoiseBiomeSourceParameterLists.NETHER);
                     source = SeedBiomeSampler.createMultiNoiseSource(param);
-                    yield (NoiseGeneratorSettings)nss.m_255043_(NoiseGeneratorSettings.f_64434_).m_203334_();
+                    yield (NoiseGeneratorSettings)nss.getOrThrow(NoiseGeneratorSettings.NETHER).value();
                 }
-                case Dim.END -> {
-                    source = TheEndBiomeSource.m_254978_((HolderGetter)biomesLookup);
-                    yield (NoiseGeneratorSettings)nss.m_255043_(NoiseGeneratorSettings.f_64435_).m_203334_();
+                case END -> {
+                    source = TheEndBiomeSource.create((HolderGetter)biomesLookup);
+                    yield (NoiseGeneratorSettings)nss.getOrThrow(NoiseGeneratorSettings.END).value();
                 }
                 default -> {
-                    Holder.Reference param = params.m_255043_(MultiNoiseBiomeSourceParameterLists.f_273878_);
+                    Holder.Reference param = params.getOrThrow(MultiNoiseBiomeSourceParameterLists.OVERWORLD);
                     source = SeedBiomeSampler.createMultiNoiseSource(param);
-                    yield (NoiseGeneratorSettings)nss.m_255043_(NoiseGeneratorSettings.f_64432_).m_203334_();
+                    yield (NoiseGeneratorSettings)nss.getOrThrow(NoiseGeneratorSettings.OVERWORLD).value();
                 }
             }), (HolderGetter)noise, seed);
-            e = new Entry((BiomeSource)source, rs.m_224579_());
+            e = new Entry((BiomeSource)source, rs.sampler());
             CACHE.put(key, e);
             return e;
         }
@@ -102,8 +102,8 @@ public final class SeedBiomeSampler {
         if (e == null) {
             return null;
         }
-        Holder holder = e.source.m_203407_(QuartPos.m_175400_(blockX), QuartPos.m_175400_(blockY), QuartPos.m_175400_(blockZ), e.climate);
-        return holder.m_203543_().orElse(null);
+        Holder holder = e.source.getNoiseBiome(QuartPos.fromBlock(blockX), QuartPos.fromBlock(blockY), QuartPos.fromBlock(blockZ), e.climate);
+        return (ResourceKey<Biome>)holder.unwrapKey().orElse(null);
     }
 
     static {

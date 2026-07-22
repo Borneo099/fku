@@ -16,12 +16,12 @@ public enum BlockPlacingMethod {
     public static BlockPlacingMethod facing(Direction direction) {
         return switch (direction) {
             default -> throw new IncompatibleClassChangeError();
-            case Direction.UP -> FACING_TOP;
-            case Direction.DOWN -> FACING_BOTTOM;
-            case Direction.NORTH -> FACING_NORTH;
-            case Direction.SOUTH -> FACING_SOUTH;
-            case Direction.EAST -> FACING_EAST;
-            case Direction.WEST -> FACING_WEST;
+            case UP -> FACING_TOP;
+            case DOWN -> FACING_BOTTOM;
+            case NORTH -> FACING_NORTH;
+            case SOUTH -> FACING_SOUTH;
+            case EAST -> FACING_EAST;
+            case WEST -> FACING_WEST;
         };
     }
 

@@ -19,11 +19,11 @@ public class HealthTagManager {
     public static void tick() {
         boolean holdingBow;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.f_91073_ == null || mc.player == null) {
+        if (mc.level == null || mc.player == null) {
             return;
         }
-        ItemStack mainHand = mc.player.m_21205_();
-        ItemStack offHand = mc.player.m_21206_();
+        ItemStack mainHand = mc.player.getMainHandItem();
+        ItemStack offHand = mc.player.getOffhandItem();
         boolean bl = holdingBow = ArrowDmgFeature.isBowItem(mainHand) || ArrowDmgFeature.isBowItem(offHand);
         if (holdingBow) {
             HealthTagManager.findAndLockBestTarget(mc);
@@ -39,9 +39,9 @@ public class HealthTagManager {
             lastAttackTime = System.currentTimeMillis();
             return;
         }
-        Vec3 eyePos = mc.player.m_146892_();
+        Vec3 eyePos = mc.player.getEyePosition();
         Vec3 lookVec = mc.player.getLookAngle();
-        List entities = mc.f_91073_.m_45933_((Entity)mc.player, mc.player.m_20191_().m_82400_(128.0));
+        List entities = mc.level.getEntities((Entity)mc.player, mc.player.getBoundingBox().inflate(128.0));
         LivingEntity bestCandidate = null;
         double bestScore = Double.MAX_VALUE;
         for (Entity entity : entities) {
@@ -54,7 +54,7 @@ public class HealthTagManager {
             PartEntity part;
             Entity entity2;
             LivingEntity living;
-            if (!(entity instanceof LivingEntity) || !(living = (LivingEntity) entity).m_6084_() || living == mc.player) continue;
+            if (!(entity instanceof LivingEntity) || !(living = (LivingEntity) entity).isAlive() || living == mc.player) continue;
             if (entity instanceof PartEntity && (entity2 = (part = (PartEntity)entity).getParent()) instanceof LivingEntity) {
                 LivingEntity parent;
                 living = parent = (LivingEntity) entity2;

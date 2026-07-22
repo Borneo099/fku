@@ -60,16 +60,16 @@ public class TaskQueue {
         int slot;
         ItemStack item;
         ArrayList<BlockSnapshot> snapshots = new ArrayList<BlockSnapshot>();
-        boolean isAir = targetState.m_60795_();
+        boolean isAir = targetState.isAir();
         for (BlockPos pos : positions) {
-            if (TaskQueue.mc.f_91073_ == null) continue;
-            BlockState oldState = TaskQueue.mc.f_91073_.m_8055_(pos);
+            if (TaskQueue.mc.level == null) continue;
+            BlockState oldState = TaskQueue.mc.level.getBlockState(pos);
             snapshots.add(new BlockSnapshot(pos, oldState, null));
             this.queue.add(new BlockOperation(pos, targetState, null, isAir ? BlockOperation.Type.BREAK : BlockOperation.Type.SET));
         }
         HistoryManager.getInstance().pushSnapshot(snapshots);
-        if (!isAir && !(item = this.findItemForBlock(targetState)).m_41619_() && (slot = this.ensureInHotbarSlot(item.m_41720_())) >= 0 && this.originalSlot < 0) {
-            this.originalSlot = TaskQueue.mc.player != null ? TaskQueue.mc.player.m_150109_().f_35977_ : -1;
+        if (!isAir && !(item = this.findItemForBlock(targetState)).isEmpty() && (slot = this.ensureInHotbarSlot(item.getItem())) >= 0 && this.originalSlot < 0) {
+            this.originalSlot = TaskQueue.mc.player != null ? TaskQueue.mc.player.getInventory().selected : -1;
         }
         this.startQueue(commandName);
     }
@@ -77,8 +77,8 @@ public class TaskQueue {
     public void submitReplace(List<BlockPos> positions, BlockState targetState, BlockState fromState, String commandName) {
         ArrayList<BlockSnapshot> snapshots = new ArrayList<BlockSnapshot>();
         for (BlockPos pos : positions) {
-            if (TaskQueue.mc.f_91073_ == null) continue;
-            BlockState oldState = TaskQueue.mc.f_91073_.m_8055_(pos);
+            if (TaskQueue.mc.level == null) continue;
+            BlockState oldState = TaskQueue.mc.level.getBlockState(pos);
             if (fromState != null && !this.matchesBlock(oldState, fromState)) continue;
             snapshots.add(new BlockSnapshot(pos, oldState, null));
             this.queue.add(new BlockOperation(pos, targetState, null, BlockOperation.Type.REPLACE));
@@ -98,8 +98,8 @@ public class TaskQueue {
         ArrayList<BlockSnapshot> snapshots = new ArrayList<BlockSnapshot>();
         for (int i = 0; i < positions.size(); ++i) {
             BlockPos pos = positions.get(i);
-            if (TaskQueue.mc.f_91073_ == null) continue;
-            BlockState oldState = TaskQueue.mc.f_91073_.m_8055_(pos);
+            if (TaskQueue.mc.level == null) continue;
+            BlockState oldState = TaskQueue.mc.level.getBlockState(pos);
             snapshots.add(new BlockSnapshot(pos, oldState, null));
             this.queue.add(new BlockOperation(pos, states.get(i), i < blockEntityData.size() ? blockEntityData.get(i) : null, BlockOperation.Type.PASTE));
         }
@@ -142,24 +142,24 @@ public class TaskQueue {
     }
 
     private void executeOperation(BlockOperation op) {
-        if (TaskQueue.mc.player == null || TaskQueue.mc.f_91073_ == null) {
+        if (TaskQueue.mc.player == null || TaskQueue.mc.level == null) {
             return;
         }
-        boolean isCreative = TaskQueue.mc.player.m_150110_().f_35937_;
+        boolean isCreative = TaskQueue.mc.player.getAbilities().instabuild;
         switch (op.type) {
             case SET: 
             case REPLACE: {
                 this.breakBlockPacket(op.pos, isCreative);
-                if (op.targetState == null || op.targetState.m_60795_()) break;
+                if (op.targetState == null || op.targetState.isAir()) break;
                 this.placeBlockPacket(op.pos, op.targetState, false);
                 break;
             }
             case PASTE: {
                 this.breakBlockPacket(op.pos, isCreative);
-                if (op.targetState != null && !op.targetState.m_60795_()) {
+                if (op.targetState != null && !op.targetState.isAir()) {
                     this.placeBlockPacket(op.pos, op.targetState, true);
                 }
-                if (!(op.blockEntityData instanceof CompoundTag) || ((CompoundTag)op.blockEntityData).m_128456_()) break;
+                if (!(op.blockEntityData instanceof CompoundTag) || ((CompoundTag)op.blockEntityData).isEmpty()) break;
                 this.restoreBlockEntity(op.pos, (CompoundTag)op.blockEntityData);
                 break;
             }
@@ -176,59 +176,59 @@ public class TaskQueue {
         Direction placeFace;
         float pitch;
         float yaw;
-        if (TaskQueue.mc.player == null || TaskQueue.mc.player.f_108617_ == null) {
+        if (TaskQueue.mc.player == null || TaskQueue.mc.player.connection == null) {
             return;
         }
         ItemStack item = this.findItemForBlock(state);
-        if (item.m_41619_()) {
+        if (item.isEmpty()) {
             return;
         }
-        int targetSlot = this.ensureInHotbarSlot(item.m_41720_());
+        int targetSlot = this.ensureInHotbarSlot(item.getItem());
         if (targetSlot < 0) {
             return;
         }
         if (this.originalSlot < 0) {
-            this.originalSlot = TaskQueue.mc.player.m_150109_().f_35977_;
+            this.originalSlot = TaskQueue.mc.player.getInventory().selected;
         }
         int seq = this.getSequence();
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
-        Vec3 eyePos = TaskQueue.mc.player.m_20299_(1.0f);
-        Vec3 blockCenter = Vec3.m_82512_((Vec3i)pos);
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+        Vec3 eyePos = TaskQueue.mc.player.getEyePosition(1.0f);
+        Vec3 blockCenter = Vec3.atCenterOf((Vec3i)pos);
         Vec3 dir = blockCenter.subtract(eyePos).normalize();
         if (orient) {
             float[] orientation = ClipboardManager.getPlacementYawPitch(state);
             yaw = orientation[0];
             pitch = orientation[1];
             placeFace = ClipboardManager.getPlacementFace(state);
-            if (placeFace.m_122434_() == Direction.Axis.Y && Float.isNaN(yaw)) {
+            if (placeFace.getAxis() == Direction.Axis.Y && Float.isNaN(yaw)) {
                 // empty if block
             }
         } else {
-            yaw = (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
-            pitch = (-Math.asin(dir.y) * 180.0 / Math.PI);
-            placeFace = Direction.m_122366_(dir.x, dir.y, dir.z).m_122424_();
+            yaw = (float)(Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
+            pitch = (float)(-Math.asin(dir.y) * 180.0 / Math.PI);
+            placeFace = Direction.getNearest(dir.x, dir.y, dir.z).getOpposite();
         }
         if (!Float.isNaN(yaw) && !Float.isNaN(pitch)) {
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(yaw, pitch, TaskQueue.mc.player.m_20096_()));
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(yaw, pitch, TaskQueue.mc.player.onGround()));
         }
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(targetSlot));
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(targetSlot));
         if (!orient || placeFace == null) {
-            placeFace = Direction.m_122366_(dir.x, dir.y, dir.z).m_122424_();
+            placeFace = Direction.getNearest(dir.x, dir.y, dir.z).getOpposite();
         }
-        Vec3 clickPos = blockCenter.add(Vec3.m_82528_((Vec3i)placeFace.m_122436_()).scale(-0.5));
+        Vec3 clickPos = blockCenter.add(Vec3.atLowerCornerOf((Vec3i)placeFace.getNormal()).scale(-0.5));
         BlockHitResult hitResult = new BlockHitResult(clickPos, placeFace, pos, false);
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerCommandPacket((Entity)TaskQueue.mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, seq));
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerCommandPacket((Entity)TaskQueue.mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundPlayerCommandPacket((Entity)TaskQueue.mc.player, ServerboundPlayerCommandPacket.Action.PRESS_SHIFT_KEY));
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundUseItemOnPacket(InteractionHand.MAIN_HAND, hitResult, seq));
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundPlayerCommandPacket((Entity)TaskQueue.mc.player, ServerboundPlayerCommandPacket.Action.RELEASE_SHIFT_KEY));
     }
 
     private void restoreBlockEntity(BlockPos pos, CompoundTag tag) {
-        if (TaskQueue.mc.player == null || TaskQueue.mc.f_91073_ == null) {
+        if (TaskQueue.mc.player == null || TaskQueue.mc.level == null) {
             return;
         }
-        if (TaskQueue.mc.f_91073_.m_7702_(pos) != null) {
+        if (TaskQueue.mc.level.getBlockEntity(pos) != null) {
             try {
-                TaskQueue.mc.f_91073_.m_7702_(pos).m_142466_(tag);
+                TaskQueue.mc.level.getBlockEntity(pos).load(tag);
             }
             catch (Exception exception) {
                 // ignored
@@ -237,30 +237,30 @@ public class TaskQueue {
     }
 
     private void breakBlockPacket(BlockPos pos, boolean isCreative) {
-        if (TaskQueue.mc.player == null || TaskQueue.mc.player.f_108617_ == null) {
+        if (TaskQueue.mc.player == null || TaskQueue.mc.player.connection == null) {
             return;
         }
         int seq = this.getSequence();
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
-        Vec3 eyePos = TaskQueue.mc.player.m_20299_(1.0f);
-        Vec3 blockCenter = Vec3.m_82512_((Vec3i)pos);
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundSwingPacket(InteractionHand.MAIN_HAND));
+        Vec3 eyePos = TaskQueue.mc.player.getEyePosition(1.0f);
+        Vec3 blockCenter = Vec3.atCenterOf((Vec3i)pos);
         Vec3 dir = blockCenter.subtract(eyePos).normalize();
-        float yaw = (Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
-        float pitch = (-Math.asin(dir.y) * 180.0 / Math.PI);
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Rot(yaw, pitch, TaskQueue.mc.player.m_20096_()));
-        TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+        float yaw = (float)(Math.atan2(-dir.x, dir.z) * 180.0 / Math.PI);
+        float pitch = (float)(-Math.asin(dir.y) * 180.0 / Math.PI);
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Rot(yaw, pitch, TaskQueue.mc.player.onGround()));
+        TaskQueue.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, Direction.DOWN, seq));
         if (!isCreative) {
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, Direction.DOWN, seq));
         }
     }
 
     private int getSequence() {
-        if (TaskQueue.mc.f_91073_ == null) {
+        if (TaskQueue.mc.level == null) {
             return 0;
         }
-        BlockStatePredictionHandler handler = ((ClientLevelAccessor)TaskQueue.mc.f_91073_).getBlockStatePredictionHandler_CU();
-        handler.m_233855_();
-        int num = handler.m_233871_();
+        BlockStatePredictionHandler handler = ((ClientLevelAccessor)TaskQueue.mc.level).getBlockStatePredictionHandler_CU();
+        handler.startPredicting();
+        int num = handler.currentSequence();
         handler.close();
         return num;
     }
@@ -271,51 +271,51 @@ public class TaskQueue {
         if (TaskQueue.mc.player == null) {
             return -1;
         }
-        Inventory inv = TaskQueue.mc.player.m_150109_();
-        if (inv.m_8020_(curr = inv.f_35977_).m_150930_(item)) {
+        Inventory inv = TaskQueue.mc.player.getInventory();
+        if (inv.getItem(curr = inv.selected).is(item)) {
             return curr;
         }
         for (i = 0; i < 9; ++i) {
-            if (!inv.m_8020_(i).m_150930_(item)) continue;
-            inv.f_35977_ = i;
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(i));
+            if (!inv.getItem(i).is(item)) continue;
+            inv.selected = i;
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(i));
             return i;
         }
         for (i = 9; i < 36; ++i) {
-            if (!inv.m_8020_(i).m_150930_(item)) continue;
-            ItemStack temp = inv.m_8020_(curr).m_41777_();
-            inv.m_6836_(curr, inv.m_8020_(i).m_41777_());
-            inv.m_6836_(i, temp);
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(curr));
+            if (!inv.getItem(i).is(item)) continue;
+            ItemStack temp = inv.getItem(curr).copy();
+            inv.setItem(curr, inv.getItem(i).copy());
+            inv.setItem(i, temp);
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(curr));
             return curr;
         }
-        if (TaskQueue.mc.player.m_150110_().f_35937_) {
+        if (TaskQueue.mc.player.getAbilities().instabuild) {
             ItemStack stack = new ItemStack((ItemLike)item, 64);
-            inv.m_6836_(curr, stack);
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCreativeModeSlotPacket(curr + 36, stack));
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(curr));
+            inv.setItem(curr, stack);
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundSetCreativeModeSlotPacket(curr + 36, stack));
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(curr));
             return curr;
         }
         return curr;
     }
 
     private ItemStack findItemForBlock(BlockState state) {
-        Block block = state.m_60734_();
-        ItemStack stack = new ItemStack((ItemLike)block.m_5456_(), 1);
-        if (!stack.m_41619_()) {
+        Block block = state.getBlock();
+        ItemStack stack = new ItemStack((ItemLike)block.asItem(), 1);
+        if (!stack.isEmpty()) {
             return stack;
         }
         if (TaskQueue.mc.player == null) {
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
-        for (int i = 0; i < TaskQueue.mc.player.m_150109_().m_6643_(); ++i) {
+        for (int i = 0; i < TaskQueue.mc.player.getInventory().getContainerSize(); ++i) {
             BlockItem bi;
-            ItemStack invStack = TaskQueue.mc.player.m_150109_().m_8020_(i);
-            Item item = invStack.m_41720_();
-            if (!(item instanceof BlockItem) || (bi = (BlockItem)item).m_40614_() != block) continue;
-            return invStack.m_255036_(1);
+            ItemStack invStack = TaskQueue.mc.player.getInventory().getItem(i);
+            Item item = invStack.getItem();
+            if (!(item instanceof BlockItem) || (bi = (BlockItem)item).getBlock() != block) continue;
+            return invStack.copyWithCount(1);
         }
-        return ItemStack.f_41583_;
+        return ItemStack.EMPTY;
     }
 
     private int findHotbarSlot(ItemStack stack) {
@@ -323,14 +323,14 @@ public class TaskQueue {
             return -1;
         }
         for (int i = 0; i < 9; ++i) {
-            if (TaskQueue.mc.player.m_150109_().m_8020_(i).m_41720_() != stack.m_41720_()) continue;
+            if (TaskQueue.mc.player.getInventory().getItem(i).getItem() != stack.getItem()) continue;
             return i;
         }
         return -1;
     }
 
     private boolean matchesBlock(BlockState state, BlockState match) {
-        return state.m_60734_() == match.m_60734_();
+        return state.getBlock() == match.getBlock();
     }
 
     private void finishQueue(boolean success) {
@@ -340,7 +340,7 @@ public class TaskQueue {
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         cfg.taskRunning = false;
         if (this.originalSlot >= 0 && TaskQueue.mc.player != null) {
-            TaskQueue.mc.player.f_108617_.m_104955_((Packet)new ServerboundSetCarriedItemPacket(this.originalSlot));
+            TaskQueue.mc.player.connection.send((Packet)new ServerboundSetCarriedItemPacket(this.originalSlot));
             this.originalSlot = -1;
         }
         if (success) {
@@ -358,7 +358,7 @@ public class TaskQueue {
 
     private void sendStatus(String msg) {
         if (TaskQueue.mc.player != null) {
-            TaskQueue.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
+            TaskQueue.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
         }
     }
 

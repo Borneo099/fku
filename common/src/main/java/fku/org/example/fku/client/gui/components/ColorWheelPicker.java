@@ -74,16 +74,16 @@ public class ColorWheelPicker {
             for (int dy = -60; dy <= 60; ++dy) {
                 int dist2 = dx * dx + dy * dy;
                 if (dist2 > r2) continue;
-                float dist = Math.sqrt(dist2) / 60.0f;
-                float angle = Math.atan2(dy, dx);
+                float dist = (float)(Math.sqrt(dist2) / 60.0f);
+                float angle = (float)Math.atan2(dy, dx);
                 if (angle < 0.0f) {
-                    angle = (angle + Math.PI * 2);
+                    angle = (float)(angle + Math.PI * 2);
                 }
-                float h = angle / (Math.PI * 2);
+                float h = (float)(angle / (Math.PI * 2));
                 float s = dist;
                 float v = this.value;
                 int rgb = ColorWheelPicker.hsvToInt(h, s, v);
-                g.m_280509_(cx + dx, cy + dy, cx + dx + 1, cy + dy + 1, rgb);
+                g.fill(cx + dx, cy + dy, cx + dx + 1, cy + dy + 1, rgb);
             }
         }
     }
@@ -94,13 +94,13 @@ public class ColorWheelPicker {
         int barW = 120;
         int barH = 12;
         for (int i = 0; i < barW; ++i) {
-            float t = i / barW;
-            int gray = (t * 255.0f);
+            float t = (float)i / barW;
+            int gray = (int)(t * 255.0f);
             int color = 0xFF000000 | gray << 16 | gray << 8 | gray;
-            g.m_280509_(barX + i, barY, barX + i + 1, barY + barH, color);
+            g.fill(barX + i, barY, barX + i + 1, barY + barH, color);
         }
-        int indX = barX + (this.value * barW);
-        g.m_280509_(indX - 2, barY - 1, indX + 3, barY + barH + 1, -1);
+        int indX = barX + (int)(this.value * barW);
+        g.fill(indX - 2, barY - 1, indX + 3, barY + barH + 1, -1);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -118,12 +118,12 @@ public class ColorWheelPicker {
         double dy = mouseY - this.centerY;
         double dist = Math.sqrt(dx * dx + dy * dy);
         if (dist <= 60.0) {
-            float angle = Math.atan2(dy, dx);
+            float angle = (float)Math.atan2(dy, dx);
             if (angle < 0.0f) {
-                angle = (angle + Math.PI * 2);
+                angle = (float)(angle + Math.PI * 2);
             }
-            this.hue = angle / (Math.PI * 2);
-            this.saturation = Math.min(dist / 60.0, 1.0);
+            this.hue = (float)(angle / (Math.PI * 2));
+            this.saturation = (float)Math.min(dist / 60.0, 1.0);
             this.updateHex();
             return true;
         }
@@ -131,7 +131,7 @@ public class ColorWheelPicker {
         int barY = this.centerY + 60 + 10;
         int barW = 120;
         if (mouseY >= barY && mouseY < (barY + 12) && mouseX >= barX && mouseX < (barX + barW)) {
-            this.value = ((mouseX - barX) / barW);
+            this.value = (float)((mouseX - barX) / barW);
             this.updateHex();
             return true;
         }
@@ -149,12 +149,12 @@ public class ColorWheelPicker {
     private static int hsvToInt(float h, float s, float v) {
         float g;
         float r;
-        int i = (h * 6.0f);
+        int i = (int)(h * 6.0f);
         float f = h * 6.0f - i;
         float p = v * (1.0f - s);
         float q = v * (1.0f - f * s);
         float t = v * (1.0f - (1.0f - f) * s);
-        return 0xFF000000 | (r * 255.0f) << 16 | (g * 255.0f) << 8 | ((switch (i % 6) {
+        return 0xFF000000 | (int)(r * 255.0f) << 16 | (int)(g * 255.0f) << 8 | (int)((switch (i % 6) {
             case 0 -> {
                 r = v;
                 g = t;

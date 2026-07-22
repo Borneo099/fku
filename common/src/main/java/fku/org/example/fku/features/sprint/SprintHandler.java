@@ -50,7 +50,7 @@ public class SprintHandler {
         if (!value) {
             Minecraft mc = SprintHandler.getMc();
             if (mc != null && mc.player != null) {
-                mc.player.m_6858_(false);
+                mc.player.setSprinting(false);
             }
             SprintHandler.restoreAll();
         }
@@ -64,7 +64,7 @@ public class SprintHandler {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         Minecraft mc = SprintHandler.getMc();
-        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || mc.player == null || mc.level == null) {
             return;
         }
         SprintConfig cfg = SprintConfig.getInstance();
@@ -88,8 +88,8 @@ public class SprintHandler {
                 }
             }
         } else if (event.phase == TickEvent.Phase.END && yawModified) {
-            mc.player.m_146922_(realYaw);
-            mc.player.m_146926_(realPitch);
+            mc.player.setYRot(realYaw);
+            mc.player.setXRot(realPitch);
             yawModified = false;
             overrideInputThisTick = false;
         }
@@ -101,8 +101,8 @@ public class SprintHandler {
             return;
         }
         Input input = event.getInput();
-        input.f_108567_ = 1.0f;
-        input.f_108566_ = 0.0f;
+        input.forwardImpulse = 1.0f;
+        input.leftImpulse = 0.0f;
     }
 
     private static void handleLegit(SprintConfig cfg) {
@@ -113,16 +113,16 @@ public class SprintHandler {
         if (mc == null) {
             return;
         }
-        if (mc.f_91066_.f_92085_.m_90857_()) {
-            mc.player.m_6858_(true);
+        if (mc.options.keyUp.isDown()) {
+            mc.player.setSprinting(true);
         } else {
-            if (!mc.player.m_20142_()) {
+            if (!mc.player.isSprinting()) {
                 return;
             }
-            if (cfg.stopOnGround && mc.player.m_20096_()) {
-                mc.player.m_6858_(false);
-            } else if (cfg.stopOnAir && !mc.player.m_20096_()) {
-                mc.player.m_6858_(false);
+            if (cfg.stopOnGround && mc.player.onGround()) {
+                mc.player.setSprinting(false);
+            } else if (cfg.stopOnAir && !mc.player.onGround()) {
+                mc.player.setSprinting(false);
             }
         }
     }
@@ -135,7 +135,7 @@ public class SprintHandler {
         if (mc == null) {
             return;
         }
-        mc.player.m_6858_(true);
+        mc.player.setSprinting(true);
     }
 
     private static void handleOmnirotational(SprintConfig cfg) {
@@ -143,12 +143,12 @@ public class SprintHandler {
         if (mc == null) {
             return;
         }
-        realYaw = mc.player.m_146908_();
-        realPitch = mc.player.m_146909_();
-        savedUp = mc.f_91066_.f_92085_.m_90857_();
-        savedDown = mc.f_91066_.f_92087_.m_90857_();
-        savedLeft = mc.f_91066_.f_92086_.m_90857_();
-        savedRight = mc.f_91066_.f_92088_.m_90857_();
+        realYaw = mc.player.getYRot();
+        realPitch = mc.player.getXRot();
+        savedUp = mc.options.keyUp.isDown();
+        savedDown = mc.options.keyDown.isDown();
+        savedLeft = mc.options.keyLeft.isDown();
+        savedRight = mc.options.keyRight.isDown();
         int curHash = 0;
         if (savedUp) {
             curHash |= 1;
@@ -165,15 +165,15 @@ public class SprintHandler {
         if (curHash == 0) {
             smoothYaw = Float.NaN;
             lastKeyHash = 0;
-            if (mc.player.m_20142_()) {
-                mc.player.m_6858_(false);
+            if (mc.player.isSprinting()) {
+                mc.player.setSprinting(false);
             }
             return;
         }
         if (!SprintHandler.canSprint(cfg)) {
             return;
         }
-        mc.player.m_6858_(true);
+        mc.player.setSprinting(true);
         if (curHash != lastKeyHash) {
             smoothYaw = Float.NaN;
             lastKeyHash = curHash;
@@ -188,7 +188,7 @@ public class SprintHandler {
         } else {
             smoothYaw = targetYaw;
         }
-        mc.player.m_146922_(smoothYaw += ((Math.random() - 0.5) * 0.002));
+        mc.player.setYRot(smoothYaw += ((Math.random() - 0.5) * 0.002));
         yawModified = true;
         overrideInputThisTick = true;
     }
@@ -212,33 +212,33 @@ public class SprintHandler {
         if (mc == null || mc.player == null) {
             return false;
         }
-        boolean bl = isHungry = mc.player.m_36324_().m_38702_() <= 6 && !mc.player.m_7500_();
+        boolean bl = isHungry = mc.player.getFoodData().getFoodLevel() <= 6 && !mc.player.isCreative();
         if (isHungry && !cfg.ignoreHunger) {
             return false;
         }
-        if (mc.player.m_21023_(MobEffects.f_19610_) && !cfg.ignoreBlindness) {
+        if (mc.player.hasEffect(MobEffects.BLINDNESS) && !cfg.ignoreBlindness) {
             return false;
         }
-        if (mc.player.f_19862_ && !cfg.ignoreCollision) {
+        if (mc.player.horizontalCollision && !cfg.ignoreCollision) {
             return false;
         }
         if (!(savedUp || savedDown || savedLeft || savedRight)) {
             return false;
         }
-        if (mc.player.m_6144_()) {
+        if (mc.player.isShiftKeyDown()) {
             return false;
         }
-        if (mc.player.m_20159_()) {
+        if (mc.player.isPassenger()) {
             return false;
         }
-        return !mc.player.m_20069_() && !mc.player.m_20077_();
+        return !mc.player.isInWater() && !mc.player.isInLava();
     }
 
     private static void restoreAll() {
         Minecraft mc = SprintHandler.getMc();
         if (yawModified && mc != null && mc.player != null) {
-            mc.player.m_146922_(realYaw);
-            mc.player.m_146926_(realPitch);
+            mc.player.setYRot(realYaw);
+            mc.player.setXRot(realPitch);
             yawModified = false;
         }
         overrideInputThisTick = false;

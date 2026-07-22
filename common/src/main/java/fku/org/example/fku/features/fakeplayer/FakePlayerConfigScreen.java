@@ -56,14 +56,14 @@ extends Screen {
             btn.setMessage(Component.literal((String)("\u521d\u59cb\u8840\u91cf: " + this.cfg.health)));
         }).bounds(cx + 160, cy + 35 - 25, 120, 20).build());
         this.nameField = new EditBox(mc.font, cx + 10, cy + 75 - 25, 200, 16, Component.literal((String)"\u5047\u4eba\u540d\u79f0"));
-        this.nameField.m_94144_(this.cfg.name);
-        this.nameField.m_94199_(16);
-        this.nameField.m_94151_(s -> {
+        this.nameField.setValue(this.cfg.name);
+        this.nameField.setMaxLength(16);
+        this.nameField.setResponder(s -> {
             if (!s.isEmpty()) {
                 this.cfg.setName((String)s);
             }
         });
-        this.m_7787_(this.nameField);
+        this.addWidget(this.nameField);
         this.simulateDamageBtn = (Button)this.addRenderableWidget(this.buildToggleButton(cx + 10, cy + 95 - 25, this.cfg.simulateDamage, "\u6a21\u62df\u4f24\u5bb3", btn -> {
             this.cfg.setSimulateDamage(!this.cfg.simulateDamage);
             btn.setMessage(Component.literal((String)((this.cfg.simulateDamage ? "\u00a7a\u2714 \u5f00\u542f" : "\u00a7c\u2718 \u5173\u95ed") + "  \u6a21\u62df\u4f24\u5bb3")));

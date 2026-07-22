@@ -43,10 +43,10 @@ public class WorldEditFeature {
         if (mc == null || !cfg.enabled) {
             return;
         }
-        if (mc.player == null || mc.f_91073_ == null) {
+        if (mc.player == null || mc.level == null) {
             return;
         }
-        if (!mc.player.m_150110_().f_35937_ && cfg.safeMode) {
+        if (!mc.player.getAbilities().instabuild && cfg.safeMode) {
             if (cfg.enabled) {
                 WorldEditFeature.autoDisable("\u00a7cWorldEdit \u4ec5\u521b\u9020\u6a21\u5f0f\u53ef\u7528");
             }
@@ -65,7 +65,7 @@ public class WorldEditFeature {
         if (mc == null || !cfg.enabled || !cfg.renderSelection) {
             return;
         }
-        if (mc.player == null || mc.f_91073_ == null) {
+        if (mc.player == null || mc.level == null) {
             return;
         }
         SelectionManager.getInstance().renderSelection(event.getPoseStack(), event.getPartialTick());
@@ -80,10 +80,10 @@ public class WorldEditFeature {
         if (mc == null || !cfg.enabled) {
             return;
         }
-        if (mc.player == null || mc.f_91073_ == null) {
+        if (mc.player == null || mc.level == null) {
             return;
         }
-        if (!mc.player.m_150110_().f_35937_ && cfg.safeMode) {
+        if (!mc.player.getAbilities().instabuild && cfg.safeMode) {
             return;
         }
         int n = event.isAttack() ? 0 : (button = event.isUseItem() ? 1 : -1);
@@ -115,7 +115,7 @@ public class WorldEditFeature {
         TaskQueue.getInstance().cancel();
         Minecraft mc = WorldEditFeature.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)("\u00a7c[WorldEdit] " + reason)), true);
+            mc.player.displayClientMessage(Component.literal((String)("\u00a7c[WorldEdit] " + reason)), true);
         }
     }
 }

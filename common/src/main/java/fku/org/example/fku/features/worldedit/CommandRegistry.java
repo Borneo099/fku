@@ -124,18 +124,18 @@ public class CommandRegistry {
             return;
         }
         for (i = 0; i < 9; ++i) {
-            if (CommandRegistry.mc.player.m_150109_().m_8020_(i).m_41720_() != item) continue;
+            if (CommandRegistry.mc.player.getInventory().getItem(i).getItem() != item) continue;
             return;
         }
         for (i = 9; i < 36; ++i) {
-            if (CommandRegistry.mc.player.m_150109_().m_8020_(i).m_41720_() != item) continue;
-            ItemStack targetStack = CommandRegistry.mc.player.m_150109_().m_8020_(i).m_41777_();
-            CommandRegistry.mc.player.m_150109_().f_35974_.set(CommandRegistry.mc.player.m_150109_().f_35977_, targetStack);
-            CommandRegistry.mc.player.m_150109_().f_35974_.set(i, ItemStack.f_41583_);
+            if (CommandRegistry.mc.player.getInventory().getItem(i).getItem() != item) continue;
+            ItemStack targetStack = CommandRegistry.mc.player.getInventory().getItem(i).copy();
+            CommandRegistry.mc.player.getInventory().items.set(CommandRegistry.mc.player.getInventory().selected, targetStack);
+            CommandRegistry.mc.player.getInventory().items.set(i, ItemStack.EMPTY);
             return;
         }
-        if (CommandRegistry.mc.player.m_150110_().f_35937_) {
-            CommandRegistry.mc.player.m_150109_().m_36054_(new ItemStack((ItemLike)item, 1));
+        if (CommandRegistry.mc.player.getAbilities().instabuild) {
+            CommandRegistry.mc.player.getInventory().add(new ItemStack((ItemLike)item, 1));
         }
     }
 
@@ -198,7 +198,7 @@ public class CommandRegistry {
             return;
         }
         boolean hollow = args.length >= 3 && args[2].equalsIgnoreCase("hollow");
-        BlockPos center = CommandRegistry.mc.player != null ? CommandRegistry.mc.player.m_20183_() : BlockPos.f_121853_;
+        BlockPos center = CommandRegistry.mc.player != null ? CommandRegistry.mc.player.blockPosition() : BlockPos.ZERO;
         List<BlockPos> positions = ShapeGenerator.sphere(center, radius, hollow);
         TaskQueue.getInstance().submitSet(positions, state, hollow ? "//sphere hollow" : "//sphere");
     }
@@ -219,7 +219,7 @@ public class CommandRegistry {
             return;
         }
         boolean hollow = args.length >= 4 && args[3].equalsIgnoreCase("hollow");
-        BlockPos center = CommandRegistry.mc.player != null ? CommandRegistry.mc.player.m_20183_() : BlockPos.f_121853_;
+        BlockPos center = CommandRegistry.mc.player != null ? CommandRegistry.mc.player.blockPosition() : BlockPos.ZERO;
         List<BlockPos> positions = ShapeGenerator.cylinder(center, radius, height, hollow);
         TaskQueue.getInstance().submitSet(positions, state, "//cyl");
     }
@@ -239,7 +239,7 @@ public class CommandRegistry {
             return;
         }
         boolean hollow = args.length >= 3 && args[2].equalsIgnoreCase("hollow");
-        BlockPos baseCenter = CommandRegistry.mc.player != null ? CommandRegistry.mc.player.m_20183_() : BlockPos.f_121853_;
+        BlockPos baseCenter = CommandRegistry.mc.player != null ? CommandRegistry.mc.player.blockPosition() : BlockPos.ZERO;
         List<BlockPos> positions = ShapeGenerator.pyramid(baseCenter, size, hollow);
         TaskQueue.getInstance().submitSet(positions, state, "//pyramid");
     }
@@ -286,7 +286,7 @@ public class CommandRegistry {
 
     private void cmdPaste(String[] args) {
         SelectionManager sel = SelectionManager.getInstance();
-        BlockPos target = sel.hasPos1() ? sel.getPos1() : (CommandRegistry.mc.player != null ? CommandRegistry.mc.player.m_20183_() : BlockPos.f_121853_);
+        BlockPos target = sel.hasPos1() ? sel.getPos1() : (CommandRegistry.mc.player != null ? CommandRegistry.mc.player.blockPosition() : BlockPos.ZERO);
         ClipboardManager.getInstance().paste(target);
     }
 
@@ -360,9 +360,9 @@ public class CommandRegistry {
         if (min == null || max == null) {
             return;
         }
-        BlockPos newMin = min.m_7918_(amount, amount, amount);
-        BlockPos newMax = max.m_7918_(-amount, -amount, -amount);
-        if (newMin.m_123341_() > newMax.m_123341_() || newMin.m_123342_() > newMax.m_123342_() || newMin.m_123343_() > newMax.m_123343_()) {
+        BlockPos newMin = min.offset(amount, amount, amount);
+        BlockPos newMax = max.offset(-amount, -amount, -amount);
+        if (newMin.getX() > newMax.getX() || newMin.getY() > newMax.getY() || newMin.getZ() > newMax.getZ()) {
             this.sendMsg("\u00a7c\u6536\u7f29\u540e\u9009\u533a\u4e3a\u7a7a");
             return;
         }
@@ -386,8 +386,8 @@ public class CommandRegistry {
         if (min == null || max == null) {
             return;
         }
-        sel.setPos1(min.m_7918_(-amount, -amount, -amount));
-        sel.setPos2(max.m_7918_(amount, amount, amount));
+        sel.setPos1(min.offset(-amount, -amount, -amount));
+        sel.setPos2(max.offset(amount, amount, amount));
     }
 
     private void cmdSchematic(String[] args) {
@@ -409,14 +409,14 @@ public class CommandRegistry {
         if (CommandRegistry.mc.player == null) {
             return;
         }
-        SelectionManager.getInstance().setPos1(CommandRegistry.mc.player.m_20183_());
+        SelectionManager.getInstance().setPos1(CommandRegistry.mc.player.blockPosition());
     }
 
     private void cmdPos2(String[] args) {
         if (CommandRegistry.mc.player == null) {
             return;
         }
-        SelectionManager.getInstance().setPos2(CommandRegistry.mc.player.m_20183_());
+        SelectionManager.getInstance().setPos2(CommandRegistry.mc.player.blockPosition());
     }
 
     private void cmdHelp(String[] args) {
@@ -454,8 +454,8 @@ public class CommandRegistry {
             BlockPos max = sel.getMax();
             if (min != null && max != null) {
                 long vol = sel.getVolume();
-                this.sendMsg("\u00a7e\u9009\u533a: " + min.m_123341_() + "," + min.m_123342_() + "," + min.m_123343_() + " \u2192 " + max.m_123341_() + "," + max.m_123342_() + "," + max.m_123343_());
-                this.sendMsg("\u00a7e\u5927\u5c0f: " + (Math.abs(max.m_123341_() - min.m_123341_()) + 1) + "\u00d7" + (Math.abs(max.m_123342_() - min.m_123342_()) + 1) + "\u00d7" + (Math.abs(max.m_123343_() - min.m_123343_()) + 1) + " = " + vol + " \u65b9\u5757");
+                this.sendMsg("\u00a7e\u9009\u533a: " + min.getX() + "," + min.getY() + "," + min.getZ() + " \u2192 " + max.getX() + "," + max.getY() + "," + max.getZ());
+                this.sendMsg("\u00a7e\u5927\u5c0f: " + (Math.abs(max.getX() - min.getX()) + 1) + "\u00d7" + (Math.abs(max.getY() - min.getY()) + 1) + "\u00d7" + (Math.abs(max.getZ() - min.getZ()) + 1) + " = " + vol + " \u65b9\u5757");
             }
         } else {
             this.sendMsg("\u00a7c\u672a\u8bbe\u7f6e\u9009\u533a");
@@ -529,7 +529,7 @@ public class CommandRegistry {
             this.sendMsg("\u00a7c\u672a\u77e5\u65b9\u5757: " + input);
             return null;
         }
-        return block.m_49966_();
+        return block.defaultBlockState();
     }
 
     private int parseInt(String s, int defaultVal) {
@@ -555,7 +555,7 @@ public class CommandRegistry {
 
     private void sendMsg(String msg) {
         if (CommandRegistry.mc.player != null) {
-            CommandRegistry.mc.player.m_5661_(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
+            CommandRegistry.mc.player.displayClientMessage(Component.literal((String)("\u00a77[WorldEdit] " + msg)), true);
         }
     }
 

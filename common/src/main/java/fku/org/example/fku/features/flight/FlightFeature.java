@@ -51,7 +51,7 @@ public class FlightFeature {
         } else {
             Minecraft mc = FlightFeature.getMc();
             if (cfg.soundFeedback && mc != null && mc.player != null) {
-                mc.player.m_6330_(SoundEvents.f_11932_, SoundSource.PLAYERS, 0.5f, 1.5f);
+                mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
             }
             if (!NoFallFeature.isEnabled()) {
                 NoFallFeature.setEnabled(true);
@@ -74,7 +74,7 @@ public class FlightFeature {
             return;
         }
         Minecraft mc = FlightFeature.getMc();
-        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || mc.player == null || mc.level == null) {
             return;
         }
         LocalPlayer player = mc.player;
@@ -82,21 +82,21 @@ public class FlightFeature {
         if (!FlightFeature.isEnabled()) {
             return;
         }
-        if (cfg.onlyInCreative && !player.m_7500_()) {
+        if (cfg.onlyInCreative && !player.isCreative()) {
             FlightFeature.deactivate();
             return;
         }
         if (cfg.consumeHunger && active) {
-            if (player.m_36324_().m_38702_() <= 0) {
+            if (player.getFoodData().getFoodLevel() <= 0) {
                 FlightFeature.deactivate();
                 return;
             }
-            player.m_36324_().m_38703_(cfg.hungerCost * 0.01f);
+            player.getFoodData().addExhaustion(cfg.hungerCost * 0.01f);
         }
-        boolean jumping = player.f_108618_.f_108572_;
+        boolean jumping = player.input.jumping;
         if (!active) {
             boolean hasCreativeFlight;
-            boolean bl = hasCreativeFlight = player.m_150110_().f_35936_ && player.m_150110_().f_35935_;
+            boolean bl = hasCreativeFlight = player.getAbilities().mayfly && player.getAbilities().flying;
             if (jumping && !prevJumping && !hasCreativeFlight) {
                 long now = System.currentTimeMillis();
                 if (tapWaiting && now - lastJumpPress <= cfg.doubleTapWindow) {
@@ -113,24 +113,24 @@ public class FlightFeature {
             prevJumping = jumping;
             return;
         }
-        float camYaw = mc.f_91063_.m_109153_().m_90590_();
-        float fwd = player.f_108618_.f_108567_;
-        float str = -player.f_108618_.f_108566_;
-        Vec3 h = Vec3.m_82498_(0.0f, camYaw).m_82542_(fwd, 0.0, fwd).add(Vec3.m_82498_(0.0f, (camYaw + 90.0f)).m_82542_(str, 0.0, str));
-        h = h.m_82556_() > 1.0E-4 ? h.normalize().scale(cfg.flySpeed) : Vec3.f_82478_;
-        double vy = jumping ? cfg.verticalSpeed : (player.f_108618_.f_108573_ ? -cfg.verticalSpeed : 0.0);
-        player.m_20334_(h.x, vy, h.z);
+        float camYaw = mc.gameRenderer.getMainCamera().getYRot();
+        float fwd = player.input.forwardImpulse;
+        float str = -player.input.leftImpulse;
+        Vec3 h = Vec3.directionFromRotation(0.0f, camYaw).multiply(fwd, 0.0, fwd).add(Vec3.directionFromRotation(0.0f, (camYaw + 90.0f)).multiply(str, 0.0, str));
+        h = h.lengthSqr() > 1.0E-4 ? h.normalize().scale(cfg.flySpeed) : Vec3.ZERO;
+        double vy = jumping ? cfg.verticalSpeed : (player.input.shiftKeyDown ? -cfg.verticalSpeed : 0.0);
+        player.setDeltaMovement(h.x, vy, h.z);
         if (cfg.antiKick) {
             if (++antiKickTicks > cfg.antiKickInterval) {
                 antiKickTicks = 0;
-                player.m_20334_(h.x, -cfg.antiKickDistance, h.z);
+                player.setDeltaMovement(h.x, -cfg.antiKickDistance, h.z);
             } else if (antiKickTicks == 1) {
-                player.m_20334_(h.x, cfg.antiKickDistance, h.z);
+                player.setDeltaMovement(h.x, cfg.antiKickDistance, h.z);
             }
         }
-        player.f_19794_ = cfg.disableCollision;
-        if (cfg.disableCollision && player.getY() < mc.f_91073_.m_141937_()) {
-            player.m_6034_(player.getX(), (mc.f_91073_.m_141937_() + 1), player.getZ());
+        player.noPhysics = cfg.disableCollision;
+        if (cfg.disableCollision && player.getY() < mc.level.getMinBuildHeight()) {
+            player.setPos(player.getX(), (mc.level.getMinBuildHeight() + 1), player.getZ());
         }
         if (jumping && !prevJumping) {
             long now = System.currentTimeMillis();
@@ -143,10 +143,10 @@ public class FlightFeature {
         }
         prevJumping = jumping;
         if (!cfg.allowSprint) {
-            player.m_6858_(false);
+            player.setSprinting(false);
         }
-        if (cfg.particleEffect && player.f_19797_ % 3 == 0) {
-            mc.f_91073_.m_7106_((ParticleOptions)ParticleTypes.f_123796_, player.getX() + (player.m_217043_().m_188500_() - 0.5) * player.getBbWidth(), player.getY(), player.getZ() + (player.m_217043_().m_188500_() - 0.5) * player.getBbWidth(), 0.0, -0.1, 0.0);
+        if (cfg.particleEffect && player.tickCount % 3 == 0) {
+            mc.level.addParticle((ParticleOptions)ParticleTypes.CLOUD, player.getX() + (player.getRandom().nextDouble() - 0.5) * player.getBbWidth(), player.getY(), player.getZ() + (player.getRandom().nextDouble() - 0.5) * player.getBbWidth(), 0.0, -0.1, 0.0);
         }
         if (!NoFallFeature.isEnabled()) {
             NoFallFeature.setEnabled(true);
@@ -166,7 +166,7 @@ public class FlightFeature {
             SprintConfig.save();
         }
         if (FlightConfig.getInstance().soundFeedback && mc.player != null) {
-            mc.player.m_6330_(SoundEvents.f_11932_, SoundSource.PLAYERS, 0.5f, 1.5f);
+            mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 0.5f, 1.5f);
         }
         if (!NoFallFeature.isEnabled()) {
             NoFallFeature.setEnabled(true);
@@ -185,9 +185,9 @@ public class FlightFeature {
             SprintConfig.save();
             savedSprintMode = null;
         }
-        mc.player.f_19794_ = false;
+        mc.player.noPhysics = false;
         if (FlightConfig.getInstance().soundFeedback) {
-            mc.player.m_6330_(SoundEvents.f_11928_, SoundSource.PLAYERS, 0.3f, 0.8f);
+            mc.player.playNotifySound(SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 0.3f, 0.8f);
         }
         Fku.LOGGER.debug("[Flight] \u964d\u843d");
     }

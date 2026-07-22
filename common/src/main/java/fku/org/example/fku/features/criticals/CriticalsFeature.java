@@ -25,7 +25,7 @@ public class CriticalsFeature {
         cfg.enabled = !cfg.enabled;
         cfg.saveConfig();
         if (!cfg.silentSave && (player = Minecraft.getInstance().player) != null) {
-            player.m_213846_(Component.literal((String)("\u00a7a[\u5200\u5200\u66b4\u51fb] " + (cfg.enabled ? "\u5df2\u5f00\u542f" : "\u5df2\u5173\u95ed"))));
+            player.sendSystemMessage(Component.literal((String)("\u00a7a[\u5200\u5200\u66b4\u51fb] " + (cfg.enabled ? "\u5df2\u5f00\u542f" : "\u5df2\u5173\u95ed"))));
         }
     }
 

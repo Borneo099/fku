@@ -24,21 +24,16 @@ public abstract class MixinMultiPlayerGameMode {
      */
     @Inject(method={"attack"}, at={@At(value="HEAD")})
     public void onAttackHead(Player player, Entity target, CallbackInfo ci) {
-        config = KnockbackConfig.getInstance();
+        KnockbackConfig config = KnockbackConfig.getInstance();
         if (config.enabled && target instanceof LivingEntity) {
-            livingTarget = (LivingEntity)target;
-            targetYaw = KnockbackDirectionCalculator.calculateYaw((LivingEntity)player, livingTarget, config.mode);
+            LivingEntity livingTarget = (LivingEntity)target;
+            float targetYaw = KnockbackDirectionCalculator.calculateYaw((LivingEntity)player, livingTarget, config.mode);
             FakeRotationManager.setPending(livingTarget, targetYaw);
         }
-        if (!(target instanceof LivingEntity)) ** GOTO lbl-1000
-        lt = (LivingEntity)target;
-        if (player.m_20188_() >= lt.getY() + lt.getBbHeight() * 0.85) {
-            v0 = true;
-        } else lbl-1000:
-        // 2 sources
-
-        {
-            v0 = false;
+        boolean v0 = false;
+        if (target instanceof LivingEntity) {
+            LivingEntity lt = (LivingEntity)target;
+            v0 = player.getEyeY() >= lt.getY() + lt.getBbHeight() * 0.85;
         }
         KillIconFeature.markHeadshot(v0);
     }

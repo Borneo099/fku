@@ -78,7 +78,7 @@ public class TpAuraFeature {
         overlayShowUntil = System.currentTimeMillis() + 3000L;
         if (v) {
             if (TpAuraFeature.mc.player != null) {
-                TpAuraFeature.mc.player.m_5661_(Component.literal((String)("\u00a76[TpAura] \u00a7a\u5df2\u542f\u7528 \u00a77(\u8303\u56f4=" + cfg.maxRange + ", \u6a21\u5f0f=" + cfg.mode + ")")), false);
+                TpAuraFeature.mc.player.displayClientMessage(Component.literal((String)("\u00a76[TpAura] \u00a7a\u5df2\u542f\u7528 \u00a77(\u8303\u56f4=" + cfg.maxRange + ", \u6a21\u5f0f=" + cfg.mode + ")")), false);
             }
         } else {
             TpAuraFeature feature = instance;
@@ -86,7 +86,7 @@ public class TpAuraFeature {
                 feature.cleanup();
             }
             if (TpAuraFeature.mc.player != null) {
-                TpAuraFeature.mc.player.m_5661_(Component.literal((String)"\u00a76[TpAura] \u00a7c\u5df2\u7981\u7528"), false);
+                TpAuraFeature.mc.player.displayClientMessage(Component.literal((String)"\u00a76[TpAura] \u00a7c\u5df2\u7981\u7528"), false);
             }
         }
     }
@@ -111,7 +111,7 @@ public class TpAuraFeature {
         waitingKeyBind = true;
         onKeyBoundCallback = onBound;
         if (TpAuraFeature.mc.player != null) {
-            TpAuraFeature.mc.player.m_5661_(Component.literal((String)"\u00a76[TpAura] \u00a7e\u6309\u4e0b\u952e\u76d8\u4e0a\u7684\u6309\u952e\u7ed1\u5b9a\u70ed\u952e. (Esc\u53d6\u6d88)"), false);
+            TpAuraFeature.mc.player.displayClientMessage(Component.literal((String)"\u00a76[TpAura] \u00a7e\u6309\u4e0b\u952e\u76d8\u4e0a\u7684\u6309\u952e\u7ed1\u5b9a\u70ed\u952e. (Esc\u53d6\u6d88)"), false);
         }
     }
 
@@ -119,7 +119,7 @@ public class TpAuraFeature {
         waitingKeyBind = false;
         onKeyBoundCallback = null;
         if (TpAuraFeature.mc.player != null) {
-            TpAuraFeature.mc.player.m_5661_(Component.literal((String)"\u00a76[TpAura] \u00a77\u70ed\u952e\u7ed1\u5b9a\u5df2\u53d6\u6d88"), false);
+            TpAuraFeature.mc.player.displayClientMessage(Component.literal((String)"\u00a76[TpAura] \u00a77\u70ed\u952e\u7ed1\u5b9a\u5df2\u53d6\u6d88"), false);
         }
     }
 
@@ -160,7 +160,7 @@ public class TpAuraFeature {
             cfg.setHotkeyName(keyName);
             waitingKeyBind = false;
             if (TpAuraFeature.mc.player != null) {
-                TpAuraFeature.mc.player.m_5661_(Component.literal((String)("\u00a76[TpAura] \u00a7a\u70ed\u952e\u5df2\u7ed1\u5b9a: \u00a7e" + keyName)), false);
+                TpAuraFeature.mc.player.displayClientMessage(Component.literal((String)("\u00a76[TpAura] \u00a7a\u70ed\u952e\u5df2\u7ed1\u5b9a: \u00a7e" + keyName)), false);
             }
             if (onKeyBoundCallback != null) {
                 onKeyBoundCallback.run();
@@ -177,17 +177,17 @@ public class TpAuraFeature {
         }
         TpAuraConfig cfg = TpAuraConfig.getInstance();
         if (cfg.autoFlight && cfg.enabled) {
-            p.m_150110_().f_35935_ = true;
-            p.f_108617_.m_104955_((Packet)new ServerboundPlayerAbilitiesPacket(p.m_150110_()));
-            float fwd = p.f_108618_.f_108567_;
-            float str = -p.f_108618_.f_108566_;
-            float camYaw = TpAuraFeature.mc.f_91063_.m_109153_().m_90590_();
-            Vec3 h = Vec3.m_82498_(0.0f, camYaw).m_82542_(fwd, 0.0, fwd).add(Vec3.m_82498_(0.0f, (camYaw + 90.0f)).m_82542_(str, 0.0, str));
+            p.getAbilities().flying = true;
+            p.connection.send((Packet)new ServerboundPlayerAbilitiesPacket(p.getAbilities()));
+            float fwd = p.input.forwardImpulse;
+            float str = -p.input.leftImpulse;
+            float camYaw = TpAuraFeature.mc.gameRenderer.getMainCamera().getYRot();
+            Vec3 h = Vec3.directionFromRotation(0.0f, camYaw).multiply(fwd, 0.0, fwd).add(Vec3.directionFromRotation(0.0f, (camYaw + 90.0f)).multiply(str, 0.0, str));
             double hSpeed = cfg.autoFlightHorizontalSpeed;
-            h = h.m_82556_() > 1.0E-4 ? h.normalize().scale(hSpeed) : Vec3.f_82478_;
-            double vy = p.f_108618_.f_108572_ ? cfg.autoFlightSpeed : (p.f_108618_.f_108573_ ? -cfg.autoFlightSpeed : 0.0);
-            p.m_20334_(h.x, vy, h.z);
-            p.f_19864_ = true;
+            h = h.lengthSqr() > 1.0E-4 ? h.normalize().scale(hSpeed) : Vec3.ZERO;
+            double vy = p.input.jumping ? cfg.autoFlightSpeed : (p.input.shiftKeyDown ? -cfg.autoFlightSpeed : 0.0);
+            p.setDeltaMovement(h.x, vy, h.z);
+            p.hurtMarked = true;
         }
     }
 
@@ -196,7 +196,7 @@ public class TpAuraFeature {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
-        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.f_91073_ == null) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.level == null) {
             return;
         }
         TpAuraConfig cfg = TpAuraConfig.getInstance();
@@ -208,7 +208,7 @@ public class TpAuraFeature {
         if (cfg.autoSwitch) {
             self.checkAndSwapWeapon(cfg);
         }
-        if (("Smart".equals(cfg.attackMode) || "Universal".equals(cfg.attackMode)) && TpAuraFeature.mc.player.m_36403_(0.5f) < cfg.cooldownThreshold) {
+        if (("Smart".equals(cfg.attackMode) || "Universal".equals(cfg.attackMode)) && TpAuraFeature.mc.player.getAttackStrengthScale(0.5f) < cfg.cooldownThreshold) {
             return;
         }
         if (self.delayTimer > 0) {
@@ -237,18 +237,18 @@ public class TpAuraFeature {
         if (!TpAuraFeature.isEnabled()) {
             return;
         }
-        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.f_91073_ == null) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.level == null) {
             return;
         }
         TpAuraFeature self = TpAuraFeature.getInstance();
         TpAuraConfig cfg = TpAuraConfig.getInstance();
         PoseStack poseStack = event.getPoseStack();
-        Vec3 camPos = TpAuraFeature.mc.f_91063_.m_109153_().getPosition();
+        Vec3 camPos = TpAuraFeature.mc.gameRenderer.getMainCamera().getPosition();
         poseStack.pushPose();
         poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
-        VertexConsumer consumer = mc.m_91269_().m_110104_().m_6299_((RenderType)RenderType.f_110371_);
+        VertexConsumer consumer = mc.renderBuffers().bufferSource().getBuffer((RenderType)RenderType.LINES);
         if (self.currentTarget != null) {
-            TpAuraFeature.renderBox(poseStack, consumer, self.currentTarget.m_20191_(), cfg.getTargetColor());
+            TpAuraFeature.renderBox(poseStack, consumer, self.currentTarget.getBoundingBox(), cfg.getTargetColor());
         }
         if (cfg.renderPath && !self.renderPathNodes.isEmpty()) {
             int pathColor = cfg.getPathColor();
@@ -262,8 +262,8 @@ public class TpAuraFeature {
                 if (i >= self.renderPathNodes.size() - 1) continue;
                 Vec3 next = self.renderPathNodes.get(i + 1);
                 Matrix4f mat = poseStack.last().pose();
-                consumer.vertex(mat, n.x, (n.y + 1.0), n.z).m_85950_(pr, pg, pb, pa).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-                consumer.vertex(mat, next.x, (next.y + 1.0), next.z).m_85950_(pr, pg, pb, pa).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+                consumer.vertex(mat, (float)n.x, (float)(n.y + 1.0), (float)n.z).color(pr, pg, pb, pa).normal(0.0f, 1.0f, 0.0f).endVertex();
+                consumer.vertex(mat, (float)next.x, (float)(next.y + 1.0), (float)next.z).color(pr, pg, pb, pa).normal(0.0f, 1.0f, 0.0f).endVertex();
             }
         }
         poseStack.popPose();
@@ -278,9 +278,9 @@ public class TpAuraFeature {
             return;
         }
         String text = "\u00a76[TpAura " + (TpAuraFeature.isEnabled() ? "\u00a7aON" : "\u00a7cOFF") + "\u00a76]";
-        int w = mc.getWindow().m_85445_();
-        int h = mc.getWindow().m_85446_();
-        int textX = w / 2 - TpAuraFeature.mc.font.m_92895_(text) / 2;
+        int w = mc.getWindow().getGuiScaledWidth();
+        int h = mc.getWindow().getGuiScaledHeight();
+        int textX = w / 2 - TpAuraFeature.mc.font.width(text) / 2;
         int textY = h - 62;
         event.getGuiGraphics().drawString(TpAuraFeature.mc.font, text, textX, textY, 0xFFFFFF);
     }
@@ -291,46 +291,46 @@ public class TpAuraFeature {
         float b = (color & 0xFF) / 255.0f;
         float a = (color >> 24 & 0xFF) / 255.0f;
         Matrix4f mat = poseStack.last().pose();
-        double minX = box.f_82288_;
-        double minY = box.f_82289_;
-        double minZ = box.f_82290_;
-        double maxX = box.f_82291_;
-        double maxY = box.f_82292_;
-        double maxZ = box.f_82293_;
-        consumer.vertex(mat, minX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, -1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, minY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, maxY, minZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, maxX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, minY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
-        consumer.vertex(mat, minX, maxY, maxZ).m_85950_(r, g, b, a).m_5601_(0.0f, 1.0f, 0.0f).endVertex();
+        float minX = (float)box.minX;
+        float minY = (float)box.minY;
+        float minZ = (float)box.minZ;
+        float maxX = (float)box.maxX;
+        float maxY = (float)box.maxY;
+        float maxZ = (float)box.maxZ;
+        consumer.vertex(mat, (float)minX, (float)minY, (float)minZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)minY, (float)maxZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)minY, (float)maxZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)minY, (float)minZ).color(r, g, b, a).normal(0.0f, -1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)maxY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)maxY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)minY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)minY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)maxX, (float)maxY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
+        consumer.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(r, g, b, a).normal(0.0f, 1.0f, 0.0f).endVertex();
     }
 
     private void executeTrouserAttack(Entity target, TpAuraConfig cfg) {
-        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.f_91073_ == null) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.level == null) {
             return;
         }
-        if (TpAuraFeature.mc.player.f_108617_ == null) {
+        if (TpAuraFeature.mc.player.connection == null) {
             return;
         }
-        if (target == null || !target.m_6084_()) {
+        if (target == null || !target.isAlive()) {
             return;
         }
         try {
@@ -354,8 +354,8 @@ public class TpAuraFeature {
             return;
         }
         double reach = cfg.maxRange;
-        int worldMinY = TpAuraFeature.mc.f_91073_.m_141937_();
-        int worldMaxY = TpAuraFeature.mc.f_91073_.m_151558_() - 1;
+        int worldMinY = TpAuraFeature.mc.level.getMinBuildHeight();
+        int worldMaxY = TpAuraFeature.mc.level.getMaxBuildHeight() - 1;
         if (basePos.y < worldMinY || basePos.y > worldMaxY) {
             return;
         }
@@ -387,21 +387,21 @@ public class TpAuraFeature {
         if (spam > 100) {
             spam = 100;
         }
-        for (int i = 0; i < spam && TpAuraFeature.mc.player != null && TpAuraFeature.mc.player.f_108617_ != null; ++i) {
-            TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(TpAuraFeature.mc.player.getX(), TpAuraFeature.mc.player.getY(), TpAuraFeature.mc.player.getZ(), false));
+        for (int i = 0; i < spam && TpAuraFeature.mc.player != null && TpAuraFeature.mc.player.connection != null; ++i) {
+            TpAuraFeature.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Pos(TpAuraFeature.mc.player.getX(), TpAuraFeature.mc.player.getY(), TpAuraFeature.mc.player.getZ(), false));
         }
         boolean bl = totemMode = cfg.totemBypass && "Paper".equals(cfg.mode);
         if (totemMode) {
             int attackCount = cfg.totemAttacks;
             for (int i = 0; i < attackCount; ++i) {
                 int worldTop;
-                int blocks = reach + i * cfg.totemHeightIncrease;
+                int blocks = (int)(reach + i * cfg.totemHeightIncrease);
                 if ("Paper".equals(cfg.mode) && cfg.goUp && cfg.limitCeiling && blocks > 0) {
                     double safeH = this.getSafeCeilingHeight(basePos, blocks, cfg.ceilingScanStep);
                     if (safeH <= basePos.y + 1.0) break;
-                    blocks = Math.min(blocks, (safeH - basePos.y));
+                    blocks = (int)Math.min(blocks, (safeH - basePos.y));
                 }
-                if (TpAuraFeature.mc.f_91073_ == null || !(basePos.y + blocks > (worldTop = TpAuraFeature.mc.f_91073_.m_151558_() - 1)) || (blocks = (worldTop - basePos.y)) >= 1) {
+                if (TpAuraFeature.mc.level == null || !(basePos.y + blocks > (worldTop = TpAuraFeature.mc.level.getMaxBuildHeight() - 1)) || (blocks = (int)(worldTop - basePos.y)) >= 1) {
                     Vec3 progressiveAbove = new Vec3(basePos.x, basePos.y + blocks, basePos.z);
                     if (cfg.goUp) {
                         this.sendMove(progressiveAbove);
@@ -422,16 +422,16 @@ public class TpAuraFeature {
         }
         this.doReturn(basePos, finalPos, cfg);
         if (cfg.returnPos && TpAuraFeature.mc.player != null) {
-            TpAuraFeature.mc.player.m_6034_(basePos.x, basePos.y, basePos.z);
-            if (TpAuraFeature.mc.player.f_108617_ != null) {
-                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(basePos.x, basePos.y, basePos.z, false));
-                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(basePos.x, basePos.y, basePos.z, false));
+            TpAuraFeature.mc.player.setPos(basePos.x, basePos.y, basePos.z);
+            if (TpAuraFeature.mc.player.connection != null) {
+                TpAuraFeature.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Pos(basePos.x, basePos.y, basePos.z, false));
+                TpAuraFeature.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Pos(basePos.x, basePos.y, basePos.z, false));
             }
         }
     }
 
     private void performAttack(Entity target, TpAuraConfig cfg) {
-        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.f_108617_ == null) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.connection == null) {
             return;
         }
         if (target == null) {
@@ -439,26 +439,26 @@ public class TpAuraFeature {
         }
         if (FakePlayerFeature.handleTpAuraAttack(target)) {
             if (cfg.swingHand) {
-                TpAuraFeature.mc.player.m_6674_(InteractionHand.MAIN_HAND);
+                TpAuraFeature.mc.player.swing(InteractionHand.MAIN_HAND);
             }
-            TpAuraFeature.mc.player.m_36334_();
+            TpAuraFeature.mc.player.resetAttackStrengthTicker();
             return;
         }
-        TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)ServerboundInteractPacket.m_179605_(target, (boolean)TpAuraFeature.mc.player.m_6144_()));
-        KillFXFeature.markAttackedByTpAura(target.m_19879_());
-        KillIconFeature.markAttackedByTpAura(target.m_19879_());
+        TpAuraFeature.mc.player.connection.send((Packet)ServerboundInteractPacket.createAttackPacket(target, (boolean)TpAuraFeature.mc.player.isShiftKeyDown()));
+        KillFXFeature.markAttackedByTpAura(target.getId());
+        KillIconFeature.markAttackedByTpAura(target.getId());
         HealthTagManager.onAttack(target);
         if (cfg.swingHand) {
-            TpAuraFeature.mc.player.m_6674_(InteractionHand.MAIN_HAND);
+            TpAuraFeature.mc.player.swing(InteractionHand.MAIN_HAND);
         }
-        TpAuraFeature.mc.player.m_36334_();
+        TpAuraFeature.mc.player.resetAttackStrengthTicker();
     }
 
     private void sendMove(Vec3 pos) {
-        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.f_108617_ == null) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.connection == null) {
             return;
         }
-        TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
+        TpAuraFeature.mc.player.connection.send((Packet)new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
     }
 
     private void doReturn(Vec3 startPos, Vec3 finalPos, TpAuraConfig cfg) {
@@ -481,16 +481,16 @@ public class TpAuraFeature {
             if (cfg.offsetFix) {
                 Vec3 offset = this.getOffset(startPos);
                 this.sendMove(offset);
-                TpAuraFeature.mc.player.m_6034_(offset.x, offset.y, offset.z);
+                TpAuraFeature.mc.player.setPos(offset.x, offset.y, offset.z);
             } else {
-                TpAuraFeature.mc.player.m_6034_(startPos.x, startPos.y, startPos.z);
+                TpAuraFeature.mc.player.setPos(startPos.x, startPos.y, startPos.z);
             }
         } else if (cfg.offsetFix) {
             Vec3 offset = this.getOffset(finalPos);
             this.sendMove(offset);
-            TpAuraFeature.mc.player.m_6034_(offset.x, offset.y, offset.z);
+            TpAuraFeature.mc.player.setPos(offset.x, offset.y, offset.z);
         } else {
-            TpAuraFeature.mc.player.m_6034_(finalPos.x, finalPos.y, finalPos.z);
+            TpAuraFeature.mc.player.setPos(finalPos.x, finalPos.y, finalPos.z);
         }
     }
 
@@ -507,20 +507,20 @@ public class TpAuraFeature {
     }
 
     private boolean invalid(Vec3 pos) {
-        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+        if (TpAuraFeature.mc.level == null || TpAuraFeature.mc.player == null) {
             return true;
         }
-        BlockPos bp = BlockPos.m_274561_(pos.x, pos.y, pos.z);
-        if (bp.m_123342_() < TpAuraFeature.mc.f_91073_.m_141937_() || bp.m_123342_() >= TpAuraFeature.mc.f_91073_.m_151558_()) {
+        BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
+        if (bp.getY() < TpAuraFeature.mc.level.getMinBuildHeight() || bp.getY() >= TpAuraFeature.mc.level.getMaxBuildHeight()) {
             return true;
         }
-        if (TpAuraFeature.mc.f_91073_.m_6325_(bp.m_123341_() >> 4, bp.m_123343_() >> 4) == null) {
+        if (TpAuraFeature.mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) {
             return true;
         }
-        AABB box = TpAuraFeature.mc.player.m_20191_().m_82383_(pos.subtract(TpAuraFeature.mc.player.position()));
-        for (BlockPos bPos : BlockPos.m_121940_((BlockPos)BlockPos.m_274561_(box.f_82288_, box.f_82289_, box.f_82290_), (BlockPos)BlockPos.m_274561_(box.f_82291_, box.f_82292_, box.f_82293_))) {
-            BlockState state = TpAuraFeature.mc.f_91073_.m_8055_(bPos);
-            if (state.m_60812_((BlockGetter)TpAuraFeature.mc.f_91073_, bPos).m_83281_() && state.m_60734_() != Blocks.f_49991_) continue;
+        AABB box = TpAuraFeature.mc.player.getBoundingBox().move(pos.subtract(TpAuraFeature.mc.player.position()));
+        for (BlockPos bPos : BlockPos.betweenClosed((BlockPos)BlockPos.containing(box.minX, box.minY, box.minZ), (BlockPos)BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
+            BlockState state = TpAuraFeature.mc.level.getBlockState(bPos);
+            if (state.getCollisionShape((BlockGetter)TpAuraFeature.mc.level, bPos).isEmpty() && state.getBlock() != Blocks.LAVA) continue;
             return true;
         }
         return false;
@@ -540,20 +540,20 @@ public class TpAuraFeature {
     }
 
     private double getSafeCeilingHeight(Vec3 startPos, double maxHeight, int step) {
-        if (TpAuraFeature.mc.f_91073_ == null) {
+        if (TpAuraFeature.mc.level == null) {
             return startPos.y + maxHeight;
         }
         for (int y = step; y <= maxHeight; y += step) {
-            BlockPos checkPos = BlockPos.m_274561_(startPos.x, (startPos.y + y), startPos.z);
-            BlockState state = TpAuraFeature.mc.f_91073_.m_8055_(checkPos);
-            if (state.m_60795_() || state.m_60812_((BlockGetter)TpAuraFeature.mc.f_91073_, checkPos).m_83281_()) continue;
+            BlockPos checkPos = BlockPos.containing(startPos.x, (startPos.y + y), startPos.z);
+            BlockState state = TpAuraFeature.mc.level.getBlockState(checkPos);
+            if (state.isAir() || state.getCollisionShape((BlockGetter)TpAuraFeature.mc.level, checkPos).isEmpty()) continue;
             return Math.max(startPos.y, startPos.y + y - 2.0);
         }
         return startPos.y + maxHeight;
     }
 
     private Vec3 findRandomLandingPoint(Vec3 center, int offset, double maxRange) {
-        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+        if (TpAuraFeature.mc.level == null || TpAuraFeature.mc.player == null) {
             return null;
         }
         ArrayList<LandingCandidate> candidates = new ArrayList<LandingCandidate>();
@@ -563,7 +563,7 @@ public class TpAuraFeature {
                 for (int dy = -1; dy <= 1; ++dy) {
                     LandingCandidate candidate;
                     Vec3 testPos = center.add(dx, dy, 0.0);
-                    if (TpAuraFeature.mc.player.m_20238_(testPos) > maxRange * maxRange || (candidate = this.evaluateLandingPoint(testPos)) == null) continue;
+                    if (TpAuraFeature.mc.player.distanceToSqr(testPos) > maxRange * maxRange || (candidate = this.evaluateLandingPoint(testPos)) == null) continue;
                     candidates.add(candidate);
                 }
             }
@@ -575,14 +575,14 @@ public class TpAuraFeature {
     }
 
     private LandingCandidate evaluateLandingPoint(Vec3 pos) {
-        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+        if (TpAuraFeature.mc.level == null || TpAuraFeature.mc.player == null) {
             return null;
         }
-        BlockPos bp = BlockPos.m_274561_(pos.x, pos.y, pos.z);
-        if (bp.m_123342_() < TpAuraFeature.mc.f_91073_.m_141937_() || bp.m_123342_() >= TpAuraFeature.mc.f_91073_.m_151558_()) {
+        BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
+        if (bp.getY() < TpAuraFeature.mc.level.getMinBuildHeight() || bp.getY() >= TpAuraFeature.mc.level.getMaxBuildHeight()) {
             return null;
         }
-        if (TpAuraFeature.mc.f_91073_.m_6325_(bp.m_123341_() >> 4, bp.m_123343_() >> 4) == null) {
+        if (TpAuraFeature.mc.level.getChunk(bp.getX() >> 4, bp.getZ() >> 4) == null) {
             return null;
         }
         boolean hasBlockCollision = this.checkBlockCollision(pos);
@@ -595,25 +595,25 @@ public class TpAuraFeature {
     }
 
     private boolean checkBlockCollision(Vec3 pos) {
-        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+        if (TpAuraFeature.mc.level == null || TpAuraFeature.mc.player == null) {
             return true;
         }
-        AABB box = TpAuraFeature.mc.player.m_20191_().m_82383_(pos.subtract(TpAuraFeature.mc.player.position()));
-        for (BlockPos bPos : BlockPos.m_121940_((BlockPos)BlockPos.m_274561_(box.f_82288_, box.f_82289_, box.f_82290_), (BlockPos)BlockPos.m_274561_(box.f_82291_, box.f_82292_, box.f_82293_))) {
-            BlockState state = TpAuraFeature.mc.f_91073_.m_8055_(bPos);
-            if (state.m_60812_((BlockGetter)TpAuraFeature.mc.f_91073_, bPos).m_83281_() && state.m_60734_() != Blocks.f_49991_) continue;
+        AABB box = TpAuraFeature.mc.player.getBoundingBox().move(pos.subtract(TpAuraFeature.mc.player.position()));
+        for (BlockPos bPos : BlockPos.betweenClosed((BlockPos)BlockPos.containing(box.minX, box.minY, box.minZ), (BlockPos)BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
+            BlockState state = TpAuraFeature.mc.level.getBlockState(bPos);
+            if (state.getCollisionShape((BlockGetter)TpAuraFeature.mc.level, bPos).isEmpty() && state.getBlock() != Blocks.LAVA) continue;
             return true;
         }
         return false;
     }
 
     private boolean checkEntityAtPosition(Vec3 pos) {
-        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+        if (TpAuraFeature.mc.level == null || TpAuraFeature.mc.player == null) {
             return false;
         }
         AABB checkArea = new AABB(pos.x - 0.5, pos.y, pos.z - 0.5, pos.x + 0.5, pos.y + 2.0, pos.z + 0.5);
-        for (Entity e : TpAuraFeature.mc.f_91073_.m_45933_(null, checkArea)) {
-            if (e == TpAuraFeature.mc.player || !e.m_6084_()) continue;
+        for (Entity e : TpAuraFeature.mc.level.getEntities(null, checkArea)) {
+            if (e == TpAuraFeature.mc.player || !e.isAlive()) continue;
             return true;
         }
         return false;
@@ -640,13 +640,13 @@ public class TpAuraFeature {
     }
 
     private Entity findTarget(TpAuraConfig cfg) {
-        if (TpAuraFeature.mc.f_91073_ == null || TpAuraFeature.mc.player == null) {
+        if (TpAuraFeature.mc.level == null || TpAuraFeature.mc.player == null) {
             return null;
         }
         Set<String> allowedTypes = cfg.getEntityTypeSet();
         Entity best = null;
         double bestDist = Double.MAX_VALUE;
-        for (Entity entity : TpAuraFeature.mc.f_91073_.m_104735_()) {
+        for (Entity entity : TpAuraFeature.mc.level.entitiesForRendering()) {
             if (!this.entityFilter(entity, cfg, allowedTypes)) continue;
             double dist = TpAuraFeature.mc.player.distanceTo(entity);
             double effectiveRange = cfg.maxRange;
@@ -661,29 +661,29 @@ public class TpAuraFeature {
         Player p;
         TamableAnimal ta;
         String entityTypeKey;
-        if (!(entity instanceof LivingEntity) || !entity.m_6084_() || entity == TpAuraFeature.mc.player) {
+        if (!(entity instanceof LivingEntity) || !entity.isAlive() || entity == TpAuraFeature.mc.player) {
             return false;
         }
-        if (!cfg.attackAllEntities && !allowedTypes.contains(entityTypeKey = ForgeRegistries.ENTITY_TYPES.getKey(entity.m_6095_()).m_135815_().toLowerCase())) {
+        if (!cfg.attackAllEntities && !allowedTypes.contains(entityTypeKey = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).getPath().toLowerCase())) {
             return false;
         }
         if (TpAuraFeature.mc.player.distanceTo(entity) > cfg.maxRange) {
             return false;
         }
-        if (cfg.ignoreNamed && entity.m_8077_()) {
+        if (cfg.ignoreNamed && entity.hasCustomName()) {
             return false;
         }
-        if (cfg.ignoreTamed && entity instanceof TamableAnimal && (ta = (TamableAnimal)entity).m_21824_()) {
+        if (cfg.ignoreTamed && entity instanceof TamableAnimal && (ta = (TamableAnimal)entity).isTame()) {
             return false;
         }
         if (cfg.whitelistEnabled) {
-            String entityType = ForgeRegistries.ENTITY_TYPES.getKey(entity.m_6095_()).m_135815_().toLowerCase();
+            String entityType = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType()).getPath().toLowerCase();
             List wl = Arrays.stream(cfg.whitelist.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
             if (wl.contains(entityType)) {
                 return false;
             }
         }
-        return !(entity instanceof Player) || !(p = (Player)entity).m_7500_() && !p.m_5833_();
+        return !(entity instanceof Player) || !(p = (Player)entity).isCreative() && !p.isSpectator();
     }
 
     private int findWeaponInventorySlot() {
@@ -691,7 +691,7 @@ public class TpAuraFeature {
             return -1;
         }
         for (int i = 0; i < 45; ++i) {
-            String name = TpAuraFeature.mc.player.m_150109_().m_8020_(i).m_41720_().toString().toLowerCase();
+            String name = TpAuraFeature.mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
             if (!name.contains("sword") && !name.contains("mace") && !name.contains("axe")) continue;
             return i;
         }
@@ -700,11 +700,11 @@ public class TpAuraFeature {
 
     private boolean checkAndSwapWeapon(TpAuraConfig cfg) {
         boolean isWeapon;
-        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.f_108617_ == null) {
+        if (TpAuraFeature.mc.player == null || TpAuraFeature.mc.player.connection == null) {
             return false;
         }
-        ItemStack mainHand = TpAuraFeature.mc.player.m_21205_();
-        String itemName = mainHand.m_41720_().toString().toLowerCase();
+        ItemStack mainHand = TpAuraFeature.mc.player.getMainHandItem();
+        String itemName = mainHand.getItem().toString().toLowerCase();
         boolean bl = isWeapon = itemName.contains("sword") || itemName.contains("mace") || itemName.contains("axe");
         if (isWeapon && (!cfg.requireMace || itemName.contains("mace"))) {
             return true;
@@ -713,23 +713,23 @@ public class TpAuraFeature {
             int slot = this.findWeaponInventorySlot();
             if (slot != -1) {
                 this.silentSwapSlot = slot;
-                this.silentSwapPrevSlot = TpAuraFeature.mc.player.m_150109_().f_35977_;
+                this.silentSwapPrevSlot = TpAuraFeature.mc.player.getInventory().selected;
                 if (slot >= 36) {
-                    TpAuraFeature.mc.player.m_150109_().f_35977_ = slot - 36;
+                    TpAuraFeature.mc.player.getInventory().selected = slot - 36;
                 } else {
-                    TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(0, TpAuraFeature.mc.player.f_36096_.m_182424_(), slot, 0, ClickType.SWAP, TpAuraFeature.mc.player.f_36096_.m_142621_(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
-                    TpAuraFeature.mc.player.m_150109_().f_35977_ = 0;
+                    TpAuraFeature.mc.player.connection.send((Packet)new ServerboundContainerClickPacket(0, TpAuraFeature.mc.player.containerMenu.getStateId(), slot, 0, ClickType.SWAP, TpAuraFeature.mc.player.containerMenu.getCarried(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+                    TpAuraFeature.mc.player.getInventory().selected = 0;
                 }
                 return true;
             }
         } else {
             for (int i = 0; i < 9; ++i) {
-                String name = TpAuraFeature.mc.player.m_150109_().m_8020_(i).m_41720_().toString().toLowerCase();
+                String name = TpAuraFeature.mc.player.getInventory().getItem(i).getItem().toString().toLowerCase();
                 if (!name.contains("sword") && !name.contains("mace") && !name.contains("axe")) continue;
                 if (this.originalSlot == -1) {
-                    this.originalSlot = TpAuraFeature.mc.player.m_150109_().f_35977_;
+                    this.originalSlot = TpAuraFeature.mc.player.getInventory().selected;
                 }
-                TpAuraFeature.mc.player.m_150109_().f_35977_ = i;
+                TpAuraFeature.mc.player.getInventory().selected = i;
                 return true;
             }
         }
@@ -740,19 +740,19 @@ public class TpAuraFeature {
         if (this.silentSwapSlot == -1 && this.originalSlot == -1) {
             return;
         }
-        if (this.silentSwapSlot != -1 && TpAuraFeature.mc.player != null && TpAuraFeature.mc.player.f_108617_ != null) {
+        if (this.silentSwapSlot != -1 && TpAuraFeature.mc.player != null && TpAuraFeature.mc.player.connection != null) {
             if (this.silentSwapSlot >= 36) {
-                TpAuraFeature.mc.player.m_150109_().f_35977_ = this.silentSwapPrevSlot;
+                TpAuraFeature.mc.player.getInventory().selected = this.silentSwapPrevSlot;
             } else {
-                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClickPacket(0, TpAuraFeature.mc.player.f_36096_.m_182424_(), this.silentSwapSlot, 0, ClickType.SWAP, TpAuraFeature.mc.player.f_36096_.m_142621_(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
-                TpAuraFeature.mc.player.m_150109_().f_35977_ = this.silentSwapPrevSlot;
-                TpAuraFeature.mc.player.f_108617_.m_104955_((Packet)new ServerboundContainerClosePacket(TpAuraFeature.mc.player.f_36096_.f_38840_));
+                TpAuraFeature.mc.player.connection.send((Packet)new ServerboundContainerClickPacket(0, TpAuraFeature.mc.player.containerMenu.getStateId(), this.silentSwapSlot, 0, ClickType.SWAP, TpAuraFeature.mc.player.containerMenu.getCarried(), (Int2ObjectMap)new Int2ObjectOpenHashMap()));
+                TpAuraFeature.mc.player.getInventory().selected = this.silentSwapPrevSlot;
+                TpAuraFeature.mc.player.connection.send((Packet)new ServerboundContainerClosePacket(TpAuraFeature.mc.player.containerMenu.containerId));
             }
             this.silentSwapSlot = -1;
             this.silentSwapPrevSlot = -1;
         }
         if (this.originalSlot != -1 && TpAuraFeature.mc.player != null) {
-            TpAuraFeature.mc.player.m_150109_().f_35977_ = this.originalSlot;
+            TpAuraFeature.mc.player.getInventory().selected = this.originalSlot;
             this.originalSlot = -1;
         }
     }

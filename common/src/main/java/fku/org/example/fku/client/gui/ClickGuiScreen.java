@@ -39,7 +39,7 @@ extends Screen {
         }
         if (!HotkeySystem.isWaiting()) {
             String hint = "\u00a77\u00a7o\u4e2d\u952e\u70b9\u51fb\u7ec4\u4ef6\u53ef\u7ed1\u5b9a\u70ed\u952e";
-            int hw = this.font.m_92895_(hint.replace("\u00a77\u00a7o", "").replace("\u00a7r", ""));
+            int hw = this.font.width(hint.replace("\u00a77\u00a7o", "").replace("\u00a7r", ""));
             g.drawString(this.font, hint, (this.width - hw) / 2, 8, 0x888888);
         }
     }
@@ -54,21 +54,21 @@ extends Screen {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    public boolean m_7979_(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         for (GuiPanel panel : this.panels) {
             panel.mouseDragged(mouseX, mouseY, button, dragX, dragY);
         }
-        return super.m_7979_(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
-    public boolean m_6348_(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         for (GuiPanel panel : this.panels) {
             panel.mouseReleased(mouseX, mouseY, button);
         }
-        return super.m_6348_(mouseX, mouseY, button);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             if (HotkeySystem.isWaiting()) {
                 HotkeySystem.cancelBinding();
@@ -81,11 +81,11 @@ extends Screen {
             if (!panel.keyPressed(keyCode, scanCode, modifiers)) continue;
             return true;
         }
-        if (KeyBindings.OPEN_GUI_KEY.m_90832_(keyCode, scanCode)) {
+        if (KeyBindings.OPEN_GUI_KEY.matches(keyCode, scanCode)) {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public void onClose() {

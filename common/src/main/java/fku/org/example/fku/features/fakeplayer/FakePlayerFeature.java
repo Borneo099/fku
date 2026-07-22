@@ -61,25 +61,25 @@ public class FakePlayerFeature {
         FakePlayerFeature.remove();
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
         Minecraft mc = FakePlayerFeature.getMc();
-        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || mc.player == null || mc.level == null) {
             return;
         }
         fakePlayer = new FakePlayerEntity((Player)mc.player, cfg.name, cfg.health, cfg.copyInv);
-        if (mc.f_91073_ instanceof ClientLevel) {
-            mc.f_91073_.m_104630_(fakePlayer.m_19879_(), (AbstractClientPlayer)fakePlayer);
+        if (mc.level instanceof ClientLevel) {
+            mc.level.addPlayer(fakePlayer.getId(), (AbstractClientPlayer)fakePlayer);
         }
         Fku.LOGGER.info("[FakePlayer] \u5df2\u751f\u6210: {}", cfg.name);
     }
 
     public static void remove() {
         if (fakePlayer != null) {
-            fakePlayer.m_146870_();
+            fakePlayer.discard();
             fakePlayer = null;
         }
     }
 
     public static boolean hasFakePlayer() {
-        return fakePlayer != null && fakePlayer.m_6084_();
+        return fakePlayer != null && fakePlayer.isAlive();
     }
 
     public static FakePlayerEntity getFakePlayer() {
@@ -104,7 +104,7 @@ public class FakePlayerFeature {
         if (!cfg.enabled || !cfg.simulateDamage) {
             return;
         }
-        if (fakePlayer == null || !fakePlayer.m_6084_()) {
+        if (fakePlayer == null || !fakePlayer.isAlive()) {
             return;
         }
         if (event.getTarget() != fakePlayer) {
@@ -116,17 +116,17 @@ public class FakePlayerFeature {
         event.setCanceled(true);
         float damage = FakePlayerFeature.calculateAttackDamage((LivingEntity)event.getEntity());
         Minecraft mc = FakePlayerFeature.getMc();
-        boolean bl = isCrit = mc != null && mc.player != null && mc.player.f_19789_ > 0.0f && !mc.player.m_20096_() && !mc.player.m_20069_() && !mc.player.m_21023_(MobEffects.f_19610_) && !mc.player.m_20159_();
+        boolean bl = isCrit = mc != null && mc.player != null && mc.player.fallDistance > 0.0f && !mc.player.onGround() && !mc.player.isInWater() && !mc.player.hasEffect(MobEffects.BLINDNESS) && !mc.player.isPassenger();
         if (isCrit) {
             damage *= 1.5f;
         }
         fakePlayer.applyDamage(damage);
         LocalPlayer localPlayer = player = mc != null ? mc.player : null;
         if (player != null) {
-            mc.f_91073_.m_6263_((Player)player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(), SoundEvents.f_12323_, SoundSource.PLAYERS, 1.0f, 1.0f);
+            mc.level.playSound((Player)player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
         if (cfg.showDamage) {
-            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u53d7\u5230\u4f24\u5bb3: \u00a7f" + String.format("%.1f", damage)) + " \u00a77(\u5269\u4f59: \u00a7f" + String.format("%.1f", Math.max(0.0f, fakePlayer.m_21223_()))) + "\u00a77)");
+            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u53d7\u5230\u4f24\u5bb3: \u00a7f" + String.format("%.1f", damage) + " \u00a77(\u5269\u4f59: \u00a7f" + String.format("%.1f", Math.max(0.0f, fakePlayer.getHealth())) + "\u00a77)");
         }
         FakePlayerFeature.markHandled();
     }
@@ -138,23 +138,23 @@ public class FakePlayerFeature {
         if (mc == null || !cfg.enabled || !cfg.simulateDamage) {
             return false;
         }
-        if (fakePlayer == null || !fakePlayer.m_6084_()) {
+        if (fakePlayer == null || !fakePlayer.isAlive()) {
             return false;
         }
         if (target != fakePlayer) {
             return false;
         }
         float damage = FakePlayerFeature.calculateAttackDamage((LivingEntity)mc.player);
-        boolean bl = isCrit = mc.player != null && mc.player.f_19789_ > 0.0f && !mc.player.m_20096_() && !mc.player.m_20069_() && !mc.player.m_21023_(MobEffects.f_19610_) && !mc.player.m_20159_();
+        boolean bl = isCrit = mc.player != null && mc.player.fallDistance > 0.0f && !mc.player.onGround() && !mc.player.isInWater() && !mc.player.hasEffect(MobEffects.BLINDNESS) && !mc.player.isPassenger();
         if (isCrit) {
             damage *= 1.5f;
         }
         fakePlayer.applyDamage(damage);
-        if (mc.f_91073_ != null) {
-            mc.f_91073_.m_6263_((Player)mc.player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(), SoundEvents.f_12323_, SoundSource.PLAYERS, 1.0f, 1.0f);
+        if (mc.level != null) {
+            mc.level.playSound((Player)mc.player, fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(), SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
         if (cfg.showDamage) {
-            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u53d7\u5230\u4f24\u5bb3: \u00a7f" + String.format("%.1f", damage)) + " \u00a77(\u5269\u4f59: \u00a7f" + String.format("%.1f", Math.max(0.0f, fakePlayer.m_21223_()))) + "\u00a77)");
+            FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u53d7\u5230\u4f24\u5bb3: \u00a7f" + String.format("%.1f", damage) + " \u00a77(\u5269\u4f59: \u00a7f" + String.format("%.1f", Math.max(0.0f, fakePlayer.getHealth())) + "\u00a77)");
         }
         return true;
     }
@@ -165,19 +165,19 @@ public class FakePlayerFeature {
             return;
         }
         FakePlayerConfig cfg = FakePlayerConfig.getInstance();
-        if (!cfg.enabled || fakePlayer == null || !fakePlayer.m_6084_()) {
+        if (!cfg.enabled || fakePlayer == null || !fakePlayer.isAlive()) {
             return;
         }
         if (cfg.autoTotem) {
-            if (fakePlayer.m_21206_().m_41720_() != Items.f_42747_) {
-                fakePlayer.m_21008_(InteractionHand.OFF_HAND, new ItemStack((ItemLike)Items.f_42747_));
+            if (fakePlayer.getOffhandItem().getItem() != Items.TOTEM_OF_UNDYING) {
+                fakePlayer.setItemInHand(InteractionHand.OFF_HAND, new ItemStack((ItemLike)Items.TOTEM_OF_UNDYING));
             }
-            if (fakePlayer.m_21205_().m_41720_() != Items.f_42747_) {
-                fakePlayer.m_21008_(InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.f_42747_));
+            if (fakePlayer.getMainHandItem().getItem() != Items.TOTEM_OF_UNDYING) {
+                fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack((ItemLike)Items.TOTEM_OF_UNDYING));
             }
         }
         fakePlayer.tickCombat();
-        if (!fakePlayer.m_6084_() && cfg.respawn) {
+        if (!fakePlayer.isAlive() && cfg.respawn) {
             FakePlayerFeature.spawn();
         }
     }
@@ -189,24 +189,24 @@ public class FakePlayerFeature {
             return 1.0f;
         }
         Player player = (Player)attacker;
-        ItemStack weapon = player.m_21205_();
-        if (weapon.m_41619_()) {
+        ItemStack weapon = player.getMainHandItem();
+        if (weapon.isEmpty()) {
             return 1.0f;
         }
-        double baseDamage = weapon.m_41638_(EquipmentSlot.MAINHAND).get(Attributes.f_22281_).stream().mapToDouble(m -> m.m_22218_()).sum();
+        double baseDamage = weapon.getAttributeModifiers(EquipmentSlot.MAINHAND).get(Attributes.ATTACK_DAMAGE).stream().mapToDouble(m -> m.getAmount()).sum();
         if (baseDamage == 0.0) {
             baseDamage = 1.0;
         }
         int sharpness = 0;
         int smite = 0;
         int bane = 0;
-        Map enchantments = EnchantmentHelper.m_44831_((ItemStack)weapon);
+        Map enchantments = EnchantmentHelper.getEnchantments((ItemStack)weapon);
         for (Map.Entry entry : enchantments.entrySet()) {
             Enchantment ench = (Enchantment)entry.getKey();
             int level = (Integer)entry.getValue();
             ResourceLocation id = ForgeRegistries.ENCHANTMENTS.getKey(ench);
             if (id == null) continue;
-            String path = id.m_135815_();
+            String path = id.getPath();
             if ("sharpness".equals(path)) {
                 sharpness += level;
                 continue;
@@ -220,12 +220,12 @@ public class FakePlayerFeature {
         }
         float enchantBonus = sharpness * 1.25f + smite * 2.5f + bane * 2.5f;
         float strengthBonus = 0.0f;
-        if (player.m_21023_(MobEffects.f_19600_) && (effect2 = player.m_21124_(MobEffects.f_19600_)) != null) {
-            strengthBonus = 3.0f * (effect2.m_19564_() + 1);
+        if (player.hasEffect(MobEffects.DAMAGE_BOOST) && (effect2 = player.getEffect(MobEffects.DAMAGE_BOOST)) != null) {
+            strengthBonus = 3.0f * (effect2.getAmplifier() + 1);
         }
         float weaknessPenalty = 0.0f;
-        if (player.m_21023_(MobEffects.f_19613_) && (effect = player.m_21124_(MobEffects.f_19613_)) != null) {
-            weaknessPenalty = 4.0f * (effect.m_19564_() + 1);
+        if (player.hasEffect(MobEffects.WEAKNESS) && (effect = player.getEffect(MobEffects.WEAKNESS)) != null) {
+            weaknessPenalty = 4.0f * (effect.getAmplifier() + 1);
         }
         return (baseDamage + enchantBonus + strengthBonus - weaknessPenalty);
     }
@@ -250,7 +250,7 @@ public class FakePlayerFeature {
     private static void displayClientMessage(String msg) {
         Minecraft mc = FakePlayerFeature.getMc();
         if (mc != null && mc.player != null) {
-            mc.player.m_5661_(Component.literal((String)msg), false);
+            mc.player.displayClientMessage(Component.literal((String)msg), false);
         }
     }
 
@@ -264,46 +264,46 @@ public class FakePlayerFeature {
         private final boolean ground;
 
         public FakePlayerEntity(Player player, String name, float health, boolean copyInv) {
-            super(FakePlayerFeature.getMc().f_91073_, new GameProfile(UUID.randomUUID(), name));
-            this.m_20359_((Entity)player);
-            this.m_146922_(player.m_146908_());
-            this.m_146926_(player.m_146909_());
-            this.f_20883_ = player.f_20883_;
-            this.f_20885_ = player.f_20885_;
-            this.f_20886_ = player.f_20886_;
+            super(FakePlayerFeature.getMc().level, new GameProfile(UUID.randomUUID(), name));
+            this.copyPosition((Entity)player);
+            this.setYRot(player.getYRot());
+            this.setXRot(player.getXRot());
+            this.yBodyRot = player.yBodyRot;
+            this.yHeadRot = player.yHeadRot;
+            this.yHeadRotO = player.yHeadRotO;
             this.xOld = player.xOld;
             this.yOld = player.yOld;
             this.zOld = player.zOld;
-            this.f_19798_ = player.m_20069_();
-            this.m_20260_(player.m_6144_());
-            this.m_20124_(player.m_20089_());
-            this.ground = player.m_20096_();
-            this.m_6853_(this.ground);
-            this.m_20011_(player.m_20191_());
-            this.m_21153_(health);
+            this.wasTouchingWater = player.isInWater();
+            this.setShiftKeyDown(player.isShiftKeyDown());
+            this.setPose(player.getPose());
+            this.ground = player.onGround();
+            this.setOnGround(this.ground);
+            this.setBoundingBox(player.getBoundingBox());
+            this.setHealth(health);
             if (copyInv) {
-                Inventory playerInv = player.m_150109_();
-                Inventory fakeInv = this.m_150109_();
-                for (int i = 0; i < playerInv.m_6643_(); ++i) {
-                    fakeInv.m_6836_(i, playerInv.m_8020_(i).m_41777_());
+                Inventory playerInv = player.getInventory();
+                Inventory fakeInv = this.getInventory();
+                for (int i = 0; i < playerInv.getContainerSize(); ++i) {
+                    fakeInv.setItem(i, playerInv.getItem(i).copy());
                 }
             }
             if (FakePlayerConfig.getInstance().autoTotem) {
-                this.m_21008_(InteractionHand.OFF_HAND, new ItemStack((ItemLike)Items.f_42747_));
+                this.setItemInHand(InteractionHand.OFF_HAND, new ItemStack((ItemLike)Items.TOTEM_OF_UNDYING));
             }
-            float absorption = player.m_6103_();
-            this.m_7911_(absorption);
+            float absorption = player.getAbsorptionAmount();
+            this.setAbsorptionAmount(absorption);
         }
 
-        public boolean m_20096_() {
+        public boolean onGround() {
             return this.ground;
         }
 
-        public boolean m_5833_() {
+        public boolean isSpectator() {
             return false;
         }
 
-        public boolean m_7500_() {
+        public boolean isCreative() {
             return false;
         }
 
@@ -311,8 +311,8 @@ public class FakePlayerFeature {
             if (this.combatCooldown > 0) {
                 --this.combatCooldown;
             }
-            if (this.f_20916_ > 0) {
-                --this.f_20916_;
+            if (this.hurtTime > 0) {
+                --this.hurtTime;
             }
         }
 
@@ -320,51 +320,51 @@ public class FakePlayerFeature {
             if (this.combatCooldown > 0) {
                 return;
             }
-            float oldHealth = this.m_21223_();
+            float oldHealth = this.getHealth();
             float newHealth = oldHealth - damage;
             this.combatCooldown = FakePlayerConfig.getInstance().invulnerableTicks;
-            this.f_20916_ = 10;
-            this.f_20917_ = 10;
+            this.hurtTime = 10;
+            this.hurtDuration = 10;
             if (newHealth <= 0.0f) {
                 boolean totemPopped = this.tryPopTotem();
                 if (!totemPopped) {
                     this.die();
                 } else {
-                    this.m_21153_(1.0f);
+                    this.setHealth(1.0f);
                 }
             } else {
-                this.m_21153_(newHealth);
+                this.setHealth(newHealth);
             }
         }
 
         private boolean tryPopTotem() {
             boolean hasTotem;
             Minecraft mc = FakePlayerFeature.getMc();
-            boolean bl = hasTotem = this.m_21206_().m_41720_() == Items.f_42747_ || this.m_21205_().m_41720_() == Items.f_42747_;
+            boolean bl = hasTotem = this.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING || this.getMainHandItem().getItem() == Items.TOTEM_OF_UNDYING;
             if (!hasTotem) {
                 return false;
             }
-            if (this.m_21206_().m_41720_() == Items.f_42747_) {
-                this.m_21008_(InteractionHand.OFF_HAND, ItemStack.f_41583_);
+            if (this.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
+                this.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
             } else {
-                this.m_21008_(InteractionHand.MAIN_HAND, ItemStack.f_41583_);
+                this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             }
-            this.m_21153_(10.0f);
-            this.m_7911_(4.0f);
-            this.m_21219_();
-            this.m_7292_(new MobEffectInstance(MobEffects.f_19605_, 900, 1));
-            this.m_7292_(new MobEffectInstance(MobEffects.f_19607_, 800, 0));
-            this.m_7292_(new MobEffectInstance(MobEffects.f_19617_, 100, 1));
+            this.setHealth(10.0f);
+            this.setAbsorptionAmount(4.0f);
+            this.removeAllEffects();
+            this.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1));
+            this.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0));
+            this.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1));
             this.combatCooldown = FakePlayerConfig.getInstance().invulnerableTicks;
-            this.f_20916_ = 10;
-            if (mc != null && mc.f_91073_ != null) {
+            this.hurtTime = 10;
+            if (mc != null && mc.level != null) {
                 for (int i = 0; i < 30; ++i) {
-                    double vx = (mc.f_91073_.f_46441_.m_188500_() - 0.5) * 0.5;
-                    double vy = mc.f_91073_.f_46441_.m_188500_() * 0.5;
-                    double vz = (mc.f_91073_.f_46441_.m_188500_() - 0.5) * 0.5;
-                    mc.f_91073_.m_7106_((ParticleOptions)ParticleTypes.f_123767_, this.getX() + vx * 2.0, this.getY() + 1.0 + vy * 2.0, this.getZ() + vz * 2.0, vx, vy + 0.5, vz);
+                    double vx = (mc.level.random.nextDouble() - 0.5) * 0.5;
+                    double vy = mc.level.random.nextDouble() * 0.5;
+                    double vz = (mc.level.random.nextDouble() - 0.5) * 0.5;
+                    mc.level.addParticle((ParticleOptions)ParticleTypes.TOTEM_OF_UNDYING, this.getX() + vx * 2.0, this.getY() + 1.0 + vy * 2.0, this.getZ() + vz * 2.0, vx, vy + 0.5, vz);
                 }
-                mc.f_91073_.m_6263_(null, this.getX(), this.getY(), this.getZ(), SoundEvents.f_12513_, SoundSource.PLAYERS, 1.0f, 1.0f);
+                mc.level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0f, 1.0f);
             }
             FakePlayerConfig cfg = FakePlayerConfig.getInstance();
             if (cfg.showDamage) {
@@ -374,12 +374,12 @@ public class FakePlayerFeature {
         }
 
         private void die() {
-            this.m_21153_(0.0f);
+            this.setHealth(0.0f);
             Minecraft mc = FakePlayerFeature.getMc();
-            if (mc != null && mc.f_91073_ != null) {
-                mc.f_91073_.m_6263_(null, this.getX(), this.getY(), this.getZ(), SoundEvents.f_12322_, SoundSource.PLAYERS, 1.0f, 1.0f);
+            if (mc != null && mc.level != null) {
+                mc.level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_DEATH, SoundSource.PLAYERS, 1.0f, 1.0f);
             }
-            this.m_142687_(Entity.RemovalReason.KILLED);
+            this.remove(Entity.RemovalReason.KILLED);
             fakePlayer = null;
             FakePlayerFeature.displayClientMessage("\u00a7c\u5047\u4eba\u5df2\u6b7b\u4ea1\u3002");
         }

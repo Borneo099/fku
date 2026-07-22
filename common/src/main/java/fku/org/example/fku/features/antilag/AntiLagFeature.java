@@ -47,24 +47,24 @@ public class AntiLagFeature {
             return;
         }
         LocalPlayer player = mc.player;
-        if (player == null || player.f_108617_ == null) {
+        if (player == null || player.connection == null) {
             return;
         }
-        Vec3 serverPos = new Vec3(packet.m_132818_(), packet.m_132821_(), packet.m_132822_());
+        Vec3 serverPos = new Vec3(packet.getX(), packet.getY(), packet.getZ());
         Vec3 playerPos = player.position();
-        double dist = playerPos.m_82554_(serverPos);
+        double dist = playerPos.distanceTo(serverPos);
         if (dist > cfg.range) {
             return;
         }
         ci.cancel();
-        player.f_108617_.m_104955_((Packet)new ServerboundAcceptTeleportationPacket(packet.m_132825_()));
+        player.connection.send((Packet)new ServerboundAcceptTeleportationPacket(packet.getId()));
         if (!cfg.back) {
-            if (!cfg.allowIntoVoid && serverPos.y < player.m_9236_().m_141937_()) {
+            if (!cfg.allowIntoVoid && serverPos.y < player.level().getMinBuildHeight()) {
                 return;
             }
             if (movePacketCounter.get() > cfg.limitPerSecond) {
                 if (cfg.printWhenTooManyPacket) {
-                    player.m_5661_(Component.literal((String)"\u00a77[AntiLag] \u8fbe\u5230\u9650\u901f\u4e0a\u9650\uff0c\u8df3\u8fc7\u5047\u5305\u53d1\u9001"), true);
+                    player.displayClientMessage(Component.literal((String)"\u00a77[AntiLag] \u8fbe\u5230\u9650\u901f\u4e0a\u9650\uff0c\u8df3\u8fc7\u5047\u5305\u53d1\u9001"), true);
                 }
                 return;
             }
@@ -75,10 +75,10 @@ public class AntiLagFeature {
                     double nx = serverPos.x + (playerPos.x - serverPos.x) * t;
                     double ny = serverPos.y + (playerPos.y - serverPos.y) * t;
                     double nz = serverPos.z + (playerPos.z - serverPos.z) * t;
-                    AntiLagFeature.sendMovePacket(nx, ny, nz, player.m_20096_());
+                    AntiLagFeature.sendMovePacket(nx, ny, nz, player.onGround());
                 }
             } else {
-                AntiLagFeature.sendMovePacket(playerPos.x, playerPos.y, playerPos.z, player.m_20096_());
+                AntiLagFeature.sendMovePacket(playerPos.x, playerPos.y, playerPos.z, player.onGround());
             }
         }
         Fku.LOGGER.debug("[AntiLag] \u62e6\u622a\u62c9\u56de: dist={}, server={}, client={}", new Object[]{dist, serverPos, playerPos});
@@ -94,7 +94,7 @@ public class AntiLagFeature {
             return;
         }
         Minecraft mc = AntiLagFeature.getMc();
-        if (mc == null || mc.player == null || mc.f_91073_ == null) {
+        if (mc == null || mc.player == null || mc.level == null) {
             return;
         }
         LocalPlayer player = mc.player;
@@ -106,8 +106,8 @@ public class AntiLagFeature {
         }
         if (!cfg.back) {
             boolean isMoving;
-            boolean bl = isMoving = player.f_20902_ != 0.0f || player.f_20900_ != 0.0f;
-            if (isMoving && player.f_19862_) {
+            boolean bl = isMoving = player.zza != 0.0f || player.xxa != 0.0f;
+            if (isMoving && player.horizontalCollision) {
                 double dy = 0.0;
                 if ("OnlyUp".equals(cfg.searchVclipMode) || "Both".equals(cfg.searchVclipMode)) {
                     dy = cfg.searchFindStep;
@@ -115,7 +115,7 @@ public class AntiLagFeature {
                     dy = -cfg.searchFindStep;
                 }
                 if (dy != 0.0) {
-                    player.m_6034_(player.getX(), player.getY() + dy, player.getZ());
+                    player.setPos(player.getX(), player.getY() + dy, player.getZ());
                     Fku.LOGGER.debug("[AntiLag] VClip \u81ea\u52a8\u8131\u56f0: dy={}", dy);
                 }
             }
@@ -128,14 +128,14 @@ public class AntiLagFeature {
             return;
         }
         LocalPlayer player = mc.player;
-        if (player == null || player.f_108617_ == null) {
+        if (player == null || player.connection == null) {
             return;
         }
         if (movePacketCounter.incrementAndGet() > AntiLagConfig.getInstance().limitPerSecond) {
             AntiLagConfig.getInstance().rateLimited = true;
             return;
         }
-        player.f_108617_.m_104955_((Packet)new ServerboundMovePlayerPacket.PosRot(x, y, z, player.m_146908_(), player.m_146909_(), onGround));
+        player.connection.send((Packet)new ServerboundMovePlayerPacket.PosRot(x, y, z, player.getYRot(), player.getXRot(), onGround));
     }
 
     public static int getCurrentPacketCount() {

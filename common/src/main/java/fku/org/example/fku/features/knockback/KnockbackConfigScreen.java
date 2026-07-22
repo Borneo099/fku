@@ -38,7 +38,7 @@ extends Screen {
     private int scrollOffset = 0;
 
     public KnockbackConfigScreen() {
-        super(Component.literal((String)"\u81ea\u7531\u51fb\u9000\u914d\u7f6e"));
+        super(Component.literal("\u81ea\u7531\u51fb\u9000\u914d\u7f6e"));
     }
 
     protected void init() {
@@ -57,17 +57,17 @@ extends Screen {
             this.rebuildWidgets();
         }).bounds(cx + 10, this.cy(44), 120, 18).build();
         this.addRenderableWidget(this.modeButton);
-        this.customYawInput = new EditBox(this.font, cx + 80, this.cy(86), 60, 14, Component.literal((String)""));
-        this.customYawInput.m_94144_(String.format("%.0f", this.cfg.customYaw)));
-        this.customYawInput.m_94199_(6);
-        this.customYawInput.m_94153_(s -> s.matches("-?\\d*\\.?\\d*"));
-        this.customYawInput.m_94194_("CUSTOM".equals(this.cfg.mode));
+        this.customYawInput = new EditBox(this.font, cx + 80, this.cy(86), 60, 14, Component.literal(""));
+        this.customYawInput.setValue(String.format("%.0f", this.cfg.customYaw));
+        this.customYawInput.setMaxLength(6);
+        this.customYawInput.setFilter(s -> s.matches("-?\\d*\\.?\\d*"));
+        this.customYawInput.setVisible("CUSTOM".equals(this.cfg.mode));
         this.addRenderableWidget(this.customYawInput);
-        this.cliffRadiusInput = new EditBox(this.font, cx + 80, this.cy(120), 40, 14, Component.literal((String)""));
-        this.cliffRadiusInput.m_94144_(String.valueOf(this.cfg.cliffSearchRadius));
-        this.cliffRadiusInput.m_94199_(2);
-        this.cliffRadiusInput.m_94153_(s -> s.matches("\\d*"));
-        this.cliffRadiusInput.m_94194_("CLIFF".equals(this.cfg.mode));
+        this.cliffRadiusInput = new EditBox(this.font, cx + 80, this.cy(120), 40, 14, Component.literal(""));
+        this.cliffRadiusInput.setValue(String.valueOf(this.cfg.cliffSearchRadius));
+        this.cliffRadiusInput.setMaxLength(2);
+        this.cliffRadiusInput.setFilter(s -> s.matches("\\d*"));
+        this.cliffRadiusInput.setVisible("CLIFF".equals(this.cfg.mode));
         this.addRenderableWidget(this.cliffRadiusInput);
         this.smoothToggleButton = Button.builder(Component.literal((String)("\u5e73\u6ed1\u65cb\u8f6c: " + (this.cfg.smoothRotation ? "\u5f00" : "\u5173"))), btn -> {
             this.cfg.setSmoothRotation(!this.cfg.smoothRotation);
@@ -75,24 +75,24 @@ extends Screen {
             this.rebuildWidgets();
         }).bounds(cx + 10, this.cy(140), 110, 18).build();
         this.addRenderableWidget(this.smoothToggleButton);
-        this.smoothStepsInput = new EditBox(this.font, cx + 80, this.cy(182), 40, 14, Component.literal((String)""));
-        this.smoothStepsInput.m_94144_(String.valueOf(this.cfg.smoothSteps));
-        this.smoothStepsInput.m_94199_(2);
-        this.smoothStepsInput.m_94153_(s -> s.matches("\\d*"));
-        this.smoothStepsInput.m_94194_(this.cfg.smoothRotation);
+        this.smoothStepsInput = new EditBox(this.font, cx + 80, this.cy(182), 40, 14, Component.literal(""));
+        this.smoothStepsInput.setValue(String.valueOf(this.cfg.smoothSteps));
+        this.smoothStepsInput.setMaxLength(2);
+        this.smoothStepsInput.setFilter(s -> s.matches("\\d*"));
+        this.smoothStepsInput.setVisible(this.cfg.smoothRotation);
         this.addRenderableWidget(this.smoothStepsInput);
-        this.delayInput = new EditBox(this.font, cx + 80, this.cy(216), 40, 14, Component.literal((String)""));
-        this.delayInput.m_94144_(String.valueOf(this.cfg.rotationDelay));
-        this.delayInput.m_94199_(1);
-        this.delayInput.m_94153_(s -> s.isEmpty() || s.matches("[0-5]"));
+        this.delayInput = new EditBox(this.font, cx + 80, this.cy(216), 40, 14, Component.literal(""));
+        this.delayInput.setValue(String.valueOf(this.cfg.rotationDelay));
+        this.delayInput.setMaxLength(1);
+        this.delayInput.setFilter(s -> s.isEmpty() || s.matches("[0-5]"));
         this.addRenderableWidget(this.delayInput);
         this.aggressiveButton = Button.builder(Component.literal((String)("\u6fc0\u8fdb\u6a21\u5f0f: " + (this.cfg.aggressiveMode ? "\u5f00" : "\u5173"))), btn -> {
             this.cfg.setAggressiveMode(!this.cfg.aggressiveMode);
             btn.setMessage(Component.literal((String)("\u6fc0\u8fdb\u6a21\u5f0f: " + (this.cfg.aggressiveMode ? "\u5f00" : "\u5173"))));
         }).bounds(cx + 10, this.cy(236), 110, 18).build();
         this.addRenderableWidget(this.aggressiveButton);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 70, this.cy(270), 60, 18).build());
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(cx + 70, this.cy(270), 60, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5b8c\u6210"), btn -> {
             this.saveConfig();
             Minecraft.getInstance().setScreen(new ClickGuiScreen());
         }).bounds(cx + 150, this.cy(270), 60, 18).build());
@@ -108,7 +108,7 @@ extends Screen {
 
     private void saveConfig() {
         try {
-            float yaw = Float.parseFloat(this.customYawInput.m_94155_());
+            float yaw = Float.parseFloat(this.customYawInput.getValue());
             yaw = Math.max(-180.0f, Math.min(180.0f, yaw));
             this.cfg.setCustomYaw(yaw);
         }
@@ -116,7 +116,7 @@ extends Screen {
             // ignored
         }
         try {
-            int radius = Integer.parseInt(this.cliffRadiusInput.m_94155_());
+            int radius = Integer.parseInt(this.cliffRadiusInput.getValue());
             radius = Math.max(1, Math.min(20, radius));
             this.cfg.setCliffSearchRadius(radius);
         }
@@ -124,7 +124,7 @@ extends Screen {
             // ignored
         }
         try {
-            int steps = Integer.parseInt(this.smoothStepsInput.m_94155_());
+            int steps = Integer.parseInt(this.smoothStepsInput.getValue());
             steps = Math.max(2, Math.min(10, steps));
             this.cfg.setSmoothSteps(steps);
         }
@@ -132,7 +132,7 @@ extends Screen {
             // ignored
         }
         try {
-            int delay = Integer.parseInt(this.delayInput.m_94155_());
+            int delay = Integer.parseInt(this.delayInput.getValue());
             delay = Math.max(0, Math.min(5, delay));
             this.cfg.setRotationDelay(delay);
         }
@@ -146,23 +146,23 @@ extends Screen {
         return (this.height - 300) / 2 + rowOffset - this.scrollOffset;
     }
 
-    public boolean m_6050_(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         int cx = (this.width - 290) / 2;
         int cy2 = (this.height - 300) / 2;
         if (mouseX >= cx && mouseX <= (cx + 290) && mouseY >= cy2 && mouseY <= (cy2 + 300)) {
-            this.scrollOffset = Math.max(0, this.scrollOffset - (delta * 20.0));
+            this.scrollOffset = (int)Math.max(0, this.scrollOffset - (delta * 20.0));
             this.init();
             return true;
         }
-        return super.m_6050_(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     public void render(@NotNull GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 290) / 2;
         int cy = this.cy(0);
         GuiRenderHelper.drawPanelBackground(g, cx, this.cy(0), 290, 300, false);
-        g.m_280588_(cx + 2, cy + 20, cx + 290 - 2, cy + 300 - 30);
+        g.enableScissor(cx + 2, cy + 20, cx + 290 - 2, cy + 300 - 30);
         g.drawString(this.font, "\u81ea\u7531\u51fb\u9000\u914d\u7f6e", cx + 10, this.cy(8), 0xFFFFFF);
         boolean isCustom = "CUSTOM".equals(this.cfg.mode);
         boolean isCliff = "CLIFF".equals(this.cfg.mode);
@@ -191,7 +191,7 @@ extends Screen {
             default -> "";
         };
         g.drawString(this.font, modeHint, cx + 10, this.cy(30), 0x888888);
-        g.m_280618_();
+        g.disableScissor();
         super.render(g, mouseX, mouseY, partialTick);
     }
 
@@ -216,47 +216,47 @@ extends Screen {
     }
 
     private void setEditBoxFocus(EditBox focused) {
-        this.customYawInput.m_93692_(false);
-        this.cliffRadiusInput.m_93692_(false);
-        this.smoothStepsInput.m_93692_(false);
-        this.delayInput.m_93692_(false);
-        focused.m_93692_(true);
+        this.customYawInput.setFocused(false);
+        this.cliffRadiusInput.setFocused(false);
+        this.smoothStepsInput.setFocused(false);
+        this.delayInput.setFocused(false);
+        focused.setFocused(true);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
-        if (this.customYawInput.m_93696_() && this.customYawInput.m_7933_(keyCode, scanCode, modifiers)) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.customYawInput.isFocused() && this.customYawInput.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (this.cliffRadiusInput.m_93696_() && this.cliffRadiusInput.m_7933_(keyCode, scanCode, modifiers)) {
+        if (this.cliffRadiusInput.isFocused() && this.cliffRadiusInput.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (this.smoothStepsInput.m_93696_() && this.smoothStepsInput.m_7933_(keyCode, scanCode, modifiers)) {
+        if (this.smoothStepsInput.isFocused() && this.smoothStepsInput.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (this.delayInput.m_93696_() && this.delayInput.m_7933_(keyCode, scanCode, modifiers)) {
+        if (this.delayInput.isFocused() && this.delayInput.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         if (keyCode == 256) {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    public boolean m_5534_(char codePoint, int modifiers) {
-        if (this.customYawInput.m_93696_() && this.customYawInput.m_5534_(codePoint, modifiers)) {
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (this.customYawInput.isFocused() && this.customYawInput.charTyped(codePoint, modifiers)) {
             return true;
         }
-        if (this.cliffRadiusInput.m_93696_() && this.cliffRadiusInput.m_5534_(codePoint, modifiers)) {
+        if (this.cliffRadiusInput.isFocused() && this.cliffRadiusInput.charTyped(codePoint, modifiers)) {
             return true;
         }
-        if (this.smoothStepsInput.m_93696_() && this.smoothStepsInput.m_5534_(codePoint, modifiers)) {
+        if (this.smoothStepsInput.isFocused() && this.smoothStepsInput.charTyped(codePoint, modifiers)) {
             return true;
         }
-        if (this.delayInput.m_93696_() && this.delayInput.m_5534_(codePoint, modifiers)) {
+        if (this.delayInput.isFocused() && this.delayInput.charTyped(codePoint, modifiers)) {
             return true;
         }
-        return super.m_5534_(codePoint, modifiers);
+        return super.charTyped(codePoint, modifiers);
     }
 
     public boolean isPauseScreen() {

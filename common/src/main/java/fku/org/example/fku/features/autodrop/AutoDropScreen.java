@@ -38,14 +38,14 @@ extends Screen {
         }).bounds(x + 100, y + 30, 90, 20).build();
         this.addRenderableWidget(this.dropModeButton);
         this.scanIntervalField = new EditBox(this.font, x + 120, y + 60, 40, 18, Component.literal((String)"\u626b\u63cf\u95f4\u9694"));
-        this.scanIntervalField.m_94144_(String.valueOf(config.scanInterval));
-        this.scanIntervalField.m_94199_(2);
+        this.scanIntervalField.setValue(String.valueOf(config.scanInterval));
+        this.scanIntervalField.setMaxLength(2);
         this.addRenderableWidget(this.scanIntervalField);
         this.resetButton = Button.builder(Component.literal((String)"\u91cd\u7f6e\u9ed1\u540d\u5355"), btn -> {
             AutoDropConfig cfg = AutoDropConfig.getInstance();
             cfg.clearBlacklist();
             AutoDropPanel.resetScroll();
-            Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7a\u81ea\u52a8\u4e22\u5f03\u9ed1\u540d\u5355\u5df2\u91cd\u7f6e"), true);
+            Minecraft.getInstance().player.displayClientMessage(Component.literal((String)"\u00a7a\u81ea\u52a8\u4e22\u5f03\u9ed1\u540d\u5355\u5df2\u91cd\u7f6e"), true);
         }).bounds(x + 10, y + 95, 100, 18).build();
         this.addRenderableWidget(this.resetButton);
         this.addRenderableWidget(Button.builder(Component.literal((String)"\u4fdd\u5b58"), btn -> this.saveConfig()).bounds(x + 95, y + 130, 80, 20).build());
@@ -54,7 +54,7 @@ extends Screen {
     private void saveConfig() {
         AutoDropConfig config = AutoDropConfig.getInstance();
         try {
-            config.setScanInterval(Integer.parseInt(this.scanIntervalField.m_94155_()));
+            config.setScanInterval(Integer.parseInt(this.scanIntervalField.getValue()));
         }
         catch (NumberFormatException numberFormatException) {
             // ignored

@@ -43,7 +43,7 @@ extends Screen {
     });
 
     public GuiStyleScreen() {
-        super(Component.literal((String)"GUI\u5916\u89c2\u8bbe\u7f6e"));
+        super(Component.literal("GUI\u5916\u89c2\u8bbe\u7f6e"));
         this.primaryColorR = this.config.primaryColorR;
         this.primaryColorG = this.config.primaryColorG;
         this.primaryColorB = this.config.primaryColorB;
@@ -62,26 +62,26 @@ extends Screen {
         super.init();
         int x = (this.width - 300) / 2;
         int y = (this.height - 350) / 2;
-        this.resetButton = Button.builder(Component.literal((String)"\u91cd\u7f6e"), btn -> this.resetToDefaults()).bounds(x + 10, y + 350 - 30, 80, 20).build();
+        this.resetButton = Button.builder(Component.literal("\u91cd\u7f6e"), btn -> this.resetToDefaults()).bounds(x + 10, y + 350 - 30, 80, 20).build();
         this.addRenderableWidget(this.resetButton);
-        this.doneButton = Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> {
+        this.doneButton = Button.builder(Component.literal("\u5b8c\u6210"), btn -> {
             this.saveConfig();
             Minecraft.getInstance().setScreen(new ClickGuiScreen());
         }).bounds(x + 300 - 90, y + 350 - 30, 80, 20).build();
         this.addRenderableWidget(this.doneButton);
-        this.animationToggle = Button.builder(Component.literal((String)(this.config.animationEnabled ? "\u5f39\u7c27\u52a8\u753b: \u5f00" : "\u5f39\u7c27\u52a8\u753b: \u5173")), btn -> {
+        this.animationToggle = Button.builder(Component.literal((this.config.animationEnabled ? "\u5f39\u7c27\u52a8\u753b: \u5f00" : "\u5f39\u7c27\u52a8\u753b: \u5173")), btn -> {
             this.config.setAnimationEnabled(!this.config.animationEnabled);
-            btn.setMessage(Component.literal((String)(this.config.animationEnabled ? "\u5f39\u7c27\u52a8\u753b: \u5f00" : "\u5f39\u7c27\u52a8\u753b: \u5173")));
+            btn.setMessage(Component.literal((this.config.animationEnabled ? "\u5f39\u7c27\u52a8\u753b: \u5f00" : "\u5f39\u7c27\u52a8\u753b: \u5173")));
         }).bounds(x + 10, y + 30, 130, 20).build();
         this.addRenderableWidget(this.animationToggle);
-        this.shadowToggle = Button.builder(Component.literal((String)(this.config.shadowEnabled ? "\u9634\u5f71: \u5f00" : "\u9634\u5f71: \u5173")), btn -> {
+        this.shadowToggle = Button.builder(Component.literal((this.config.shadowEnabled ? "\u9634\u5f71: \u5f00" : "\u9634\u5f71: \u5173")), btn -> {
             this.config.setShadowEnabled(!this.config.shadowEnabled);
-            btn.setMessage(Component.literal((String)(this.config.shadowEnabled ? "\u9634\u5f71: \u5f00" : "\u9634\u5f71: \u5173")));
+            btn.setMessage(Component.literal((this.config.shadowEnabled ? "\u9634\u5f71: \u5f00" : "\u9634\u5f71: \u5173")));
         }).bounds(x + 10, y + 55, 130, 20).build();
         this.addRenderableWidget(this.shadowToggle);
-        Button glowToggle = Button.builder(Component.literal((String)(this.config.glowEnabled ? "\u9ad8\u5149: \u5f00" : "\u9ad8\u5149: \u5173")), btn -> {
+        Button glowToggle = Button.builder(Component.literal((this.config.glowEnabled ? "\u9ad8\u5149: \u5f00" : "\u9ad8\u5149: \u5173")), btn -> {
             this.config.setGlowEnabled(!this.config.glowEnabled);
-            btn.setMessage(Component.literal((String)(this.config.glowEnabled ? "\u9ad8\u5149: \u5f00" : "\u9ad8\u5149: \u5173")));
+            btn.setMessage(Component.literal((this.config.glowEnabled ? "\u9ad8\u5149: \u5f00" : "\u9ad8\u5149: \u5173")));
         }).bounds(x + 150, y + 30, 130, 20).build();
         this.addRenderableWidget(glowToggle);
     }
@@ -163,7 +163,7 @@ extends Screen {
         this.config.setBackgroundColor(this.backgroundColorR, this.backgroundColorG, this.backgroundColorB);
         this.config.setBorderColor(this.borderColorR, this.borderColorG, this.borderColorB);
         this.config.setTextColor(this.textColorR, this.textColorG, this.textColorB);
-        Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7aGUI\u5916\u89c2\u5df2\u91cd\u7f6e\u4e3a\u9ed8\u8ba4"), true);
+        Minecraft.getInstance().player.displayClientMessage(Component.literal("\u00a7aGUI\u5916\u89c2\u5df2\u91cd\u7f6e\u4e3a\u9ed8\u8ba4"), true);
     }
 
     private void saveConfig() {
@@ -172,11 +172,11 @@ extends Screen {
         this.config.setBorderColor(this.borderColorR, this.borderColorG, this.borderColorB);
         this.config.setTextColor(this.textColorR, this.textColorG, this.textColorB);
         GuiStyleConfig.save();
-        Minecraft.getInstance().player.m_5661_(Component.literal((String)"\u00a7aGUI\u5916\u89c2\u914d\u7f6e\u5df2\u4fdd\u5b58"), true);
+        Minecraft.getInstance().player.displayClientMessage(Component.literal("\u00a7aGUI\u5916\u89c2\u914d\u7f6e\u5df2\u4fdd\u5b58"), true);
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int x = (this.width - 300) / 2;
         int y = (this.height - 350) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, 300, 350, false);

@@ -21,12 +21,12 @@ public class ModelParser {
             throw new IllegalArgumentException("\u65e0\u6cd5\u4ece\u6307\u4ee4\u4e2d\u63d0\u53d6NBT\u6570\u636e\uff0c\u8bf7\u786e\u8ba4\u6307\u4ee4\u683c\u5f0f\u6b63\u786e");
         }
         nbtString = ModelParser.cleanNbtString(nbtString);
-        CompoundTag rootTag = TagParser.m_129359_((String)nbtString);
+        CompoundTag rootTag = TagParser.parseTag((String)nbtString);
         ArrayList<CompoundTag> passengers = new ArrayList<CompoundTag>();
-        if (rootTag.m_128425_("Passengers", 9)) {
-            ListTag passengerList = rootTag.m_128437_("Passengers", 10);
+        if (rootTag.contains("Passengers", 9)) {
+            ListTag passengerList = rootTag.getList("Passengers", 10);
             for (int i = 0; i < passengerList.size(); ++i) {
-                CompoundTag passenger = passengerList.m_128728_(i);
+                CompoundTag passenger = passengerList.getCompound(i);
                 ModelParser.extractPassengerRecursive(passenger, passengers, 0);
             }
         }
@@ -40,11 +40,11 @@ public class ModelParser {
         if (depth > 50) {
             return;
         }
-        result.add(tag.m_6426_());
-        if (tag.m_128425_("Passengers", 9)) {
-            ListTag passengers = tag.m_128437_("Passengers", 10);
+        result.add(tag.copy());
+        if (tag.contains("Passengers", 9)) {
+            ListTag passengers = tag.getList("Passengers", 10);
             for (int i = 0; i < passengers.size(); ++i) {
-                ModelParser.extractPassengerRecursive(passengers.m_128728_(i), result, depth + 1);
+                ModelParser.extractPassengerRecursive(passengers.getCompound(i), result, depth + 1);
             }
         }
     }
@@ -57,7 +57,7 @@ public class ModelParser {
             double dz = ModelParser.parseTildeCoord(matcher.group(4));
             return new Vec3(dx, dy, dz);
         }
-        return Vec3.f_82478_;
+        return Vec3.ZERO;
     }
 
     public static String extractEntityId(String command) {

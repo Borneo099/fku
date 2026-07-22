@@ -18,21 +18,21 @@ extends Screen {
     private Button timeoutToggle;
 
     public DisableTimeoutConfigScreen() {
-        super(Component.literal((String)"\u7981\u7528\u8d85\u65f6\u914d\u7f6e"));
+        super(Component.literal("\u7981\u7528\u8d85\u65f6\u914d\u7f6e"));
     }
 
     protected void init() {
         super.init();
         int cx = (this.width - 240) / 2;
         int cy = (this.height - 120) / 2;
-        this.timeoutToggle = Button.builder(Component.literal((String)this.currentToggleLabel()), btn -> {
+        this.timeoutToggle = Button.builder(Component.literal(this.currentToggleLabel()), btn -> {
             boolean current = (Boolean)FkuConfig.disableConnectionTimeout.get();
-            FkuConfig.disableConnectionTimeout.set((!current ? 1 : 0));
+            FkuConfig.disableConnectionTimeout.set(!current);
             FkuConfig.disableConnectionTimeout.save();
-            btn.setMessage(Component.literal((String)this.currentToggleLabel()));
+            btn.setMessage(Component.literal(this.currentToggleLabel()));
         }).bounds(cx + 130, cy + 30, 50, 18).build();
         this.addRenderableWidget(this.timeoutToggle);
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u5b8c\u6210"), btn -> Minecraft.getInstance().setScreen(new ClickGuiScreen())).bounds(cx + 70, cy + 75, 100, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u5b8c\u6210"), btn -> Minecraft.getInstance().setScreen(new ClickGuiScreen())).bounds(cx + 70, cy + 75, 100, 20).build());
     }
 
     private String currentToggleLabel() {
@@ -40,7 +40,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int cx = (this.width - 240) / 2;
         int cy = (this.height - 120) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, 240, 120, false);

@@ -37,7 +37,7 @@ public class SliderComponent {
         this.handleTarget = (this.currentValue - this.minValue) / (this.maxValue - this.minValue);
         float dt = Math.min(0.05f, 0.05f);
         float stiffness = 12.0f;
-        float damping = 2.0f * Math.sqrt(stiffness);
+        float damping = (float)(2.0f * Math.sqrt(stiffness));
         float disp = this.handlePos - this.handleTarget;
         float force = -stiffness * disp;
         float dampForce = -damping * this.handleVel;
@@ -56,7 +56,7 @@ public class SliderComponent {
         this.updateHandle();
         guiGraphics.drawString(Minecraft.getInstance().font, this.label + ": " + this.currentValue, this.x, this.y - 12, config.getTextColor());
         GuiRenderHelper.drawRoundedRect(guiGraphics, this.x, this.y, this.width, 4, config.getBackgroundColorWithAlpha(200), 2);
-        int fillWidth = (this.width * this.handlePos);
+        int fillWidth = (int)(this.width * this.handlePos);
         if (fillWidth > 0) {
             GuiRenderHelper.drawRoundedRect(guiGraphics, this.x, this.y, fillWidth, 4, config.getPrimaryColorWithAlpha(200), 2);
         }
@@ -93,9 +93,9 @@ public class SliderComponent {
     }
 
     private void updateValue(double mouseX) {
-        float percentage = ((mouseX - this.x) / this.width);
+        float percentage = (float)((mouseX - this.x) / this.width);
         percentage = Math.max(0.0f, Math.min(1.0f, percentage));
-        this.currentValue = this.minValue + (percentage * (this.maxValue - this.minValue));
+        this.currentValue = (int)(this.minValue + (percentage * (this.maxValue - this.minValue)));
         if (this.listener != null) {
             this.listener.onValueChanged(this.currentValue);
         }

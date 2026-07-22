@@ -25,7 +25,7 @@ extends Screen {
     private int yElytraLabelY;
 
     public BaritoneScreen() {
-        super(Component.literal((String)"Baritone \u8bbe\u7f6e"));
+        super(Component.literal("Baritone \u8bbe\u7f6e"));
     }
 
     protected void init() {
@@ -82,7 +82,7 @@ extends Screen {
             c.elytraEnabled = v;
             ElytraAnywhereFeature.setEnabled(v);
         });
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> this.onClose()).bounds(this.cx + 150 - 45, y += sp + 6, 90, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> this.onClose()).bounds(this.cx + 150 - 45, y += sp + 6, 90, 18).build());
         this.yParkourLabelY = this.cy + 26;
         this.ySpeedLabelY = speedToggleY - 2;
         this.yElytraLabelY = elytraY - 2;
@@ -120,7 +120,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 300, 320, false);
         g.drawString(this.font, "\u00a7l\u00a7dBaritone \u8bbe\u7f6e", this.cx + 10, this.cy + 8, 0xFFFFFF);
         g.drawString(this.font, "\u00a7b\u2261 \u8dd1\u9177\u6a21\u5f0f", this.cx + 12, this.yParkourLabelY, 0x55FFFF);
@@ -132,12 +132,12 @@ extends Screen {
         super.render(g, mx, my, pt);
     }
 
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             this.onClose();
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     public boolean isPauseScreen() {

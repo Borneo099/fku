@@ -33,7 +33,7 @@ extends Screen {
     private AbstractWidget autoFlightHoriInput;
 
     public TpAuraScreen() {
-        super(Component.literal((String)"TpAura \u914d\u7f6e"));
+        super(Component.literal("TpAura \u914d\u7f6e"));
     }
 
     protected void init() {
@@ -58,8 +58,8 @@ extends Screen {
         for (int i = 0; i < 5; ++i) {
             int fi = i;
             String name = tabs[0][i];
-            int tw = this.font.m_92895_(name) + 14;
-            this.addRenderableWidget(Button.builder(Component.literal((String)(i == this.activeTab ? "\u00a7e[" + name + "]\u00a7r" : name)), b -> {
+            int tw = this.font.width(name) + 14;
+            this.addRenderableWidget(Button.builder(Component.literal((i == this.activeTab ? "\u00a7e[" + name + "]\u00a7r" : name)), b -> {
                 this.saveInputs();
                 this.activeTab = fi;
                 this.init();
@@ -132,43 +132,43 @@ extends Screen {
                 this.totemHeightInput = this.mkEdit(cx + 215, ly, 30, String.valueOf(cfg.totemHeightIncrease));
                 this.addLabel(cx + 2, ly += sp, "\u70ed\u952e(\u4e2d\u952e\u70b9\u51fb\u7ec4\u4ef6\u7ed1\u5b9a):");
                 String hk = cfg.hotkeyKey >= 0 ? cfg.hotkeyName : "\u672a\u7ed1\u5b9a";
-                this.addRenderableWidget(Button.builder(Component.literal((String)("\u00a77" + hk)), b -> {}).bounds(cx + 155, ly, 130, 14).build());
+                this.addRenderableWidget(Button.builder(Component.literal(("\u00a77" + hk)), b -> {}).bounds(cx + 155, ly, 130, 14).build());
             }
         }
-        this.addRenderableWidget(Button.builder(Component.literal((String)"\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("\u00a7a\u4fdd\u5b58\u5e76\u8fd4\u56de"), b -> {
             this.saveInputs();
             this.minecraft.setScreen(null);
         }).bounds(cx + 150 - 40, cy + 260 - 22, 80, 16).build());
     }
 
     private void addLabel(int x, int y, String text) {
-        this.addRenderableWidget(Button.builder(Component.literal((String)("\u00a77" + text)), b -> {}).bounds(x, y, this.font.m_92895_(text) + 4, 14).build());
+        this.addRenderableWidget(Button.builder(Component.literal(("\u00a77" + text)), b -> {}).bounds(x, y, this.font.width(text) + 4, 14).build());
     }
 
     private void addToggle(int x, int y, String label, BooleanSupplier getter, Consumer<Boolean> setter) {
         boolean cur = getter.getAsBoolean();
-        this.addRenderableWidget(Button.builder(Component.literal((String)(label + (cur ? " \u00a7a\u5f00" : " \u00a77\u5173"))), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal((label + (cur ? " \u00a7a\u5f00" : " \u00a77\u5173"))), b -> {
             boolean now = !getter.getAsBoolean();
             setter.accept(now);
-            b.setMessage(Component.literal((String)(label + (now ? " \u00a7a\u5f00" : " \u00a77\u5173"))));
+            b.setMessage(Component.literal((label + (now ? " \u00a7a\u5f00" : " \u00a77\u5173"))));
         }).bounds(x, y, 90, 14).build());
     }
 
     private AbstractWidget mkEdit(int x, int y, int w, String val) {
-        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal((String)""));
-        b.m_94144_(val);
-        b.m_94199_(8);
-        b.m_94153_(s -> s.matches("[\\d.]*"));
-        this.m_7787_(b);
+        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal(""));
+        b.setValue(val);
+        b.setMaxLength(8);
+        b.setFilter(s -> s.matches("[\\d.]*"));
+        this.addWidget(b);
         return b;
     }
 
     private AbstractWidget mkTextEdit(int x, int y, int w, String val) {
-        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal((String)""));
-        b.m_94144_(val);
-        b.m_94199_(500);
-        b.m_94153_(s -> true);
-        this.m_7787_(b);
+        EditBox b = new EditBox(this.font, x, y, w, 14, Component.literal(""));
+        b.setValue(val);
+        b.setMaxLength(500);
+        b.setFilter(s -> true);
+        this.addWidget(b);
         return b;
     }
 
@@ -178,44 +178,44 @@ extends Screen {
         TpAuraConfig cfg = TpAuraConfig.getInstance();
         try {
             abstractWidget = this.cooldownInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setCooldownThreshold(Double.parseDouble(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setCooldownThreshold(Double.parseDouble(e2.getValue()));
             }
         }
-        catch (Exception e2) {
+        catch (Exception ex2) {
             // ignored
         }
         try {
             abstractWidget = this.delayInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setAttackDelay(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setAttackDelay(Integer.parseInt(e2.getValue()));
             }
         }
-        catch (Exception e3) {
+        catch (Exception ex3) {
             // ignored
         }
         try {
             abstractWidget = this.rangeInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setMaxRange(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setMaxRange(Integer.parseInt(e2.getValue()));
             }
         }
-        catch (Exception e4) {
+        catch (Exception ex4) {
             // ignored
         }
         try {
             abstractWidget = this.attackDistInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setAttackDistance(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setAttackDistance(Integer.parseInt(e2.getValue()));
             }
         }
-        catch (Exception e5) {
+        catch (Exception ex5) {
             // ignored
         }
         try {
             abstractWidget = this.tpOffsetInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setTpOffset(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setTpOffset(Integer.parseInt(e2.getValue()));
             }
         }
         catch (Exception e6) {
@@ -223,8 +223,8 @@ extends Screen {
         }
         try {
             abstractWidget = this.packetsInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setPaperPackets(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setPaperPackets(Integer.parseInt(e2.getValue()));
             }
         }
         catch (Exception e7) {
@@ -232,8 +232,8 @@ extends Screen {
         }
         try {
             abstractWidget = this.ceilingStepInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setCeilingScanStep(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setCeilingScanStep(Integer.parseInt(e2.getValue()));
             }
         }
         catch (Exception e8) {
@@ -242,16 +242,16 @@ extends Screen {
         abstractWidget = this.entityTypesInput;
         if (abstractWidget instanceof EditBox) {
             e2 = (EditBox)abstractWidget;
-            cfg.setEntityTypes(e2.m_94155_());
+            cfg.setEntityTypes(e2.getValue());
         }
         if ((abstractWidget = this.whitelistInput) instanceof EditBox) {
             e2 = (EditBox)abstractWidget;
-            cfg.setWhitelist(e2.m_94155_());
+            cfg.setWhitelist(e2.getValue());
         }
         try {
             abstractWidget = this.totemAttacksInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setTotemAttacks(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setTotemAttacks(Integer.parseInt(e2.getValue()));
             }
         }
         catch (Exception e9) {
@@ -259,8 +259,8 @@ extends Screen {
         }
         try {
             abstractWidget = this.autoFlightSpeedInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setAutoFlightSpeed(Double.parseDouble(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setAutoFlightSpeed(Double.parseDouble(e2.getValue()));
             }
         }
         catch (Exception e10) {
@@ -268,8 +268,8 @@ extends Screen {
         }
         try {
             abstractWidget = this.autoFlightHoriInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setAutoFlightHorizontalSpeed(Double.parseDouble(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setAutoFlightHorizontalSpeed(Double.parseDouble(e2.getValue()));
             }
         }
         catch (Exception e11) {
@@ -277,8 +277,8 @@ extends Screen {
         }
         try {
             abstractWidget = this.totemHeightInput;
-            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).m_94155_().isEmpty()) {
-                cfg.setTotemHeightIncrease(Integer.parseInt(e2.m_94155_()));
+            if (abstractWidget instanceof EditBox && !(e2 = (EditBox)abstractWidget).getValue().isEmpty()) {
+                cfg.setTotemHeightIncrease(Integer.parseInt(e2.getValue()));
             }
         }
         catch (Exception exception) {
@@ -288,7 +288,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 300) / 2;
         int cy = (this.height - 260) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, 300, 260, false);
@@ -319,18 +319,18 @@ extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
-    public boolean m_7933_(int k, int s, int m) {
+    public boolean keyPressed(int k, int s, int m) {
         for (AbstractWidget w : new AbstractWidget[]{this.cooldownInput, this.delayInput, this.rangeInput, this.attackDistInput, this.tpOffsetInput, this.packetsInput, this.ceilingStepInput, this.entityTypesInput, this.whitelistInput, this.totemAttacksInput, this.totemHeightInput, this.autoFlightSpeedInput, this.autoFlightHoriInput}) {
             EditBox e;
-            if (!(w instanceof EditBox) || !(e = (EditBox)w).m_93696_()) continue;
-            return e.m_7933_(k, s, m);
+            if (!(w instanceof EditBox) || !(e = (EditBox)w).isFocused()) continue;
+            return e.keyPressed(k, s, m);
         }
         if (k == 256) {
             this.saveInputs();
             this.minecraft.setScreen(null);
             return true;
         }
-        return super.m_7933_(k, s, m);
+        return super.keyPressed(k, s, m);
     }
 
     public void onClose() {
