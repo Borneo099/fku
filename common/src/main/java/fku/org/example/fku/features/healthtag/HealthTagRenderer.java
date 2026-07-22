@@ -3,7 +3,6 @@ package fku.org.example.fku.features.healthtag;
 import fku.org.example.fku.api.ILivingEntityGui;
 import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import fku.org.example.fku.features.healthtag.HealthTagManager;
-import java.awt.Color;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -36,14 +35,17 @@ public class HealthTagRenderer {
             name = entity instanceof Player ? entity.getName().getString() : entity.getType().getDescription().getString();
             health = entity.getHealth();
             maxHealth = entity.getMaxHealth();
+            if (!Float.isFinite(health) || !Float.isFinite(maxHealth) || maxHealth <= 0.0f) {
+                return;
+            }
         } else if (!editing) {
             return;
         }
         int alphaInt = (int)(alpha * 255.0f);
-        int bgColor = new Color(15, 15, 15, alphaInt).getRGB();
-        int borderColor = new Color(60, 60, 60, alphaInt).getRGB();
+        int bgColor = HealthTagRenderer.argb(alphaInt, 15, 15, 15);
+        int borderColor = HealthTagRenderer.argb(alphaInt, 60, 60, 60);
         if (editing) {
-            borderColor = new Color(0, 120, 215, alphaInt).getRGB();
+            borderColor = HealthTagRenderer.argb(alphaInt, 0, 120, 215);
         }
         HealthTagRenderer.drawBetterRoundedRect(guiGraphics, config.x, config.y, config.x + 180, config.y + 45, 6, bgColor, borderColor);
         if (entity != null) {
@@ -116,14 +118,14 @@ public class HealthTagRenderer {
         int barY = config.y + 24;
         int barWidth = 125;
         int barHeight = 8;
-        guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, new Color(20, 20, 20, alphaInt).getRGB());
+        guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, HealthTagRenderer.argb(alphaInt, 20, 20, 20));
         if (animatedRatio > healthRatio) {
-            int bufferColor = new Color(180, 50, 50, (alphaInt * 0.8f)).getRGB();
+            int bufferColor = HealthTagRenderer.argb((int)(alphaInt * 0.8f), 180, 50, 50);
             guiGraphics.fill(barX, barY, barX + (int)(barWidth * animatedRatio), barY + barHeight, bufferColor);
         }
         int hColor = HealthTagRenderer.getHealthColor(healthRatio, alphaInt);
         guiGraphics.fill(barX, barY, barX + (int)(barWidth * healthRatio), barY + barHeight, hColor);
-        int highlightColor = new Color(255, 255, 255, (alphaInt * 0.3f)).getRGB();
+        int highlightColor = HealthTagRenderer.argb((int)(alphaInt * 0.3f), 255, 255, 255);
         guiGraphics.fill(barX, barY, barX + (int)(barWidth * healthRatio), barY + 1, highlightColor);
         String healthText = String.format("%.1f / %.1f", health, maxHealth);
         float textScale = 0.85f;
@@ -155,6 +157,10 @@ public class HealthTagRenderer {
             b = 0;
         }
         return alpha << 24 | r << 16 | g << 8 | b;
+    }
+
+    private static int argb(int alpha, int r, int g, int b) {
+        return (alpha & 0xFF) << 24 | (r & 0xFF) << 16 | (g & 0xFF) << 8 | (b & 0xFF);
     }
 
     private static void drawBetterRoundedRect(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int radius, int color, int borderColor) {
