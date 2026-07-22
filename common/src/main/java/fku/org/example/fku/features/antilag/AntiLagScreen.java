@@ -103,7 +103,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 310) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, this.cy(0), 310, 340, false);
         g.drawString(this.font, "AntiLag \u9632\u62c9\u56de\u914d\u7f6e", cx + 10, this.cy(10), 0xFFFFFF);

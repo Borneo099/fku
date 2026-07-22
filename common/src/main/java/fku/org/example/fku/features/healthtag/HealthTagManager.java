@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.entity.PartEntity;
@@ -41,7 +42,7 @@ public class HealthTagManager {
         }
         Vec3 eyePos = mc.player.getEyePosition();
         Vec3 lookVec = mc.player.getLookAngle();
-        List entities = mc.level.getEntities((Entity)mc.player, mc.player.getBoundingBox().inflate(128.0));
+        List<Entity> entities = mc.level.getEntities((Entity)mc.player, mc.player.getBoundingBox().inflate(128.0));
         LivingEntity bestCandidate = null;
         double bestScore = Double.MAX_VALUE;
         for (Entity entity : entities) {

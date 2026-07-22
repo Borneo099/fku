@@ -79,7 +79,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         GuiRenderHelper.drawPanelBackground(g, this.cx, this.cy, 280, 240, false);
         g.drawString(this.font, "\u00a7l\u00a7b\u4e09\u53c9\u621f\u590d\u5236\u914d\u7f6e", this.cx + 10, this.cy + 8, 0xFFFFFF);
         g.drawString(this.font, "\u00a77\u51b7\u5374\u5ef6\u8fdf(tick):", this.cx + 12, this.cy + 33, 0xAAAAAA);

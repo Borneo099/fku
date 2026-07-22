@@ -168,7 +168,7 @@ public class AttackIndicatorFeature {
                 previousTarget = null;
             }
         }
-        Vec3 cameraPos = AttackIndicatorFeature.mc.getEntityRenderDispatcher().position.getPosition();
+        Vec3 cameraPos = AttackIndicatorFeature.mc.getEntityRenderDispatcher().camera.getPosition();
         for (SwordWave sw : activeSwordWaves) {
             Vec3 camStart = sw.startPos.subtract(cameraPos);
             Vec3 camEnd = sw.targetPos.subtract(cameraPos);

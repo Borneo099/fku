@@ -404,7 +404,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         GuiRenderHelper.drawRoundedRect(g, this.bx - 10, this.by - 8, 300, 356, -1440603614, 8);
         g.drawString(this.font, "\u00a7l\u653b\u51fb\u6307\u793a\u5668\u914d\u7f6e", this.bx + 10, this.by - 4, 0xFFFFFF);
         super.render(g, mx, my, pt);

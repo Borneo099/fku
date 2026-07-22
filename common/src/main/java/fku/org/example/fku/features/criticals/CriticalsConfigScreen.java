@@ -49,7 +49,7 @@ extends Screen {
     }
 
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = this.width / 2;
         int top = 40;
         CriticalsConfig cfg = CriticalsConfig.getInstance();

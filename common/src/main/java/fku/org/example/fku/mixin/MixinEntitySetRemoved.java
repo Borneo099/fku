@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinEntitySetRemoved {
     @Inject(method={"setRemoved(Lnet/minecraft/world/entity/Entity$RemovalReason;)V"}, at={@At(value="HEAD")})
     private void onSetRemoved(Entity.RemovalReason reason, CallbackInfo ci) {
-        Entity self = (Entity)this;
+        Entity self = (Entity)(Object)this;
         if (self.level().isClientSide && (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED)) {
             KillIconFeature.onEntityRemoved(self);
         }

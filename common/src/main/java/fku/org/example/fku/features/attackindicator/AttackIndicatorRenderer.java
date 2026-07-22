@@ -36,7 +36,7 @@ public class AttackIndicatorRenderer {
         float partialTick = mc.getPartialTick();
         Vec3 playerPos = player.position().add(0.0, player.getBbHeight() * 0.3, 0.0);
         Vec3 targetPos = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
-        Vec3 cameraPos = AttackIndicatorRenderer.mc.getEntityRenderDispatcher().position.getPosition();
+        Vec3 cameraPos = AttackIndicatorRenderer.mc.getEntityRenderDispatcher().camera.getPosition();
         Vec3 start = playerPos.subtract(cameraPos);
         Vec3 end = targetPos.subtract(cameraPos);
         if (cfg.enableBeam) {
@@ -71,19 +71,19 @@ public class AttackIndicatorRenderer {
         Tesselator t = Tesselator.getInstance();
         BufferBuilder buf = t.getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        int segments = Math.max(8, (length * 2.0));
-        float segLen = (length / segments);
+        int segments = Math.max(8, (int)(length * 2.0));
+        float segLen = (float)(length / segments);
         for (int i = 0; i < segments; ++i) {
             float t1 = i / segments;
             float t2 = (i + 1) / segments;
             float flow = (t1 + time * cfg.beamFlowSpeed) % 1.0f;
-            float alpha = 0.3f + 0.7f * (0.5f + 0.5f * Math.sin(flow * Math.PI * 8.0));
-            float pulse = 0.5f + 0.5f * Math.sin(flow * Math.PI * 2.0);
-            float wobble = 0.02f * Math.sin(t1 * 20.0f + time * 30.0f);
+            float alpha = 0.3f + 0.7f * (float)(0.5f + 0.5f * Math.sin(flow * Math.PI * 8.0));
+            float pulse = 0.5f + 0.5f * (float)Math.sin(flow * Math.PI * 2.0);
+            float wobble = 0.02f * (float)Math.sin(t1 * 20.0f + time * 30.0f);
             Vec3 p1 = start.add(dir.scale(t1 * length)).add(right.scale(wobble));
             Vec3 p2 = start.add(dir.scale(t2 * length)).add(right.scale((wobble * 1.2f)));
             float w = beamWidth * (0.5f + 0.5f * pulse);
-            int a = (alpha * 150.0f);
+            int a = (int)(alpha * 150.0f);
             AttackIndicatorRenderer.addQuad(buf, poseStack, p1, p2, right, w, color.getRed(), color.getGreen(), color.getBlue(), a);
         }
         BufferUploader.drawWithShader(buf.end());
@@ -106,15 +106,15 @@ public class AttackIndicatorRenderer {
         Vec3 right = dir.cross(up).normalize();
         AttackIndicatorRenderer.setupRender3D();
         int segments = cfg.lightningSegments;
-        float maxOffset = (length * 0.15f);
-        int alpha = (180.0 * (0.5 + 0.5 * Math.sin(time * Math.PI * 2.0)));
+        float maxOffset = (float)(length * 0.15f);
+        int alpha = (int)(180.0 * (0.5 + 0.5 * Math.sin(time * Math.PI * 2.0)));
         RNG.setSeed(System.currentTimeMillis() / 100L);
         float[] offsets = new float[segments + 1];
         for (int i = 1; i < segments; ++i) {
-            float chaos = 0.5f + 0.5f * Math.sin(i * 3.7 + (time * 50.0f));
-            offsets[i] = ((RNG.nextDouble() - 0.5) * 2.0 * maxOffset * chaos);
+            float chaos = 0.5f + 0.5f * (float)Math.sin(i * 3.7 + (time * 50.0f));
+            offsets[i] = (float)((RNG.nextDouble() - 0.5) * 2.0f * maxOffset * chaos);
             int n = i;
-            offsets[n] = (offsets[n] * (0.5 + 0.5 * Math.sin((time * 30.0f) + i * 1.3)));
+            offsets[n] = (offsets[n] * (float)(0.5 + 0.5 * Math.sin((time * 30.0f) + i * 1.3)));
         }
         offsets[segments] = 0.0f;
         offsets[0] = 0.0f;
@@ -126,8 +126,8 @@ public class AttackIndicatorRenderer {
             double t2 = (i + 1) / segments;
             Vec3 p1 = start.add(diff.scale(t1)).add(right.scale((offsets[i] * 0.3f)));
             Vec3 p2 = start.add(diff.scale(t2)).add(right.scale((offsets[i + 1] * 0.3f)));
-            buf.vertex(poseStack.last().pose(), p1.x, p1.y, p1.z).color(color.getRed(), color.getGreen(), color.getBlue(), alpha).endVertex();
-            buf.vertex(poseStack.last().pose(), p2.x, p2.y, p2.z).color(color.getRed(), color.getGreen(), color.getBlue(), alpha).endVertex();
+            buf.vertex(poseStack.last().pose(), (float)p1.x, (float)p1.y, (float)p1.z).color(color.getRed(), color.getGreen(), color.getBlue(), alpha).endVertex();
+            buf.vertex(poseStack.last().pose(), (float)p2.x, (float)p2.y, (float)p2.z).color(color.getRed(), color.getGreen(), color.getBlue(), alpha).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         AttackIndicatorRenderer.restoreRender3D();
@@ -150,7 +150,7 @@ public class AttackIndicatorRenderer {
         Vec3 perp = right.cross(dir).normalize();
         float progress = time * cfg.waveSpeed % 1.0f;
         Vec3 center = start.add(diff.scale(progress));
-        float waveRadius = (length * 0.15f * (1.0f - Math.abs(progress - 0.5f) * 2.0f));
+        float waveRadius = (float)(length * 0.15f * (1.0f - Math.abs(progress - 0.5f) * 2.0f));
         if (waveRadius < 0.1f) {
             return;
         }
@@ -161,12 +161,12 @@ public class AttackIndicatorRenderer {
         int rings = 24;
         float alpha = 0.6f * (1.0f - Math.abs(progress - 0.5f) * 2.0f);
         for (int i = 0; i <= rings; ++i) {
-            float angle = (Math.PI * 2 * i / rings);
-            float x = (Math.cos(angle) * waveRadius * right.x + Math.sin(angle) * waveRadius * perp.x);
-            float y = (Math.cos(angle) * waveRadius * right.y + Math.sin(angle) * waveRadius * perp.y);
-            float z = (Math.cos(angle) * waveRadius * right.z + Math.sin(angle) * waveRadius * perp.z);
-            buf.vertex(poseStack.last().pose(), center.x + x, center.y + y, center.z + z).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 255.0f)).endVertex();
-            buf.vertex(poseStack.last().pose(), center.x + x * 0.8f, center.y + y * 0.8f, center.z + z * 0.8f).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 180.0f)).endVertex();
+            float angle = (float)(Math.PI * 2 * i / rings);
+            float x = (float)(Math.cos(angle) * waveRadius * right.x + Math.sin(angle) * waveRadius * perp.x);
+            float y = (float)(Math.cos(angle) * waveRadius * right.y + Math.sin(angle) * waveRadius * perp.y);
+            float z = (float)(Math.cos(angle) * waveRadius * right.z + Math.sin(angle) * waveRadius * perp.z);
+            buf.vertex(poseStack.last().pose(), (float)(center.x + x), (float)(center.y + y), (float)(center.z + z)).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 255.0f)).endVertex();
+            buf.vertex(poseStack.last().pose(), (float)(center.x + x * 0.8f), (float)(center.y + y * 0.8f), (float)(center.z + z * 0.8f)).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 180.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         AttackIndicatorRenderer.restoreRender3D();
@@ -190,19 +190,19 @@ public class AttackIndicatorRenderer {
         Tesselator t = Tesselator.getInstance();
         BufferBuilder buf = t.getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        int links = (length * 2.0);
-        float linkSpacing = (length / links);
+        int links = (int)(length * 2.0);
+        float linkSpacing = (float)(length / links);
         float sway = cfg.tetherSway * 0.3f;
         for (int i = 0; i < links; ++i) {
             float t1 = i / links;
             float t2 = (i + 1) / links;
-            float sway1 = sway * Math.sin(t1 * 10.0f + time * 20.0f);
-            float sway2 = sway * Math.sin(t2 * 10.0f + time * 20.0f);
-            float w1 = 0.04f * (0.5f + 0.5f * Math.sin(t1 * 5.0f + time));
-            float w2 = 0.04f * (0.5f + 0.5f * Math.sin(t2 * 5.0f + time));
+            float sway1 = sway * (float)Math.sin(t1 * 10.0f + time * 20.0f);
+            float sway2 = sway * (float)Math.sin(t2 * 10.0f + time * 20.0f);
+            float w1 = 0.04f * (0.5f + 0.5f * (float)Math.sin(t1 * 5.0f + time));
+            float w2 = 0.04f * (0.5f + 0.5f * (float)Math.sin(t2 * 5.0f + time));
             Vec3 p1 = start.add(diff.scale(t1)).add(right.scale(sway1));
             Vec3 p2 = start.add(diff.scale(t2)).add(right.scale(sway2));
-            int a = (120.0f * (0.5f + 0.5f * Math.sin(t1 * 3.0f + time * 2.0f)));
+            int a = (int)(120.0f * (0.5f + 0.5f * (float)Math.sin(t1 * 3.0f + time * 2.0f)));
             AttackIndicatorRenderer.addQuad(buf, poseStack, p1, p2, right, w1, color.getRed(), color.getGreen(), color.getBlue(), a);
             AttackIndicatorRenderer.addQuad(buf, poseStack, p1, p2, up, w1 * 0.6f, color.getRed(), color.getGreen(), color.getBlue(), a / 2);
         }
@@ -236,17 +236,17 @@ public class AttackIndicatorRenderer {
         Vec3 right = dir.cross(up).normalize();
         Vec3 perp = right.cross(dir).normalize();
         Vec3 wavePos = start.add(diff.scale(progress));
-        float baseRadius = (length * 0.12f * cfg.swordWaveIntensity);
+        float baseRadius = (float)(length * 0.12f * cfg.swordWaveIntensity);
         float innerRadius = baseRadius * 0.6f;
         float crescentOffset = baseRadius * 0.15f;
         float scale = 1.0f - 0.3f * progress;
         baseRadius *= scale;
         innerRadius *= scale;
         crescentOffset *= scale;
-        float rotAngle = progress * Math.PI * 2.0f;
+        float rotAngle = (float)(progress * Math.PI * 2.0f);
         Color color = AttackIndicatorRenderer.parseColor(cfg.swordWaveColor);
         float time = (System.currentTimeMillis() % 1000L) / 1000.0f;
-        float pulseAlpha = 0.7f + 0.3f * Math.sin(time * Math.PI * 2.0);
+        float pulseAlpha = 0.7f + 0.3f * (float)Math.sin(time * Math.PI * 2.0);
         AttackIndicatorRenderer.setupRender3D();
         Tesselator t = Tesselator.getInstance();
         BufferBuilder buf = t.getBuilder();
@@ -255,19 +255,19 @@ public class AttackIndicatorRenderer {
         float arcStart = -2.6179938f;
         float arcEnd = 2.6179938f;
         float arcRange = arcEnd - arcStart;
-        float frx = right.x;
-        float fry = right.y;
-        float frz = right.z;
-        float fpx = perp.x;
-        float fpy = perp.y;
-        float fpz = perp.z;
-        float fdx = dir.x;
-        float fdy = dir.y;
-        float fdz = dir.z;
+        float frx = (float)right.x;
+        float fry = (float)right.y;
+        float frz = (float)right.z;
+        float fpx = (float)perp.x;
+        float fpy = (float)perp.y;
+        float fpz = (float)perp.z;
+        float fdx = (float)dir.x;
+        float fdy = (float)dir.y;
+        float fdz = (float)dir.z;
         for (i = 0; i <= segments; ++i) {
             angle = arcStart + arcRange * i / segments + rotAngle;
-            cos = Math.cos(angle);
-            sin = Math.sin(angle);
+            cos = (float)Math.cos(angle);
+            sin = (float)Math.sin(angle);
             ox = cos * baseRadius * frx + sin * baseRadius * fpx;
             oy = cos * baseRadius * fry + sin * baseRadius * fpy;
             oz = cos * baseRadius * frz + sin * baseRadius * fpz;
@@ -275,16 +275,16 @@ public class AttackIndicatorRenderer {
             iy = cos * innerRadius * fry + sin * innerRadius * fpy + fpy * crescentOffset;
             iz = cos * innerRadius * frz + sin * innerRadius * fpz + fpz * crescentOffset;
             thickness = 0.03f * scale;
-            alpha = (200.0f * pulseAlpha);
-            buf.vertex(poseStack.last().pose(), wavePos.x + ox + fdx * thickness, wavePos.y + oy + fdy * thickness, wavePos.z + oz + fdz * thickness).color(color.getRed(), color.getGreen(), color.getBlue(), alpha).endVertex();
-            buf.vertex(poseStack.last().pose(), wavePos.x + ix + fdx * thickness, wavePos.y + iy + fdy * thickness, wavePos.z + iz + fdz * thickness).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 0.6f)).endVertex();
+            alpha = (int)(200.0f * pulseAlpha);
+            buf.vertex(poseStack.last().pose(), (float)(wavePos.x + ox + fdx * thickness), (float)(wavePos.y + oy + fdy * thickness), (float)(wavePos.z + oz + fdz * thickness)).color(color.getRed(), color.getGreen(), color.getBlue(), alpha).endVertex();
+            buf.vertex(poseStack.last().pose(), (float)(wavePos.x + ix + fdx * thickness), (float)(wavePos.y + iy + fdy * thickness), (float)(wavePos.z + iz + fdz * thickness)).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 0.6f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         buf.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i <= segments; ++i) {
             angle = arcStart + arcRange * i / segments + rotAngle;
-            cos = Math.cos(angle);
-            sin = Math.sin(angle);
+            cos = (float)Math.cos(angle);
+            sin = (float)Math.sin(angle);
             ox = cos * baseRadius * frx + sin * baseRadius * fpx;
             oy = cos * baseRadius * fry + sin * baseRadius * fpy;
             oz = cos * baseRadius * frz + sin * baseRadius * fpz;
@@ -292,9 +292,9 @@ public class AttackIndicatorRenderer {
             iy = cos * innerRadius * fry + sin * innerRadius * fpy + fpy * crescentOffset;
             iz = cos * innerRadius * frz + sin * innerRadius * fpz + fpz * crescentOffset;
             thickness = 0.03f * scale;
-            alpha = (200.0f * pulseAlpha);
-            buf.vertex(poseStack.last().pose(), wavePos.x + ox - fdx * thickness, wavePos.y + oy - fdy * thickness, wavePos.z + oz - fdz * thickness).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 0.8f)).endVertex();
-            buf.vertex(poseStack.last().pose(), wavePos.x + ix - fdx * thickness, wavePos.y + iy - fdy * thickness, wavePos.z + iz - fdz * thickness).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 0.5f)).endVertex();
+            alpha = (int)(200.0f * pulseAlpha);
+            buf.vertex(poseStack.last().pose(), (float)(wavePos.x + ox - fdx * thickness), (float)(wavePos.y + oy - fdy * thickness), (float)(wavePos.z + oz - fdz * thickness)).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 0.8f)).endVertex();
+            buf.vertex(poseStack.last().pose(), (float)(wavePos.x + ix - fdx * thickness), (float)(wavePos.y + iy - fdy * thickness), (float)(wavePos.z + iz - fdz * thickness)).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 0.5f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         AttackIndicatorRenderer.restoreRender3D();
@@ -313,7 +313,7 @@ public class AttackIndicatorRenderer {
         double renderX = target.xOld + (target.getX() - target.xOld) * partialTick;
         double renderY = target.yOld + (target.getY() - target.yOld) * partialTick;
         double renderZ = target.zOld + (target.getZ() - target.zOld) * partialTick;
-        Vec3 cameraPos = AttackIndicatorRenderer.mc.getEntityRenderDispatcher().position.getPosition();
+        Vec3 cameraPos = AttackIndicatorRenderer.mc.getEntityRenderDispatcher().camera.getPosition();
         poseStack.pushPose();
         poseStack.translate(renderX - cameraPos.x, renderY - cameraPos.y, renderZ - cameraPos.z);
         if (cfg.enableLockBox) {
@@ -339,7 +339,7 @@ public class AttackIndicatorRenderer {
         int i;
         float boxSize = target.getBbWidth() * 0.6f * cfg.boxSize;
         float height = target.getBbHeight() + 0.2f;
-        float time = (System.currentTimeMillis() % 10000L) / 10000.0f * (Math.PI * 2);
+        float time = (float)((System.currentTimeMillis() % 10000L) / 10000.0f * (Math.PI * 2));
         Color color = AttackIndicatorRenderer.parseColor(cfg.boxColor);
         int r = color.getRed();
         int g = color.getGreen();
@@ -348,31 +348,31 @@ public class AttackIndicatorRenderer {
         Tesselator t = Tesselator.getInstance();
         BufferBuilder buf = t.getBuilder();
         int segments = 24;
-        float angleStep = (Math.PI * 2 / segments);
+        float angleStep = (float)(Math.PI * 2 / segments);
         float baseAngle = time * cfg.boxRotateSpeed;
         buf.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i <= segments; ++i) {
             angle = baseAngle + i * angleStep;
-            x = Math.cos(angle) * boxSize;
-            z = Math.sin(angle) * boxSize;
-            alpha = 0.3f + 0.7f * (0.5f + 0.5f * Math.sin(angle * 2.0f + time * 3.0f));
-            buf.vertex(poseStack.last().pose(), x, 0.0f, z).color(r, g, b, (alpha * 120.0f)).endVertex();
+            x = (float)Math.cos(angle) * boxSize;
+            z = (float)Math.sin(angle) * boxSize;
+            alpha = 0.3f + 0.7f * (0.5f + 0.5f * (float)Math.sin(angle * 2.0f + time * 3.0f));
+            buf.vertex(poseStack.last().pose(), x, 0.0f, z).color(r, g, b, (int)(alpha * 120.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         buf.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i <= segments; ++i) {
             angle = baseAngle + i * angleStep;
-            x = Math.cos(angle) * boxSize;
-            z = Math.sin(angle) * boxSize;
-            alpha = 0.3f + 0.7f * (0.5f + 0.5f * Math.sin(angle * 2.0f + time * 3.0f));
-            buf.vertex(poseStack.last().pose(), x, height, z).color(r, g, b, (alpha * 120.0f)).endVertex();
+            x = (float)Math.cos(angle) * boxSize;
+            z = (float)Math.sin(angle) * boxSize;
+            alpha = 0.3f + 0.7f * (0.5f + 0.5f * (float)Math.sin(angle * 2.0f + time * 3.0f));
+            buf.vertex(poseStack.last().pose(), x, height, z).color(r, g, b, (int)(alpha * 120.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         buf.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i < segments; i += 6) {
             angle = baseAngle + i * angleStep;
-            x = Math.cos(angle) * boxSize;
-            z = Math.sin(angle) * boxSize;
+            x = (float)Math.cos(angle) * boxSize;
+            z = (float)Math.sin(angle) * boxSize;
             buf.vertex(poseStack.last().pose(), x, 0.0f, z).color(r, g, b, 100).endVertex();
             buf.vertex(poseStack.last().pose(), x, height, z).color(r, g, b, 100).endVertex();
         }
@@ -382,7 +382,7 @@ public class AttackIndicatorRenderer {
 
     private static void renderHalo(PoseStack poseStack, LivingEntity target, AttackIndicatorConfig cfg) {
         float radius = target.getBbWidth() * cfg.haloRadius;
-        float time = (System.currentTimeMillis() % 10000L) / 10000.0f * (Math.PI * 2);
+        float time = (float)((System.currentTimeMillis() % 10000L) / 10000.0f * (Math.PI * 2));
         Color color = AttackIndicatorRenderer.parseColor(cfg.haloColor);
         AttackIndicatorRenderer.setupRender3D();
         Tesselator t = Tesselator.getInstance();
@@ -391,12 +391,12 @@ public class AttackIndicatorRenderer {
         int segments = 32;
         float angle = time * cfg.haloRotateSpeed;
         for (int i = 0; i <= segments; ++i) {
-            float a = angle + (Math.PI * 2 * i / segments);
-            float x = Math.cos(a) * radius;
-            float z = Math.sin(a) * radius;
-            float alpha = 0.3f + 0.7f * (0.5f + 0.5f * Math.sin(a * 2.0f + time * 4.0f));
-            buf.vertex(poseStack.last().pose(), x, 0.05f, z).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 80.0f)).endVertex();
-            buf.vertex(poseStack.last().pose(), x, 0.15f, z).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 40.0f)).endVertex();
+            float a = (float)(angle + (Math.PI * 2 * i / segments));
+            float x = (float)Math.cos(a) * radius;
+            float z = (float)Math.sin(a) * radius;
+            float alpha = 0.3f + 0.7f * (0.5f + 0.5f * (float)Math.sin(a * 2.0f + time * 4.0f));
+            buf.vertex(poseStack.last().pose(), x, 0.05f, z).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 80.0f)).endVertex();
+            buf.vertex(poseStack.last().pose(), x, 0.15f, z).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 40.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         AttackIndicatorRenderer.restoreRender3D();
@@ -410,15 +410,15 @@ public class AttackIndicatorRenderer {
         Tesselator t = Tesselator.getInstance();
         BufferBuilder buf = t.getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        float alpha = 0.3f + 0.3f * Math.sin(time * Math.PI * 2.0);
+        float alpha = 0.3f + 0.3f * (float)Math.sin(time * Math.PI * 2.0);
         for (int i = 0; i < 3; ++i) {
             float width = 0.1f * (1.0f + i * 0.5f);
             float aMul = 1.0f - i * 0.3f;
-            int a = (alpha * 60.0f * aMul);
+            int a = (int)(alpha * 60.0f * aMul);
             buf.vertex(poseStack.last().pose(), -width, 0.1f, 0.0f).color(color.getRed(), color.getGreen(), color.getBlue(), a).endVertex();
             buf.vertex(poseStack.last().pose(), width, 0.1f, 0.0f).color(color.getRed(), color.getGreen(), color.getBlue(), a).endVertex();
-            buf.vertex(poseStack.last().pose(), width, height, 0.0f).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 20.0f * aMul)).endVertex();
-            buf.vertex(poseStack.last().pose(), -width, height, 0.0f).color(color.getRed(), color.getGreen(), color.getBlue(), (alpha * 20.0f * aMul)).endVertex();
+            buf.vertex(poseStack.last().pose(), width, height, 0.0f).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 20.0f * aMul)).endVertex();
+            buf.vertex(poseStack.last().pose(), -width, height, 0.0f).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(alpha * 20.0f * aMul)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         AttackIndicatorRenderer.restoreRender3D();
@@ -431,7 +431,7 @@ public class AttackIndicatorRenderer {
         int i;
         Color color = AttackIndicatorRenderer.parseColor(cfg.glowColor);
         float time = (System.currentTimeMillis() % 2000L) / 2000.0f;
-        float intensity = cfg.glowIntensity * (0.5f + 0.5f * Math.sin(time * Math.PI * 2.0));
+        float intensity = cfg.glowIntensity * (0.5f + 0.5f * (float)Math.sin(time * Math.PI * 2.0));
         float w = target.getBbWidth() * 0.5f;
         float h = target.getBbHeight();
         float expand = 0.15f * intensity;
@@ -440,27 +440,27 @@ public class AttackIndicatorRenderer {
         BufferBuilder buf = t.getBuilder();
         buf.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i <= 24; ++i) {
-            angle = (Math.PI * 2 * i / 24.0);
-            x = (Math.cos(angle) * (w + expand));
-            z = (Math.sin(angle) * (w + expand));
-            buf.vertex(poseStack.last().pose(), x, -expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (intensity * 80.0f)).endVertex();
+            angle = (float)(Math.PI * 2 * i / 24.0);
+            x = (float)(Math.cos(angle) * (w + expand));
+            z = (float)(Math.sin(angle) * (w + expand));
+            buf.vertex(poseStack.last().pose(), x, -expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(intensity * 80.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         buf.begin(VertexFormat.Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i <= 24; ++i) {
-            angle = (Math.PI * 2 * i / 24.0);
-            x = (Math.cos(angle) * (w + expand));
-            z = (Math.sin(angle) * (w + expand));
-            buf.vertex(poseStack.last().pose(), x, h + expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (intensity * 80.0f)).endVertex();
+            angle = (float)(Math.PI * 2 * i / 24.0);
+            x = (float)(Math.cos(angle) * (w + expand));
+            z = (float)(Math.sin(angle) * (w + expand));
+            buf.vertex(poseStack.last().pose(), x, h + expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(intensity * 80.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         buf.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
         for (i = 0; i < 4; ++i) {
-            angle = (Math.PI * 2 * i / 4.0);
-            x = (Math.cos(angle) * (w + expand));
-            z = (Math.sin(angle) * (w + expand));
-            buf.vertex(poseStack.last().pose(), x, -expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (intensity * 60.0f)).endVertex();
-            buf.vertex(poseStack.last().pose(), x, h + expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (intensity * 60.0f)).endVertex();
+            angle = (float)(Math.PI * 2 * i / 4.0);
+            x = (float)(Math.cos(angle) * (w + expand));
+            z = (float)(Math.sin(angle) * (w + expand));
+            buf.vertex(poseStack.last().pose(), x, -expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(intensity * 60.0f)).endVertex();
+            buf.vertex(poseStack.last().pose(), x, h + expand, z).color(color.getRed(), color.getGreen(), color.getBlue(), (int)(intensity * 60.0f)).endVertex();
         }
         BufferUploader.drawWithShader(buf.end());
         AttackIndicatorRenderer.restoreRender3D();
@@ -478,12 +478,12 @@ public class AttackIndicatorRenderer {
     }
 
     private static void renderDirectionArrow(GuiGraphics guiGraphics, Entity target, AttackIndicatorConfig cfg, int sw, int sh) {
-        Vec3 lookVec;
         if (AttackIndicatorRenderer.mc.player == null) {
             return;
         }
+        Vec3 lookVec = AttackIndicatorRenderer.mc.player.getLookAngle();
         Vec3 toTarget = target.position().subtract(AttackIndicatorRenderer.mc.player.position()).normalize();
-        double angle = Math.atan2(toTarget.cross(lookVec).y, toTarget.dot(lookVec = AttackIndicatorRenderer.mc.player.getLookAngle()));
+        double angle = Math.atan2(toTarget.cross(lookVec).y, toTarget.dot(lookVec));
         if (Math.abs(Math.toDegrees(angle)) < 21.0) {
             return;
         }
@@ -491,19 +491,19 @@ public class AttackIndicatorRenderer {
         int cy = sh / 2;
         int radius = Math.min(sw, sh) / 2 - 20;
         double arrowAngle = angle - 1.5707963267948966;
-        int ax = (cx + Math.cos(arrowAngle) * radius * 0.5);
-        int ay = (cy + Math.sin(arrowAngle) * radius * 0.5);
+        int ax = (int)(cx + Math.cos(arrowAngle) * radius * 0.5);
+        int ay = (int)(cy + Math.sin(arrowAngle) * radius * 0.5);
         ax = Math.max(20, Math.min(sw - 20, ax));
         ay = Math.max(20, Math.min(sh - 20, ay));
         Color color = AttackIndicatorRenderer.parseColor(cfg.arrowColor);
         float sz = 8.0f * cfg.arrowSize;
-        float a2 = (angle + 1.5707963267948966);
-        int x1 = (ax + Math.cos(a2) * sz);
-        int y1 = (ay + Math.sin(a2) * sz);
-        int x2 = (ax + Math.cos(a2 + 2.5f) * sz);
-        int y2 = (ay + Math.sin(a2 + 2.5f) * sz);
-        int x3 = (ax + Math.cos(a2 - 2.5f) * sz);
-        int y3 = (ay + Math.sin(a2 - 2.5f) * sz);
+        float a2 = (float)(angle + 1.5707963267948966);
+        int x1 = (int)(ax + Math.cos(a2) * sz);
+        int y1 = (int)(ay + Math.sin(a2) * sz);
+        int x2 = (int)(ax + Math.cos(a2 + 2.5f) * sz);
+        int y2 = (int)(ay + Math.sin(a2 + 2.5f) * sz);
+        int x3 = (int)(ax + Math.cos(a2 - 2.5f) * sz);
+        int y3 = (int)(ay + Math.sin(a2 - 2.5f) * sz);
         PoseStack pose = guiGraphics.pose();
         Matrix4f matrix = pose.last().pose();
         RenderSystem.enableBlend();
@@ -522,8 +522,8 @@ public class AttackIndicatorRenderer {
     private static void renderEdgeFlash(GuiGraphics guiGraphics, AttackIndicatorConfig cfg, int sw, int sh) {
         Color color = AttackIndicatorRenderer.parseColor(cfg.flashColor);
         float time = (System.currentTimeMillis() % 1000L) / 1000.0f;
-        float intensity = cfg.flashIntensity * (0.5f + 0.5f * Math.sin(time * Math.PI * 2.0));
-        int alpha = (intensity * 255.0f);
+        float intensity = cfg.flashIntensity * (0.5f + 0.5f * (float)Math.sin(time * Math.PI * 2.0));
+        int alpha = (int)(intensity * 255.0f);
         if (alpha < 5) {
             return;
         }
@@ -565,7 +565,7 @@ public class AttackIndicatorRenderer {
                 return new Color(Integer.parseInt(hex, 16));
             }
             if (hex.length() == 8) {
-                return new Color(Long.parseLong(hex, 16), true);
+                return new Color((int)Long.parseLong(hex, 16), true);
             }
             return Color.RED;
         }
@@ -580,10 +580,10 @@ public class AttackIndicatorRenderer {
     }
 
     private static void addQuad(BufferBuilder buf, PoseStack pose, Vec3 p1, Vec3 p2, Vec3 right, float w, int r, int g, int b, int a) {
-        buf.vertex(pose.last().pose(), p1.x - right.x * w, p1.y - right.y * w, p1.z - right.z * w).color(r, g, b, a).endVertex();
-        buf.vertex(pose.last().pose(), p1.x + right.x * w, p1.y + right.y * w, p1.z + right.z * w).color(r, g, b, a).endVertex();
-        buf.vertex(pose.last().pose(), p2.x + right.x * w, p2.y + right.y * w, p2.z + right.z * w).color(r, g, b, a).endVertex();
-        buf.vertex(pose.last().pose(), p2.x - right.x * w, p2.y - right.y * w, p2.z - right.z * w).color(r, g, b, a).endVertex();
+        buf.vertex(pose.last().pose(), (float)(p1.x - right.x * w), (float)(p1.y - right.y * w), (float)(p1.z - right.z * w)).color(r, g, b, a).endVertex();
+        buf.vertex(pose.last().pose(), (float)(p1.x + right.x * w), (float)(p1.y + right.y * w), (float)(p1.z + right.z * w)).color(r, g, b, a).endVertex();
+        buf.vertex(pose.last().pose(), (float)(p2.x + right.x * w), (float)(p2.y + right.y * w), (float)(p2.z + right.z * w)).color(r, g, b, a).endVertex();
+        buf.vertex(pose.last().pose(), (float)(p2.x - right.x * w), (float)(p2.y - right.y * w), (float)(p2.z - right.z * w)).color(r, g, b, a).endVertex();
     }
 
     private static void setupRender3D() {
@@ -600,4 +600,3 @@ public class AttackIndicatorRenderer {
         RenderSystem.disableBlend();
     }
 }
-

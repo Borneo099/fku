@@ -204,29 +204,16 @@ public class ClipboardManager {
         }
         root.put("BlockEntities", teList);
         File file = new File(schematicsDir, name.endsWith(".schematic") ? name : name + ".schematic");
-        FileOutputStream fos = new FileOutputStream(file);
-        try {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
             NbtIo.writeCompressed((CompoundTag)root, (OutputStream)fos);
             this.sendMessage("\u00a7a\u5df2\u4fdd\u5b58: " + file.getName() + " (" + blockData.length + " \u65b9\u5757)");
             bl = true;
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    fos.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (IOException e) {
-                this.sendMessage("\u00a7c\u4fdd\u5b58\u5931\u8d25: " + e.getMessage());
-                Fku.LOGGER.error("[WorldEdit] \u4fdd\u5b58schematic\u5931\u8d25", (Throwable)e);
-                return false;
-            }
+        catch (IOException e) {
+            this.sendMessage("\u00a7c\u4fdd\u5b58\u5931\u8d25: " + e.getMessage());
+            Fku.LOGGER.error("[WorldEdit] \u4fdd\u5b58schematic\u5931\u8d25", (Throwable)e);
+            return false;
         }
-        fos.close();
         return bl;
     }
 
@@ -245,8 +232,7 @@ public class ClipboardManager {
             this.sendMessage("\u00a7c\u6587\u4ef6\u4e0d\u5b58\u5728: " + file.getName());
             return false;
         }
-        FileInputStream fis = new FileInputStream(file);
-        try {
+        try (FileInputStream fis = new FileInputStream(file)) {
             CompoundTag root = NbtIo.readCompressed((InputStream)fis);
             int w = root.getShort("Width");
             int h = root.getShort("Height");
@@ -300,23 +286,11 @@ public class ClipboardManager {
             this.sendMessage("\u00a7a\u5df2\u52a0\u8f7d: " + file.getName() + " (" + this.copiedPositions.size() + " \u65b9\u5757)");
             bl = true;
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    fis.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (IOException e) {
-                this.sendMessage("\u00a7c\u52a0\u8f7d\u5931\u8d25: " + e.getMessage());
-                Fku.LOGGER.error("[WorldEdit] \u52a0\u8f7dschematic\u5931\u8d25", (Throwable)e);
-                return false;
-            }
+        catch (IOException e) {
+            this.sendMessage("\u00a7c\u52a0\u8f7d\u5931\u8d25: " + e.getMessage());
+            Fku.LOGGER.error("[WorldEdit] \u52a0\u8f7dschematic\u5931\u8d25", (Throwable)e);
+            return false;
         }
-        fis.close();
         return bl;
     }
 

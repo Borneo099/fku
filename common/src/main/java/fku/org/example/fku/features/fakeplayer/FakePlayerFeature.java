@@ -200,7 +200,7 @@ public class FakePlayerFeature {
         int sharpness = 0;
         int smite = 0;
         int bane = 0;
-        Map enchantments = EnchantmentHelper.getEnchantments((ItemStack)weapon);
+        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments((ItemStack)weapon);
         for (Map.Entry entry : enchantments.entrySet()) {
             Enchantment ench = (Enchantment)entry.getKey();
             int level = (Integer)entry.getValue();
@@ -227,7 +227,7 @@ public class FakePlayerFeature {
         if (player.hasEffect(MobEffects.WEAKNESS) && (effect = player.getEffect(MobEffects.WEAKNESS)) != null) {
             weaknessPenalty = 4.0f * (effect.getAmplifier() + 1);
         }
-        return (baseDamage + enchantBonus + strengthBonus - weaknessPenalty);
+        return (float)(baseDamage + enchantBonus + strengthBonus - weaknessPenalty);
     }
 
     private static boolean handledByThisTick() {

@@ -63,7 +63,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.fillGradient(g);
+        this.renderBackground(g);
         int x = (this.width - 270) / 2;
         int y = (this.height - 160) / 2;
         GuiRenderHelper.drawPanelBackground(g, x, y, 270, 160, false);

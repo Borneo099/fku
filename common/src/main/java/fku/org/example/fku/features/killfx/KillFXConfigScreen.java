@@ -105,7 +105,7 @@ extends Screen {
         this.contentMaxRow = row = cy + 35 - this.scrollOffset;
         String[] categories = new String[]{"\u901a\u7528", "\u95ea\u7535", "\u7c92\u5b50", "\u97f3\u6548", "\u989d\u5916", "\u7740\u8272\u5668"};
         int tabX = cx + 5;
-        Object object = categories;
+        String[] object = categories;
         int n = ((String[])object).length;
         for (int i = 0; i < n; ++i) {
             String cat;
@@ -654,7 +654,7 @@ extends Screen {
         int cx = (this.width - 300) / 2;
         int cy = (this.height - 255) / 2;
         if (mouseX >= cx && mouseX <= (cx + 300) && mouseY >= cy && mouseY <= (cy + 255)) {
-            int newScroll = this.scrollOffset - (delta * 16.0);
+            int newScroll = this.scrollOffset - (int)(delta * 16.0);
             int maxScroll = Math.max(0, this.contentMaxRow - (cy + 255 - 60));
             this.scrollOffset = Math.max(0, Math.min(newScroll, maxScroll));
             this.rebuildWidgets();
@@ -666,7 +666,7 @@ extends Screen {
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         String[][] labelDefs;
         String[][] stringArrayArray;
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int cx = (this.width - 300) / 2;
         int cy = (this.height - 255) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, cx, cy, 300, 255, false);

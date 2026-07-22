@@ -177,12 +177,12 @@ public class AutoDropPanel {
         double mouseY = event.getMouseY();
         if (mouseX >= panelX && mouseX <= (panelX + 112) && mouseY >= panelY && mouseY <= (panelY + 20) && event.getButton() == 0) {
             dragging = true;
-            dragOffsetX = mouseX - panelX;
-            dragOffsetY = mouseY - panelY;
+            dragOffsetX = (int)(mouseX - panelX);
+            dragOffsetY = (int)(mouseY - panelY);
             event.setCanceled(true);
             return;
         }
-        if (mouseX >= panelX && mouseX <= (panelX + 112) && mouseY >= (panelY + 64) && mouseY <= (panelY + 188) && event.getButton() == 1 && (index = (row = (relY = (mouseY - panelY - 64.0)) / 18) * 6 + (col = (relX = (mouseX - (startX = panelX + 4 + (104 - (itemsWidth = 106)) / 2))) / 18) + scrollOffset) >= 0 && index < config.blacklist.size()) {
+        if (mouseX >= panelX && mouseX <= (panelX + 112) && mouseY >= (panelY + 64) && mouseY <= (panelY + 188) && event.getButton() == 1 && (index = (row = (relY = (int)(mouseY - panelY - 64.0)) / 18) * 6 + (col = (relX = (int)(mouseX - (startX = panelX + 4 + (104 - (itemsWidth = 106)) / 2))) / 18) + scrollOffset) >= 0 && index < config.blacklist.size()) {
             String itemId = config.blacklist.get(index);
             config.removeFromBlacklist(itemId);
             event.setCanceled(true);
@@ -203,8 +203,8 @@ public class AutoDropPanel {
         int panelX = AutoDropPanel.getPanelX(mc);
         int panelY = AutoDropPanel.getPanelY(mc);
         if (dragging) {
-            int newX = event.getMouseX() - dragOffsetX;
-            int newY = event.getMouseY() - dragOffsetY;
+            int newX = (int)(event.getMouseX() - dragOffsetX);
+            int newY = (int)(event.getMouseY() - dragOffsetY);
             int screenWidth = mc.getWindow().getGuiScaledWidth();
             int screenHeight = mc.getWindow().getGuiScaledHeight();
             if (newX < 0) {

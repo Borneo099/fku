@@ -28,7 +28,7 @@ implements ILivingEntityGui {
     @Inject(method={"handleEntityEvent"}, at={@At(value="HEAD")})
     private void onHandleEntityEvent(byte pId, CallbackInfo ci) {
         if (pId == 2) {
-            HealthTagManager.onEntityHurt((LivingEntity)this);
+            HealthTagManager.onEntityHurt((LivingEntity)(Object)this);
         }
     }
 }

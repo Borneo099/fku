@@ -102,32 +102,19 @@ public class DisplayModelConfig {
     }
 
     public static List<String> loadPreset(String name) {
-        List list;
+        List<String> list;
         File file = new File(DisplayModelConfig.getPresetsDir(), name + ".json");
         if (!file.exists()) {
             return new ArrayList<String>();
         }
-        FileReader r = new FileReader(file);
-        try {
+        try (FileReader r = new FileReader(file)) {
             Type type = new TypeToken<List<String>>(){}.getType();
-            List cmds = (List)GSON.fromJson(r, type);
-            list = cmds != null ? cmds : new ArrayList();
+            List<String> cmds = GSON.fromJson(r, type);
+            list = cmds != null ? cmds : new ArrayList<String>();
         }
-        catch (Throwable throwable) {
-            try {
-                try {
-                    r.close();
-                }
-                catch (Throwable throwable2) {
-                    throwable.addSuppressed(throwable2);
-                }
-                throw throwable;
-            }
-            catch (IOException e) {
-                return new ArrayList<String>();
-            }
+        catch (Exception e) {
+            return new ArrayList<String>();
         }
-        r.close();
         return list;
     }
 

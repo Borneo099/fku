@@ -24,7 +24,7 @@ import org.joml.Vector3f;
 
 public class KillFXShaderManager {
     private static final Minecraft mc = Minecraft.getInstance();
-    private static final LinkedList<ShaderEffect> effects = new LinkedList();
+    private static final LinkedList<ShaderEffect> effects = new LinkedList<>();
     private static TextureTarget sceneCopyTarget;
     private static TextureTarget opaqueDepthTarget;
 
@@ -40,7 +40,7 @@ public class KillFXShaderManager {
     }
 
     public static void tick() {
-        Iterator it = effects.iterator();
+        Iterator<ShaderEffect> it = effects.iterator();
         while (it.hasNext()) {
             ShaderEffect e = (ShaderEffect)it.next();
             ++e.elapsed;
@@ -75,7 +75,7 @@ public class KillFXShaderManager {
         KillFXShaderManager.ensureTargets(mainTarget);
         KillFXShaderManager.copyColor(mainTarget, (RenderTarget)sceneCopyTarget);
         KillFXShaderManager.copyDepth(mainTarget, (RenderTarget)opaqueDepthTarget);
-        mainTarget.unbindRead(false);
+        mainTarget.unbindRead();
         shader.setSampler("DiffuseSampler", sceneCopyTarget.getColorTextureId());
         shader.setSampler("DepthSampler", opaqueDepthTarget.getDepthTextureId());
         if (shader.getUniform("ScreenSize") != null) {
@@ -149,11 +149,11 @@ public class KillFXShaderManager {
 
     private static void ensureTargets(RenderTarget main) {
         if (sceneCopyTarget == null || KillFXShaderManager.sceneCopyTarget.width != main.width || KillFXShaderManager.sceneCopyTarget.height != main.height) {
-            sceneCopyTarget = new TextureTarget(main.width, main.height, false, Minecraft.ON_MS);
+            sceneCopyTarget = new TextureTarget(main.width, main.height, false, false);
             sceneCopyTarget.setFilterMode(9729);
         }
         if (opaqueDepthTarget == null || KillFXShaderManager.opaqueDepthTarget.width != main.width || KillFXShaderManager.opaqueDepthTarget.height != main.height) {
-            opaqueDepthTarget = new TextureTarget(main.width, main.height, true, Minecraft.ON_MS);
+            opaqueDepthTarget = new TextureTarget(main.width, main.height, true, false);
             opaqueDepthTarget.setFilterMode(9728);
         }
     }

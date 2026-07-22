@@ -96,7 +96,7 @@ extends Screen {
     }
 
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int cx = (this.width - 300) / 2;
         int cy = (this.height - 200) / 2;
         guiGraphics.drawString(Minecraft.getInstance().font, "\u00a7l\u00a7n\u5047\u4eba\u914d\u7f6e", cx + 10, cy + 5, 0xFFFFFF);

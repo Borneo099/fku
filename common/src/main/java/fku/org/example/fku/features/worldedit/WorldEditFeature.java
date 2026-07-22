@@ -74,7 +74,7 @@ public class WorldEditFeature {
     @SubscribeEvent
     public static void onClickInput(InputEvent.InteractionKeyMappingTriggered event) {
         boolean handled;
-        int button;
+        int button = -1;
         WorldEditConfig cfg = WorldEditConfig.getInstance();
         Minecraft mc = WorldEditFeature.getMc();
         if (mc == null || !cfg.enabled) {

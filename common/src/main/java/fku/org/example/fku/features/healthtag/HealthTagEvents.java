@@ -35,7 +35,7 @@ public class HealthTagEvents {
         Minecraft mc = Minecraft.getInstance();
         double mouseX = mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getWidth();
         double mouseY = mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getHeight();
-        HealthTagRenderer.render(event.getGuiGraphics(), mouseX, mouseY, event.getPartialTick());
+        HealthTagRenderer.render(event.getGuiGraphics(), (int)mouseX, (int)mouseY, event.getPartialTick());
     }
 
     @SubscribeEvent

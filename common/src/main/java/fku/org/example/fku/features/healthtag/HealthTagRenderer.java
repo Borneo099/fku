@@ -39,7 +39,7 @@ public class HealthTagRenderer {
         } else if (!editing) {
             return;
         }
-        int alphaInt = (alpha * 255.0f);
+        int alphaInt = (int)(alpha * 255.0f);
         int bgColor = new Color(15, 15, 15, alphaInt).getRGB();
         int borderColor = new Color(60, 60, 60, alphaInt).getRGB();
         if (editing) {
@@ -66,8 +66,8 @@ public class HealthTagRenderer {
             size = Math.max(size, 2.0f);
             float xMouse = modelX - mouseX;
             float yMouse = modelY - 30 - mouseY;
-            Quaternionf pose = new Quaternionf().rotateZ(Math.PI);
-            Quaternionf rotation = new Quaternionf().rotateX(Math.atan(yMouse / 40.0f) * 20.0f * (Math.PI / 180));
+            Quaternionf pose = new Quaternionf().rotateZ((float)Math.PI);
+            Quaternionf rotation = new Quaternionf().rotateX((float)Math.atan(yMouse / 40.0f) * 20.0f * ((float)Math.PI / 180));
             pose.mul((Quaternionfc)rotation);
             float oldYRot = entity.getYRot();
             float oldYRotO = entity.yRotO;
@@ -82,7 +82,7 @@ public class HealthTagRenderer {
             entity.setYHeadRot(180.0f + xMouse * 0.2f);
             entity.yHeadRotO = 180.0f + xMouse * 0.2f;
             try {
-                InventoryScreen.renderEntityInInventory((GuiGraphics)guiGraphics, modelX, modelY, (size), (Quaternionf)pose, null, (LivingEntity) entity);
+                InventoryScreen.renderEntityInInventory((GuiGraphics)guiGraphics, modelX, modelY, (int)(size), (Quaternionf)pose, null, (LivingEntity) entity);
             }
             catch (Exception exception) {
                 // ignored
@@ -119,12 +119,12 @@ public class HealthTagRenderer {
         guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, new Color(20, 20, 20, alphaInt).getRGB());
         if (animatedRatio > healthRatio) {
             int bufferColor = new Color(180, 50, 50, (alphaInt * 0.8f)).getRGB();
-            guiGraphics.fill(barX, barY, barX + (barWidth * animatedRatio), barY + barHeight, bufferColor);
+            guiGraphics.fill(barX, barY, barX + (int)(barWidth * animatedRatio), barY + barHeight, bufferColor);
         }
         int hColor = HealthTagRenderer.getHealthColor(healthRatio, alphaInt);
-        guiGraphics.fill(barX, barY, barX + (barWidth * healthRatio), barY + barHeight, hColor);
+        guiGraphics.fill(barX, barY, barX + (int)(barWidth * healthRatio), barY + barHeight, hColor);
         int highlightColor = new Color(255, 255, 255, (alphaInt * 0.3f)).getRGB();
-        guiGraphics.fill(barX, barY, barX + (barWidth * healthRatio), barY + 1, highlightColor);
+        guiGraphics.fill(barX, barY, barX + (int)(barWidth * healthRatio), barY + 1, highlightColor);
         String healthText = String.format("%.1f / %.1f", health, maxHealth);
         float textScale = 0.85f;
         float textWidth = Minecraft.getInstance().font.width(healthText) * textScale;
@@ -145,13 +145,13 @@ public class HealthTagRenderer {
         int r;
         if (ratio > 0.5) {
             float f = (ratio - 0.5f) * 2.0f;
-            r = (255.0f * (1.0f - f));
+            r = (int)(255.0f * (1.0f - f));
             g = 255;
             b = 0;
         } else {
             float f = ratio * 2.0f;
             r = 255;
-            g = (255.0f * f);
+            g = (int)(255.0f * f);
             b = 0;
         }
         return alpha << 24 | r << 16 | g << 8 | b;
@@ -188,8 +188,8 @@ public class HealthTagRenderer {
         HealthTagConfig config = HealthTagConfig.getInstance();
         if (mouseX >= config.x && mouseX <= (config.x + 180) && mouseY >= config.y && mouseY <= (config.y + 45) && button == 0) {
             dragging = true;
-            dragOffsetX = mouseX - config.x;
-            dragOffsetY = mouseY - config.y;
+            dragOffsetX = (int)(mouseX - config.x);
+            dragOffsetY = (int)(mouseY - config.y);
             return true;
         }
         return false;
@@ -198,8 +198,8 @@ public class HealthTagRenderer {
     public static void onMouseDragged(double mouseX, double mouseY, int button) {
         if (dragging && button == 0) {
             HealthTagConfig config = HealthTagConfig.getInstance();
-            config.x = mouseX - dragOffsetX;
-            config.y = mouseY - dragOffsetY;
+            config.x = (int)(mouseX - dragOffsetX);
+            config.y = (int)(mouseY - dragOffsetY);
         }
     }
 

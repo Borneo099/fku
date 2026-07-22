@@ -71,7 +71,7 @@ extends Screen {
 
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
         String tip;
-        this.fillGradient(g);
+        this.renderBackground(g);
         int cx = (this.width - 280) / 2;
         int cy = (this.height - 240) / 2;
         GuiRenderHelper.drawPanelBackground(g, cx, cy, 280, 240, false);

@@ -147,8 +147,8 @@ public class ColorWheelPicker {
     }
 
     private static int hsvToInt(float h, float s, float v) {
-        float g;
-        float r;
+        float g = 0;
+        float r = 0;
         int i = (int)(h * 6.0f);
         float f = h * 6.0f - i;
         float p = v * (1.0f - s);

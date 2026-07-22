@@ -57,7 +57,7 @@ extends Screen {
     }
 
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.fillGradient(guiGraphics);
+        this.renderBackground(guiGraphics);
         int x = (this.width - 250) / 2;
         int y = (this.height - 150) / 2;
         GuiRenderHelper.drawPanelBackground(guiGraphics, x, y, 250, 150, false);

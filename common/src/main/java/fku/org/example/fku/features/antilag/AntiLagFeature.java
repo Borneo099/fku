@@ -69,7 +69,7 @@ public class AntiLagFeature {
                 return;
             }
             if ("MC1_16".equals(cfg.serverVersionMode)) {
-                int steps = Math.max(1, Math.ceil(dist / cfg.moveDistance));
+                int steps = Math.max(1, (int)Math.ceil(dist / cfg.moveDistance));
                 for (int i = 1; i <= steps; ++i) {
                     double t = i / steps;
                     double nx = serverPos.x + (playerPos.x - serverPos.x) * t;

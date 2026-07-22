@@ -16,7 +16,7 @@ public abstract class MixinEntityPush {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (this == mc.player) {
+        if ((Entity)(Object)this == mc.player) {
             ci.cancel();
         }
     }

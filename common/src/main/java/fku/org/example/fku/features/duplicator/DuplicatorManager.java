@@ -61,12 +61,12 @@ public class DuplicatorManager {
      * Unable to fully structure code
      */
     private void tick() {
-        mc = Minecraft.getInstance();
-        player = mc.player;
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
         if (player == null || mc.level == null) {
             return;
         }
-        cfg = this.getConfig();
+        DuplicatorConfig cfg = this.getConfig();
         if (!cfg.enableTrident) {
             this.phase = Phase.IDLE;
             return;
@@ -78,7 +78,7 @@ public class DuplicatorManager {
                 break;
             }
             case ARMING: {
-                slot = this.findBestWeaponSlot(player);
+                int slot = this.findBestWeaponSlot(player);
                 if (slot == -1) {
                     ++this.tickCounter;
                     if (this.tickCounter < 20) break;
