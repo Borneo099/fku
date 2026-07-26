@@ -53,6 +53,10 @@ public class ArrowDmgConfig {
     public boolean ignoreWalls = true;
     public String entities = "PLAYER";
 
+    // sgCustom
+    /** 自定义模组弓物品ID列表（逗号分隔），用于无法自动识别的模组弓 */
+    public String customBowIds = "";
+
     // sgRender
     public boolean renderEnabled = true;
     public int renderMaxDistance = 0;

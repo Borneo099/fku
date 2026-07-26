@@ -1,11 +1,13 @@
 package fku.org.example.fku.features.structure_locator;
 
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.tpgoto.TpGotoPosFeature;
 import fku.org.example.fku.util.BaritoneBridge;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.RandomSource;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
@@ -27,6 +29,12 @@ import java.util.regex.Pattern;
 /**
  * 结构定位功能 — 根据种子+放置规则计算最近结构坐标，支持 Baritone 前往
  * <p>
+ * 原版结构使用种子+spacing/separation/salt 计算（random_spread 算法）。
+ * 暮色森林结构使用自定义 forced_landmark 放置系统，无法通过种子计算，
+ * 改用 /locate structure 命令捕获方式定位。
+ * <p>
+ * 该功能由赛博教员实现
+ * <p>
  * 参考：lexis.Hack.Hacks.L_Enders_Cataclysm_C.CataclysmLocatorHack
  *       lexis.Hack.Hacks.Baritone.StructureLocatorHack
  */
@@ -38,6 +46,18 @@ public class StructureLocatorFeature {
     private static Minecraft getMc() { return Minecraft.getInstance(); }
     private static final Pattern SEED_PATTERN = Pattern.compile("\\[\\s*(-?\\d+)\\s*\\]");
     private static volatile boolean expectingSeed = false;
+    /**
+     * 用于捕获 /locate structure 命令返回的坐标格式
+     * 例如: [结构定位] 娜迦庭院 位于 [x: 123, y: 64, z: 456] (约 1000 格) 或类似格式
+     */
+    private static final Pattern LOCATE_PATTERN = Pattern.compile("位于\\s*\\[?\\s*x:\\s*(-?\\d+).*?y:\\s*(-?\\d+).*?z:\\s*(-?\\d+)", Pattern.CASE_INSENSITIVE);
+    /** 简化版 locate 坐标正则：直接匹配数字组合 */
+    private static final Pattern LOCATE_XYZ_PATTERN = Pattern.compile("(-?\\d+)\\s*/\\s*(-?\\d+)\\s*/\\s*(-?\\d+)");
+    private static volatile boolean expectingLocate = false;
+    private static volatile String locateTargetId = "";
+    private static volatile boolean pendingTravel = false;
+    private static volatile boolean pendingDimOk = false;
+    private static volatile Target pendingTarget = null;
 
     public static final List<Target> TARGETS = new ArrayList<>();
     private static final Map<String, Set<Long>> skipped = new HashMap<>();
@@ -80,22 +100,75 @@ public class StructureLocatorFeature {
         TARGETS.add(Target.rs("ruined_citadel", "§c废弃城堡(末影守卫)", Dim.END, 50, 25, 367895146, "linear", 64, null));
         TARGETS.add(Target.rs("soul_black_smith", "§c灵魂铁匠铺", Dim.NETHER, 60, 50, (int)1984567320L, "linear", 64, null));
         TARGETS.add(Target.rs("sunken_city", "§c沉没之城(利维坦)", Dim.OVERWORLD, 100, 70, (int)1673928450L, "triangular", 64, null));
+
+        // ★ 暮色森林 — 使用 RANDOM_SPREAD 模式（与灾变结构一致），通过种子+盐值计算位置
+        // 注意：暮色森林实际使用自定义 landmark_grid 放置系统，此处参数为近似值
+        TARGETS.add(Target.rs("naga_courtyard", "§6娜迦庭院", Dim.TWILIGHT, 32, 8, 10293847, "linear", 64, null));
+        TARGETS.add(Target.rs("lich_tower", "§5巫妖塔", Dim.TWILIGHT, 32, 8, 20394857, "linear", 64, null));
+        TARGETS.add(Target.rs("small_hollow_hill", "§2小型空心山丘", Dim.TWILIGHT, 32, 8, 30495867, "linear", 64, null));
+        TARGETS.add(Target.rs("medium_hollow_hill", "§a中型空心山丘", Dim.TWILIGHT, 32, 8, 40596877, "linear", 64, null));
+        TARGETS.add(Target.rs("large_hollow_hill", "§b大型空心山丘", Dim.TWILIGHT, 32, 8, 50697887, "linear", 64, null));
+        TARGETS.add(Target.rs("hedge_maze", "§e树篱迷宫", Dim.TWILIGHT, 32, 8, 60798897, "linear", 64, null));
+        TARGETS.add(Target.rs("quest_grove", "§7探索树林", Dim.TWILIGHT, 48, 12, 70899907, "linear", 64, null));
+        TARGETS.add(Target.rs("hydra_lair", "§4九头蛇巢穴", Dim.TWILIGHT, 48, 12, 80901017, "linear", 64, null));
+        TARGETS.add(Target.rs("labyrinth", "§8米诺陶迷宫", Dim.TWILIGHT, 48, 12, 91002027, "linear", 64, null));
+        TARGETS.add(Target.rs("knight_stronghold", "§d骑士要塞", Dim.TWILIGHT, 48, 12, 101103037, "linear", 64, null));
+        TARGETS.add(Target.rs("dark_tower", "§0黑暗高塔", Dim.TWILIGHT, 48, 12, 112104047, "linear", 64, null));
+        TARGETS.add(Target.rs("yeti_cave", "§f雪怪洞穴", Dim.TWILIGHT, 48, 12, 123105057, "linear", 64, null));
+        TARGETS.add(Target.rs("aurora_palace", "§d极光宫殿", Dim.TWILIGHT, 64, 16, 134106067, "linear", 64, null));
+        TARGETS.add(Target.rs("troll_cave", "§8洞穴巨魔", Dim.TWILIGHT, 64, 16, 145107077, "linear", 64, null));
+        TARGETS.add(Target.rs("mushroom_tower", "§d蘑菇塔", Dim.TWILIGHT, 64, 16, 156108087, "linear", 64, null));
+        TARGETS.add(Target.rs("final_castle", "§c最终城堡", Dim.TWILIGHT, 128, 32, 167109097, "linear", 64, null));
     }
 
     // ──────── 聊天捕获 ────────
     @SubscribeEvent
     public static void onChat(ClientChatReceivedEvent event) {
-        if (!expectingSeed) return;
         String text = event.getMessage().getString();
-        Matcher m = SEED_PATTERN.matcher(text);
-        if (m.find()) {
-            try {
-                StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
-                cfg.capturedSeed = Long.parseLong(m.group(1));
-                cfg.hasSeed = true;
-                expectingSeed = false;
-                cfg.save();
-            } catch (NumberFormatException ignored) {}
+        // 处理种子捕获
+        if (expectingSeed) {
+            Matcher m = SEED_PATTERN.matcher(text);
+            if (m.find()) {
+                try {
+                    StructureLocatorConfig cfg = StructureLocatorConfig.getInstance();
+                    cfg.capturedSeed = Long.parseLong(m.group(1));
+                    cfg.hasSeed = true;
+                    expectingSeed = false;
+                    cfg.save();
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        // 处理 /locate 响应捕获
+        if (expectingLocate) {
+            // 匹配 "位于 [x: 123, y: 64, z: 456]" 格式
+            Matcher m = LOCATE_PATTERN.matcher(text);
+            if (m.find()) {
+                try {
+                    int x = Integer.parseInt(m.group(1));
+                    int y = Integer.parseInt(m.group(2));
+                    int z = Integer.parseInt(m.group(3));
+                    expectingLocate = false;
+                    handleLocateResult(x, y, z);
+                    return;
+                } catch (NumberFormatException ignored) {}
+            }
+            // 匹配简化格式 "123 / 64 / 456"
+            m = LOCATE_XYZ_PATTERN.matcher(text);
+            if (m.find()) {
+                try {
+                    int x = Integer.parseInt(m.group(1));
+                    int y = Integer.parseInt(m.group(2));
+                    int z = Integer.parseInt(m.group(3));
+                    expectingLocate = false;
+                    handleLocateResult(x, y, z);
+                    return;
+                } catch (NumberFormatException ignored) {}
+            }
+            // 检查错误信息
+            if (text.contains("无法定位") || text.contains("Could not locate") || text.contains("找不到")) {
+                expectingLocate = false;
+                msg("§c/locate 无法定位该结构，可能未生成或不存在");
+            }
         }
     }
 
@@ -127,10 +200,15 @@ public class StructureLocatorFeature {
     public static void locate(boolean travel) {
         Minecraft mc = getMc();
         if (mc == null || mc.player == null || mc.level == null) return;
-        Long seed = resolveSeed();
-        if (seed == null) { msg("§f还没有种子。先点[取种子]或填[手动种子]"); return; }
         Target t = selectedTarget();
         boolean dimOk = currentDim() == t.dim;
+        // LOCATE 类型（暮色森林等）通过 /locate 命令定位，不需要种子
+        if (t.kind == Kind.LOCATE) {
+            locateViaCommand(t, travel, dimOk);
+            return;
+        }
+        Long seed = resolveSeed();
+        if (seed == null) { msg("§f还没有种子。先点[取种子]或填[手动种子]"); return; }
         if (t.kind == Kind.CONCENTRIC_RINGS) locateStronghold(t, seed, travel, dimOk);
         else locateRandomSpread(t, seed, travel, dimOk);
     }
@@ -235,9 +313,9 @@ public class StructureLocatorFeature {
     }
 
     private static ChunkPos calcRandomSpreadPos(long seed, int salt, int spacing, int separation, String spread, int rx, int rz) {
-        RandomSource random = RandomSource.create();
+        WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(0L));
         long key = (long) rx * 341873128712L + (long) rz * 132897987541L + seed + salt;
-        random.setSeed(key);
+        random.setLargeFeatureWithSalt(seed, salt, rx, rz);
         int offX = random.nextInt(spacing - separation);
         int offZ = random.nextInt(spacing - separation);
         return new ChunkPos(rx * spacing + offX, rz * spacing + offZ);
@@ -270,11 +348,74 @@ public class StructureLocatorFeature {
     private static void doTravel(boolean travel, boolean dimOk, Target t, int x, int z) {
         if (!travel) return;
         if (!dimOk) { msg("§e当前不在[" + dimName(t.dim) + "], 已显示坐标"); return; }
+        String mode = StructureLocatorConfig.getInstance().gotoMode;
+        if ("tpgoto".equals(mode)) {
+            // 使用 TpGotoPos 传送前往
+            TpGotoPosFeature.startTeleport(x, 120, z);
+            msg("§a已让 TpGotoPos 前往坐标 (" + x + " 120 " + z + ")");
+            return;
+        }
+        // 默认使用 Baritone
         if (!BaritoneBridge.isAvailable()) { msg("§e未安装 Baritone, 已显示坐标"); return; }
         // 前往新位置时自动清除旧标记
         if (markedX >= 0) { markedX = markedZ = -1; }
         BaritoneBridge.gotoCoordSilent(x, 120, z);
         msg("§a已让 Baritone 前往 (goto " + x + " 120 " + z + ")");
+    }
+
+    /** 通过 /locate 命令定位暮色森林等结构 */
+    private static void locateViaCommand(Target t, boolean travel, boolean dimOk) {
+        Minecraft mc = getMc();
+        if (mc == null || mc.player == null || mc.player.connection == null) return;
+        if (!dimOk) {
+            msg("§e当前不在[" + dimName(t.dim) + "], 请先进入暮色森林再定位");
+            return;
+        }
+        expectingLocate = true;
+        locateTargetId = t.id;
+        pendingTravel = travel;
+        pendingDimOk = dimOk;
+        pendingTarget = t;
+        mc.player.connection.sendCommand("locate structure twilightforest:" + t.id);
+        msg("§7已发送 /locate, 正在等待响应...");
+    }
+
+    /** 处理 /locate 命令返回的坐标结果 */
+    private static void handleLocateResult(int x, int y, int z) {
+        Minecraft mc = getMc();
+        if (mc == null) return;
+        // 查找目标结构名称
+        String targetName = "";
+        Target t = pendingTarget;
+        if (t != null) {
+            targetName = t.name;
+        } else {
+            for (Target ct : TARGETS) {
+                if (ct.id.equals(locateTargetId)) {
+                    targetName = ct.name;
+                    t = ct;
+                    break;
+                }
+            }
+        }
+        int cx = x >> 4, cz = z >> 4;
+        rememberTarget(blKey(0, locateTargetId), cx, cz);
+        int dist = (int) Math.sqrt((long)(x - mc.player.getX()) * (x - mc.player.getX()) + (long)(z - mc.player.getZ()) * (z - mc.player.getZ()));
+        msg("§f" + targetName + "  §7坐标: §bX=" + x + " Y=" + y + " Z=" + z + " §7(约" + dist + "格)");
+        // 执行 pending 的 travel
+        if (pendingTravel && pendingDimOk && t != null) {
+            String mode = StructureLocatorConfig.getInstance().gotoMode;
+            if ("tpgoto".equals(mode)) {
+                TpGotoPosFeature.startTeleport(x, y, z);
+                msg("§a已让 TpGotoPos 前往坐标 (" + x + " " + y + " " + z + ")");
+            } else if (!BaritoneBridge.isAvailable()) {
+                msg("§e未安装 Baritone, 已显示坐标");
+            } else {
+                BaritoneBridge.gotoCoordSilent(x, y, z);
+                msg("§a已让 Baritone 前往 (goto " + x + " " + y + " " + z + ")");
+            }
+        }
+        pendingTarget = null;
     }
 
     private static void rememberTarget(String key, int cx, int cz) {
@@ -304,12 +445,15 @@ public class StructureLocatorFeature {
     private static String blKey(long seed, String id) { return seed + "/" + id; }
     private static long packChunk(int cx, int cz) { return (long) cx << 32 | (long) cz & 0xFFFFFFFFL; }
 
+    private static final ResourceKey<Level> TWILIGHT_DIM = ResourceKey.create(Registries.DIMENSION, new ResourceLocation("twilightforest", "twilight_forest"));
+
     private static Dim currentDim() {
         Minecraft mc = getMc();
         if (mc == null || mc.level == null) return Dim.OVERWORLD;
         ResourceKey<Level> d = mc.level.dimension();
         if (d == Level.NETHER) return Dim.NETHER;
         if (d == Level.END) return Dim.END;
+        if (d == TWILIGHT_DIM) return Dim.TWILIGHT;
         return Dim.OVERWORLD;
     }
 
@@ -320,6 +464,7 @@ public class StructureLocatorFeature {
     public static String dimName(Dim d) {
         if (d == Dim.NETHER) return "下界";
         if (d == Dim.END) return "末地";
+        if (d == Dim.TWILIGHT) return "暮色森林";
         return "主世界";
     }
 
@@ -332,8 +477,8 @@ public class StructureLocatorFeature {
     private static String markName = "";
 
     // ──────── 类型 ────────
-    public enum Dim { OVERWORLD, NETHER, END }
-    public enum Kind { RANDOM_SPREAD, CONCENTRIC_RINGS }
+    public enum Dim { OVERWORLD, NETHER, END, TWILIGHT }
+    public enum Kind { RANDOM_SPREAD, CONCENTRIC_RINGS, LOCATE }
 
     public static final class Target {
         public final String id, name, spread;
@@ -354,6 +499,10 @@ public class StructureLocatorFeature {
         }
         static Target rings(String id, String name, int c, int d, int sp) {
             return new Target(id, name, Dim.OVERWORLD, Kind.CONCENTRIC_RINGS, 0, 0, 0, "linear", c, d, sp, 64, null);
+        }
+        /** 通过 /locate 命令定位的结构（暮色森林等） */
+        static Target locate(String id, String name, Dim dim) {
+            return new Target(id, name, dim, Kind.LOCATE, 0, 0, 0, "linear", 0, 0, 0, 64, null);
         }
     }
 }

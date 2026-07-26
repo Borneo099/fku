@@ -109,15 +109,26 @@ public class FlightFeature {
         double vy = jumping ? cfg.verticalSpeed : player.input.shiftKeyDown ? -cfg.verticalSpeed : 0;
         player.setDeltaMovement(h.x, vy, h.z);
 
-        // 防踢
+        // 防踢 — 移植自 Lexis FlightHack：先轻拉（防踢标记），再轻推（补偿高度），然后等待间隔
         if (cfg.antiKick) {
-            antiKickTicks++;
-            if (antiKickTicks > cfg.antiKickInterval) {
+            if (antiKickTicks > cfg.antiKickInterval + 1) {
                 antiKickTicks = 0;
-                player.setDeltaMovement(h.x, -cfg.antiKickDistance, h.z);
-            } else if (antiKickTicks == 1) {
-                player.setDeltaMovement(h.x, cfg.antiKickDistance, h.z);
             }
+            switch (antiKickTicks) {
+                case 0:
+                    // 按下潜行键时跳过本次防踢循环（玩家主动想下降时不做补偿）
+                    if (player.input.shiftKeyDown) {
+                        antiKickTicks = 2;
+                    } else {
+                        player.setDeltaMovement(player.getDeltaMovement().x, -cfg.antiKickDistance, player.getDeltaMovement().z);
+                    }
+                    break;
+                case 1:
+                    // 轻推补偿高度，抵消上一步的轻微下拉
+                    player.setDeltaMovement(player.getDeltaMovement().x, cfg.antiKickDistance, player.getDeltaMovement().z);
+                    break;
+            }
+            antiKickTicks++;
         }
 
         player.noPhysics = cfg.disableCollision;

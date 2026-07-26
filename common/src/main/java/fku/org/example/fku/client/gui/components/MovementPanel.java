@@ -7,6 +7,7 @@ import fku.org.example.fku.features.nofall.NoFallComponent;
 import fku.org.example.fku.features.nojumpdelay.NoJumpDelayComponent;
 import fku.org.example.fku.features.sprint.SprintComponent;
 import fku.org.example.fku.features.teleport.TeleportComponent;
+import fku.org.example.fku.features.tpgoto.TpGotoComponent;
 import fku.org.example.fku.features.waterwalk.WaterWalkComponent;
 
 public class MovementPanel extends GuiPanel {
@@ -23,6 +24,7 @@ public class MovementPanel extends GuiPanel {
         addComponent(new NoFallComponent(0, 0, 110, 20));
         addComponent(new AntiPushComponent(0, 0, 110, 20));
         addComponent(new TeleportComponent(0, 0, 110, 22));
+        addComponent(new TpGotoComponent(0, 0, 110, 20));
         addComponent(new WaterWalkComponent(0, 0, 110, 20));
     }
 

@@ -3,21 +3,22 @@ package fku.org.example.fku.client.gui.components;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import java.awt.Color;
 
 /**
  * 彩色圆盘选择器 — 完整的HSV彩色圆盘（饱和度和色相二维渐变）
  *
  * ★ 工作原理：
  *   圆盘中心 = 白色（饱和度S=0），圆盘边缘 = 纯色（饱和度S=1）
- *   色相H沿圆周变化（0°~360°）
- *   亮度V通过外部滑块控制
+ *   色相H沿圆周变化（0°~360°），0°=右=红，90°=下=黄绿，180°=左=青，270°=上=紫
+ *   亮度V通过下方滑块控制
+ *   使用java.awt.Color的HSB转换确保颜色准确性
  *
- * ★ 绘制方式：
- *   逐像素遍历圆盘区域，根据像素到中心的距离计算饱和度，
- *   根据角度计算色相，HSV→RGB 得到最终颜色
+ * ★ 选中指示器（白色圆点标记当前颜色在圆盘上的位置）
+ *   该颜色选择器由赛博教员实现
  */
 public class ColorWheelPicker {
-    private static final int WHEEL_RADIUS = 60;
+    private static final int WHEEL_RADIUS = 80;
     private static final int WHEEL_DIAMETER = WHEEL_RADIUS * 2;
 
     private int centerX, centerY;
@@ -72,14 +73,19 @@ public class ColorWheelPicker {
         // 1. 绘制完整的彩色圆盘（逐像素填充）
         drawFullColorWheel(g);
 
-        // 2. 绘制亮度条（下方）
+        // ★ 2. 绘制选中指示器 — 白色圆点标记当前颜色在圆盘上的位置
+        drawSelectionIndicator(g);
+
+        // 3. 绘制亮度条（下方）
         drawBrightnessBar(g);
 
-        // 3. 绘制HEX值和当前颜色预览
+        // 4. 绘制HEX值和当前颜色预览
         String hex = "#" + hexColor.toUpperCase();
         g.drawString(Minecraft.getInstance().font, hex, px + 5, py + size + 12, 0xFFFFFF);
         // 当前颜色小方块
-        GuiRenderHelper.drawRoundedRect(g, px + size - 30, py + size + 8, 24, 16, hexToInt(hexColor), 3);
+        int previewColor = hexToInt(hexColor);
+        GuiRenderHelper.drawRoundedRect(g, px + size - 30, py + size + 8, 24, 16, previewColor, 3);
+        GuiRenderHelper.drawRoundedOutline(g, px + size - 30, py + size + 8, 24, 16, 0xFF888888, 3, 1);
     }
 
     /** 绘制完整的HSV彩色圆盘 — 逐像素绘制 */
@@ -91,18 +97,41 @@ public class ColorWheelPicker {
         for (int dx = -WHEEL_RADIUS; dx <= WHEEL_RADIUS; dx++) {
             for (int dy = -WHEEL_RADIUS; dy <= WHEEL_RADIUS; dy++) {
                 int dist2 = dx * dx + dy * dy;
-                if (dist2 > r2) continue; // 跳过圆盘外部
+                if (dist2 > r2) continue;
 
-                float dist = (float) Math.sqrt(dist2) / WHEEL_RADIUS;
-                float angle = (float) Math.atan2(dy, dx);
+                double dist = Math.sqrt(dist2);
+                double s = dist / WHEEL_RADIUS;
+                // 使用atan2: 角度=0在右侧(正x轴)，逆时针增加
+                // 屏幕坐标y向下为正，所以atan2(dy,dx)在标准数学中：
+                // 右(1,0)=0, 下(0,1)=π/2, 左(-1,0)=π, 上(0,-1)=3π/2
+                double angle = Math.atan2(dy, dx);
                 if (angle < 0) angle += Math.PI * 2;
+                double h = angle / (Math.PI * 2);
 
-                float h = angle / (float)(Math.PI * 2);
-                float s = dist;              // 中心饱和度0，边缘饱和度1
-                float v = this.value;        // 使用当前亮度
-
-                int rgb = hsvToInt(h, s, v);
+                // 使用java.awt.Color的HSB转换确保准确性
+                int rgb = Color.HSBtoRGB((float)h, (float)Math.min(s, 1.0), this.value);
                 g.fill(cx + dx, cy + dy, cx + dx + 1, cy + dy + 1, rgb);
+            }
+        }
+    }
+
+    /** ★ 绘制选中指示器 — 白色圆点标记当前色相/饱和度位置 */
+    private void drawSelectionIndicator(GuiGraphics g) {
+        double angle = hue * Math.PI * 2;
+        double dist = saturation * WHEEL_RADIUS;
+        int sx = centerX + (int)(Math.cos(angle) * dist);
+        int sy = centerY + (int)(Math.sin(angle) * dist);
+
+        int ringRadius = Math.max(3, (int)(4 * (0.5 + 0.5 * saturation)));
+        // 外圈白色圆环
+        for (int dx = -ringRadius; dx <= ringRadius; dx++) {
+            for (int dy = -ringRadius; dy <= ringRadius; dy++) {
+                int d2 = dx * dx + dy * dy;
+                int r2 = ringRadius * ringRadius;
+                int innerR2 = (ringRadius - 2) * (ringRadius - 2);
+                if (d2 <= r2 && d2 >= innerR2) {
+                    g.fill(sx + dx, sy + dy, sx + dx + 1, sy + dy + 1, 0xFFFFFFFF);
+                }
             }
         }
     }
@@ -114,16 +143,16 @@ public class ColorWheelPicker {
         int barW = WHEEL_DIAMETER;
         int barH = 12;
 
-        // 绘制渐变亮度条：左黑右白
         for (int i = 0; i < barW; i++) {
             float t = (float) i / barW;
-            int gray = (int)(t * 255);
-            int color = (255 << 24) | (gray << 16) | (gray << 8) | gray;
-            g.fill(barX + i, barY, barX + i + 1, barY + barH, color);
+            int rgb = Color.HSBtoRGB(hue, saturation, t);
+            g.fill(barX + i, barY, barX + i + 1, barY + barH, rgb);
         }
         // 亮度指示器
         int indX = barX + (int)(this.value * barW);
-        g.fill(indX - 2, barY - 1, indX + 3, barY + barH + 1, 0xFFFFFFFF);
+        g.fill(indX - 1, barY - 1, indX + 2, barY + barH + 1, 0xFFFFFFFF);
+        g.fill(indX - 2, barY - 1, indX - 1, barY + barH + 1, 0xFF000000);
+        g.fill(indX + 2, barY - 1, indX + 3, barY + barH + 1, 0xFF000000);
     }
 
     /** 鼠标点击处理 */
@@ -144,9 +173,9 @@ public class ColorWheelPicker {
         double dy = mouseY - centerY;
         double dist = Math.sqrt(dx * dx + dy * dy);
         if (dist <= WHEEL_RADIUS) {
-            float angle = (float) Math.atan2(dy, dx);
+            double angle = Math.atan2(dy, dx);
             if (angle < 0) angle += Math.PI * 2;
-            this.hue = angle / (float)(Math.PI * 2);
+            this.hue = (float)(angle / (Math.PI * 2));
             this.saturation = (float) Math.min(dist / WHEEL_RADIUS, 1.0);
             updateHex();
             return true;
@@ -158,6 +187,7 @@ public class ColorWheelPicker {
         int barW = WHEEL_DIAMETER;
         if (mouseY >= barY && mouseY < barY + 12 && mouseX >= barX && mouseX < barX + barW) {
             this.value = (float) ((mouseX - barX) / barW);
+            this.value = Math.max(0.0f, Math.min(1.0f, this.value));
             updateHex();
             return true;
         }
@@ -166,47 +196,22 @@ public class ColorWheelPicker {
     }
 
     private void updateHex() {
-        int rgb = hsvToInt(hue, saturation, value);
+        // 使用java.awt.Color.HSBtoRGB确保颜色转换准确
+        int rgb = Color.HSBtoRGB(hue, saturation, value);
         this.hexColor = String.format("%02X%02X%02X", (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
         if (listener != null) listener.onColorChanged(hexColor);
     }
 
     // ═══════ HSV ↔ RGB/HEX 工具方法 ═══════
 
-    private static int hsvToInt(float h, float s, float v) {
-        int i = (int)(h * 6);
-        float f = h * 6 - i;
-        float p = v * (1 - s);
-        float q = v * (1 - f * s);
-        float t = v * (1 - (1 - f) * s);
-        float r, g, b2;
-        switch (i % 6) {
-            case 0: r=v; g=t; b2=p; break;
-            case 1: r=q; g=v; b2=p; break;
-            case 2: r=p; g=v; b2=t; break;
-            case 3: r=p; g=q; b2=v; break;
-            case 4: r=t; g=p; b2=v; break;
-            default: r=v; g=p; b2=q; break;
-        }
-        return (255 << 24) | ((int)(r*255) << 16) | ((int)(g*255) << 8) | (int)(b2*255);
-    }
-
+    /** 使用java.awt.Color的HSB转换 */
     private static float[] hexToHsv(String hex) {
         if (hex == null || hex.length() < 6) return new float[]{0f, 0.8f, 0.8f};
         try {
             int r = Integer.parseInt(hex.substring(0, 2), 16);
             int g = Integer.parseInt(hex.substring(2, 4), 16);
             int b = Integer.parseInt(hex.substring(4, 6), 16);
-            float rf = r/255f, gf = g/255f, bf = b/255f;
-            float max = Math.max(rf, Math.max(gf, bf)), min = Math.min(rf, Math.min(gf, bf));
-            float h, s, v = max;
-            float d = max - min;
-            s = max == 0 ? 0 : d / max;
-            if (max == min) h = 0;
-            else if (max == rf) h = ((gf-bf)/d + (gf<bf?6:0)) / 6f;
-            else if (max == gf) h = ((bf-rf)/d + 2) / 6f;
-            else h = ((rf-gf)/d + 4) / 6f;
-            return new float[]{h, s, v};
+            return Color.RGBtoHSB(r, g, b, null);
         } catch (Exception e) { return new float[]{0f, 0.8f, 0.8f}; }
     }
 

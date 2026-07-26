@@ -2,10 +2,8 @@ package fku.org.example.fku.features.killfx; /* water */
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
 /**
@@ -26,7 +24,7 @@ public class KillFXConfig {
         } catch (Exception ignored) {}
         return Paths.get(".").toAbsolutePath().normalize().toFile();
     }
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     // ===== 通用设置 =====
     /** 功能总开关 */
@@ -122,7 +120,7 @@ public class KillFXConfig {
     public static void load() {
         File configFile = getConfigFile();
         if (configFile.exists()) {
-            try (FileReader reader = new FileReader(configFile)) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8))) {
                 instance = GSON.fromJson(reader, KillFXConfig.class);
             } catch (IOException e) {
                 instance = new KillFXConfig();
@@ -134,7 +132,8 @@ public class KillFXConfig {
     }
 
     public static void save() {
-        try (FileWriter writer = new FileWriter(getConfigFile())) {
+        if (instance == null) return;
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getConfigFile()), StandardCharsets.UTF_8))) {
             GSON.toJson(instance, writer);
         } catch (IOException e) {
             e.printStackTrace();

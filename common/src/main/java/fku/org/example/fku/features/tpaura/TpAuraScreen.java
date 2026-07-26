@@ -34,7 +34,7 @@ public class TpAuraScreen extends Screen {
         cooldownInput = delayInput = rangeInput = attackDistInput = tpOffsetInput = null;
         packetsInput = ceilingStepInput = entityTypesInput = whitelistInput = null;
         totemAttacksInput = totemHeightInput = null;
-        autoFlightSpeedInput = null;
+        autoFlightSpeedInput = null; autoFlightHoriInput = null;
 
         var cfg = TpAuraConfig.getInstance();
         int cx = (width - W) / 2, cy = (height - H) / 2;
@@ -87,9 +87,12 @@ public class TpAuraScreen extends Screen {
                 addToggle(cx+220, ly, "偏移同步", () -> cfg.offsetFix, v -> cfg.setOffsetFix(v));
                 ly += sp;
 
+                addToggle(cx+2, ly, "§b防摔", () -> cfg.antiFall, v -> cfg.setAntiFall(v));
+                addToggle(cx+110, ly, "限制天花板", () -> cfg.limitCeiling, v -> cfg.setLimitCeiling(v));
+                ly += sp;
+
                 addLabel(cx+2, ly, "垫包数量:");
                 packetsInput = mkEdit(cx+80, ly, 30, String.valueOf(cfg.paperPackets));
-                addToggle(cx+125, ly, "限制天花板", () -> cfg.limitCeiling, v -> cfg.setLimitCeiling(v));
                 ly += sp;
 
                 addLabel(cx+2, ly, "天花板步长:");

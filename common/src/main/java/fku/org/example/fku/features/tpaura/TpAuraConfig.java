@@ -91,6 +91,10 @@ public class TpAuraConfig {
     public int totemAttacks = 2;
     public int totemHeightIncrease = 9;
 
+    // ════════ 防摔 ════════
+    /** 防摔：回传时发送 onGround=true 重置服务端下落距离，防止摔伤 */
+    public boolean antiFall = true;
+
     // ════════ 自动飞行 ════════
     /** 启用时自动开启创造飞行，避免地面瞬移卡顿 */
     public boolean autoFlight = false;
@@ -201,6 +205,7 @@ public class TpAuraConfig {
     public void setTotemBypass(boolean v) { this.totemBypass = v; save(); }
     public void setTotemAttacks(int v) { this.totemAttacks = Math.max(1, Math.min(3, v)); save(); }
     public void setTotemHeightIncrease(int v) { this.totemHeightIncrease = Math.max(1, Math.min(100, v)); save(); }
+    public void setAntiFall(boolean v) { this.antiFall = v; save(); }
     public void setAutoFlight(boolean v) { this.autoFlight = v; save(); }
     public void setAutoFlightSpeed(double v) { this.autoFlightSpeed = Math.max(0, Math.min(2.0, v)); save(); }
     public void setAutoFlightHorizontalSpeed(double v) { this.autoFlightHorizontalSpeed = Math.max(0, Math.min(3.0, v)); save(); }

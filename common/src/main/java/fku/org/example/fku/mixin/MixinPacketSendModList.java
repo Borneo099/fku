@@ -30,7 +30,7 @@ public abstract class MixinPacketSendModList {
      * ModListDiff 时若收到非法字符串可能中断登录流程，表现为卡在「加入世界中」
      * （再叠加 ConnectionMixin 的 3600s 超时，便永久卡死）。
      */
-    private static final String FAKE_MOD_ID = "我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂我卢本伟没有开挂";
+    private static final String FAKE_MOD_ID = "§";
 
     @Inject(method = "<init>(Ljava/util/Set;)V", at = @At("RETURN"), remap = false)
     private void onInit(Set<String> originalModIds, CallbackInfo ci) {
@@ -42,7 +42,7 @@ public abstract class MixinPacketSendModList {
             // 合法可见字符串（opmod / opmod_1 / opmod_2 ...），不触发服务端异常。
             Set<String> fakeModIds = new TreeSet<>();
             for (int i = 0; i < originalSize; i++) {
-                fakeModIds.add(i == 0 ? FAKE_MOD_ID : FAKE_MOD_ID + "_" + i);
+                fakeModIds.add(i == 0 ? FAKE_MOD_ID : FAKE_MOD_ID + "？！" + i + "我真没开挂" + i + "！？");
             }
             // 直接变更集合内容（modIds 本质是可变 TreeSet，final 修饰的是引用而非对象）
             modIds.clear();

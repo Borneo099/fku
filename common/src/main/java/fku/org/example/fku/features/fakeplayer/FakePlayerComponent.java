@@ -43,6 +43,9 @@ public class FakePlayerComponent extends GuiComponent {
         if (button == 0) {
             if (HotkeySystem.isWaiting()) return false;
             FakePlayerFeature.toggle(); return true;
+        } else if (button == 1) {
+            Minecraft.getInstance().setScreen(new FakePlayerConfigScreen());
+            return true;
         } else if (button == 2) {
             HotkeySystem.startBinding("假人", () -> {});
             return true;

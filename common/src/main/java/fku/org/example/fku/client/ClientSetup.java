@@ -16,6 +16,8 @@ import fku.org.example.fku.features.killaura.KillAuraFeature;
 import fku.org.example.fku.features.teleport.TeleportFeature;
 import fku.org.example.fku.features.quickcommand.QuickCommandFeature;
 import fku.org.example.fku.features.waterwalk.WaterWalkFeature;
+import fku.org.example.fku.features.attackindicator.AttackIndicatorFeature;
+import fku.org.example.fku.features.trail.TrailFeature;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -51,6 +53,10 @@ public class ClientSetup {
         CriticalsFeature.init();
         // ★ 从配置文件静默恢复防推开关状态
         AntiPushFeature.init();
+        // ★ 初始化攻击指示器
+        AttackIndicatorFeature.init();
+        // ★ 初始化拖尾特效
+        TrailFeature.init();
         // ★ 初始化 HUD 信息显示
         KillAuraFeature.init();
         TeleportFeature.init();

@@ -3,11 +3,12 @@ package fku.org.example.fku.features.criticals; /* water */
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraft.client.Minecraft;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.nio.file.Paths;
 
 /**
  * 刀刀暴击配置 — 借鉴 Wurst 的 Criticals
@@ -15,7 +16,7 @@ import java.io.FileWriter;
 public class CriticalsConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final File FILE = FMLPaths.CONFIGDIR.get().resolve("fku_criticals.json").toFile();
+    private static final File FILE = getConfigFile();
     private static CriticalsConfig instance;
 
     public boolean enabled = false;
@@ -54,5 +55,19 @@ public class CriticalsConfig {
                 GSON.toJson(obj, w);
             }
         } catch (Exception ignored) {}
+    }
+
+    private static File getConfigFile() {
+        File dir = new File(getGameDirectory(), "fku");
+        if (!dir.exists()) dir.mkdirs();
+        return new File(dir, "criticals.json");
+    }
+
+    private static File getGameDirectory() {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) return mc.gameDirectory;
+        } catch (Exception ignored) {}
+        return Paths.get(".").toAbsolutePath().normalize().toFile();
     }
 }

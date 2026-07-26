@@ -69,6 +69,8 @@ public class TpAuraFeature {
     // ════════ 运行时状态 ════════
     /** 当前目标实体 */
     public Entity currentTarget;
+    /** ★ 攻击计数器 — 每次执行攻击时递增，供AttackIndicator等模块检测TpAura攻击事件 */
+    public static int attackCounter = 0;
     /** 瞬移路径节点列表（用于渲染） */
     public final List<Vec3> renderPathNodes = new ArrayList<>();
     /** 目标列表 */
@@ -558,18 +560,18 @@ public class TpAuraFeature {
                 // ★ progressiveAbove 基于 basePos 而非 finalPos，确保上升高度
                 //   始终以玩家原始位置为锚点，不会因目标位置不同而产生偏移
                 Vec3 progressiveAbove = new Vec3(basePos.x, basePos.y + blocks, basePos.z);
-                if (cfg.goUp) sendMove(progressiveAbove);
-                sendMove(finalPos);
+                if (cfg.goUp) sendMove(progressiveAbove, cfg.antiFall);
+                sendMove(finalPos, cfg.antiFall);
 
                 performAttack(target, cfg);
             }
         } else {
             // 单次攻击
             if ("Paper".equals(cfg.mode) && cfg.goUp) {
-                sendMove(highStart);
-                sendMove(highTarget);
+                sendMove(highStart, cfg.antiFall);
+                sendMove(highTarget, cfg.antiFall);
             }
-            sendMove(finalPos);
+            sendMove(finalPos, cfg.antiFall);
 
             performAttack(target, cfg);
         }
@@ -582,11 +584,13 @@ public class TpAuraFeature {
         if (cfg.returnPos && mc.player != null) {
             mc.player.setPos(basePos.x, basePos.y, basePos.z);
             if (mc.player.connection != null) {
+                // ★ 防摔：复位包使用 onGround 配置，防止服务端累加下落距离
                 mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                    basePos.x, basePos.y, basePos.z, false));
+                    basePos.x, basePos.y, basePos.z, cfg.antiFall));
                 mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(
-                    basePos.x, basePos.y, basePos.z, false));
+                    basePos.x, basePos.y, basePos.z, cfg.antiFall));
             }
+            if (cfg.antiFall) mc.player.fallDistance = 0;
         }
     }
 
@@ -594,6 +598,9 @@ public class TpAuraFeature {
     private void performAttack(Entity target, TpAuraConfig cfg) {
         if (mc.player == null || mc.player.connection == null) return;
         if (target == null) return;
+
+        // ★ 攻击计数器递增，供AttackIndicator检测
+        attackCounter++;
 
         // ★ 假人联动：如果目标是本地假人，直接在客户端模拟伤害，不发包
         //   服务端不认识客户端假人实体，发攻击包会被丢弃
@@ -630,10 +637,15 @@ public class TpAuraFeature {
     //  位置包发送
     // ══════════════════════════════════════════════
 
-    /** 发送位置包（模拟 PositionAndOnGround） */
+    /** 发送位置包（模拟 PositionAndOnGround），默认 onGround=false */
     private void sendMove(Vec3 pos) {
+        sendMove(pos, false);
+    }
+
+    /** 发送位置包，可指定 onGround 状态 */
+    private void sendMove(Vec3 pos, boolean onGround) {
         if (mc.player == null || mc.player.connection == null) return;
-        mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, false));
+        mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(pos.x, pos.y, pos.z, onGround));
     }
 
     /** 计算回传位置并设置玩家位置 */
@@ -648,14 +660,16 @@ public class TpAuraFeature {
                 }
                 Vec3 highStart = startPos.add(0, Math.min(cfg.maxRange, returnReach), 0);
                 Vec3 highTarget = finalPos.add(0, Math.min(cfg.maxRange, returnReach), 0);
-                sendMove(highTarget);
-                sendMove(highStart);
+                sendMove(highTarget, cfg.antiFall);
+                sendMove(highStart, cfg.antiFall);
             }
-            sendMove(startPos);
+            // ★ 防摔：回传时发送 onGround=true 重置服务端下落距离，防止摔伤
+            sendMove(startPos, cfg.antiFall);
+            if (cfg.antiFall) mc.player.fallDistance = 0;
 
             if (cfg.offsetFix) {
                 Vec3 offset = getOffset(startPos);
-                sendMove(offset);
+                sendMove(offset, cfg.antiFall);
                 mc.player.setPos(offset.x, offset.y, offset.z);
             } else {
                 mc.player.setPos(startPos.x, startPos.y, startPos.z);

@@ -2,15 +2,22 @@ package fku.org.example.fku.client.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import fku.org.example.fku.features.teleport.TeleportFeature;
+import fku.org.example.fku.features.tpgoto.TpGotoPlayerFeature;
+import fku.org.example.fku.features.tpgoto.TpGotoPosFeature;
 import fku.org.example.fku.config.MovementConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -18,6 +25,43 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = "fku", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class FkuCommand {
+
+    // ★ 建议提供者：在线玩家昵称 + stop
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_PLAYERS = (ctx, builder) -> {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            for (Player p : mc.level.players()) {
+                if (p != mc.player) {
+                    builder.suggest(p.getName().getString());
+                }
+            }
+        }
+        builder.suggest("stop");
+        return builder.buildFuture();
+    };
+
+    // ★ 建议提供者：当前玩家坐标（取整）
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_COORD_X = (ctx, builder) -> {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            builder.suggest(String.format("%.0f", mc.player.getX()));
+        }
+        return builder.buildFuture();
+    };
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_COORD_Y = (ctx, builder) -> {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            builder.suggest(String.format("%.0f", mc.player.getY()));
+        }
+        return builder.buildFuture();
+    };
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_COORD_Z = (ctx, builder) -> {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            builder.suggest(String.format("%.0f", mc.player.getZ()));
+        }
+        return builder.buildFuture();
+    };
 
     @SubscribeEvent
     public static void registerClientCommands(RegisterClientCommandsEvent event) {
@@ -35,7 +79,7 @@ public class FkuCommand {
                             MovementConfig config = MovementConfig.getInstance();
                             config.yPosOverlayEnabled = !config.yPosOverlayEnabled;
                             MovementConfig.save();
-                            
+
                             String status = config.yPosOverlayEnabled ? "§a开启" : "§c关闭";
                             ctx.getSource().sendSuccess(() -> Component.literal("YPosOverlay 已 " + status), false);
                             return 1;
@@ -46,7 +90,7 @@ public class FkuCommand {
                             HealthTagConfig config = HealthTagConfig.getInstance();
                             config.enabled = !config.enabled;
                             HealthTagConfig.save();
-                            
+
                             String status = config.enabled ? "§a开启" : "§c关闭";
                             ctx.getSource().sendSuccess(() -> Component.literal("HealthTag 已 " + status), false);
                             return 1;
@@ -102,6 +146,56 @@ public class FkuCommand {
                         .executes(ctx -> {
                             // 无参数 = 准星瞬移
                             TeleportFeature.teleportToCrosshair();
+                            return 1;
+                        })
+                )
+                // ★ 传送前往玩家：/fku tpgoto <玩家名>
+                //   Tab 提示在线玩家昵称 + stop
+                .then(Commands.literal("tpgoto")
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .suggests(SUGGEST_PLAYERS)
+                                .executes(ctx -> {
+                                    String name = StringArgumentType.getString(ctx, "player");
+                                    if ("stop".equalsIgnoreCase(name)) {
+                                        TpGotoPlayerFeature.stopWalking("§a已手动停止");
+                                    } else {
+                                        TpGotoPlayerFeature.startTeleport(name);
+                                    }
+                                    return 1;
+                                })
+                        )
+                        .executes(ctx -> {
+                            ctx.getSource().sendSuccess(() -> Component.literal("§e用法: /fku tpgoto <玩家名>"), false);
+                            return 1;
+                        })
+                )
+                // ★ 传送前往坐标：/fku tpgotoPos <x> <y> <z>
+                //   Tab 提示当前玩家坐标（取整）+ stop
+                .then(Commands.literal("tpgotoPos")
+                        .then(Commands.argument("x", DoubleArgumentType.doubleArg())
+                                .suggests(SUGGEST_COORD_X)
+                                .then(Commands.argument("y", DoubleArgumentType.doubleArg())
+                                        .suggests(SUGGEST_COORD_Y)
+                                        .then(Commands.argument("z", DoubleArgumentType.doubleArg())
+                                                .suggests(SUGGEST_COORD_Z)
+                                                .executes(ctx -> {
+                                                    double x = DoubleArgumentType.getDouble(ctx, "x");
+                                                    double y = DoubleArgumentType.getDouble(ctx, "y");
+                                                    double z = DoubleArgumentType.getDouble(ctx, "z");
+                                                    TpGotoPosFeature.startTeleport(x, y, z);
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                        )
+                        .then(Commands.literal("stop")
+                                .executes(ctx -> {
+                                    TpGotoPosFeature.stopWalking("§a已手动停止");
+                                    return 1;
+                                })
+                        )
+                        .executes(ctx -> {
+                            ctx.getSource().sendSuccess(() -> Component.literal("§e用法: /fku tpgotoPos <x> <y> <z>"), false);
                             return 1;
                         })
                 )

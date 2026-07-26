@@ -25,7 +25,7 @@ public class CriticalsComponent extends ToggleComponent {
     protected void toggle() { CriticalsFeature.toggleEnabled(); }
 
     @Override
-    protected void saveConfig() {}
+    protected void saveConfig() { CriticalsConfig.getInstance().saveConfig(); }
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {

@@ -8,6 +8,7 @@ import fku.org.example.fku.features.knockback.KnockbackConfigScreen;
 import fku.org.example.fku.features.quickswitch.QuickSwitchComponent;
 import fku.org.example.fku.features.killaura.KillAuraComponent;
 import fku.org.example.fku.features.tpaura.TpAuraComponent;
+import fku.org.example.fku.features.tacz.TaCZComponent;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import fku.org.example.fku.config.GuiStyleConfig;
 import net.minecraft.client.Minecraft;
@@ -21,7 +22,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public class CombatPanel extends GuiPanel {
 
     public CombatPanel() {
-        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 120, 120);
+        super("战斗", FkuConfig.combatPanelX.get(), FkuConfig.combatPanelY.get(), 120, 145);
     }
 
     @Override
@@ -74,6 +75,9 @@ public class CombatPanel extends GuiPanel {
 
         // ★ 刀刀暴击（左键开关，右键配置；借鉴 Wurst 的 Criticals）
         addComponent(new CriticalsComponent(0, 0, 110, 22));
+
+        // ★ TaCZ 枪械辅助（左键显示用法，右键打开配置；移植自 Lexis TaCZ 系列）
+        addComponent(new TaCZComponent(0, 0, 110, 20));
     }
 
     @Override

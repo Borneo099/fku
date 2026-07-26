@@ -14,9 +14,10 @@ import org.jetbrains.annotations.NotNull;
  * ArrowDmg（32k弓）配置 — 静默保存 + ESP 渲染选项
  */
 public class ArrowDmgConfigScreen extends Screen {
-    private static final int W = 280, H = 220;
+    private static final int W = 280, H = 240;
     private int activeTab = 0;
     private AbstractWidget packetsInput, chargeInput, bypassStrInput, bypassDelInput, rangeInput, expandInput;
+    private EditBox customBowIdsInput;
 
     public ArrowDmgConfigScreen() { super(Component.literal("32k弓配置")); }
 
@@ -58,6 +59,12 @@ public class ArrowDmgConfigScreen extends Screen {
                 expandInput = mkEdit(cx+40, ly+sp*4, 30, String.format("%.1f",cfg.expandHitbox), "expand");
                 addC(cx+85, ly+sp*3, "Y校准", cfg.yCalibrate, v -> cfg.yCalibrate = v);
                 addC(cx+2, ly+sp*5, "自动下蹲", cfg.autoCrouch, v -> cfg.autoCrouch = v);
+                // 自定义模组弓物品ID输入框（参考鬼手秒切配置界面风格）
+                addRenderableWidget(Button.builder(Component.literal("§7自定义弓ID:"), b -> {}).bounds(cx+2, ly+sp*6+2, 80, 14).build());
+                customBowIdsInput = new EditBox(font, cx+2, ly+sp*7+2, W-24, 14, Component.literal(""));
+                customBowIdsInput.setMaxLength(100000);
+                customBowIdsInput.setValue(cfg.customBowIds);
+                addRenderableWidget(customBowIdsInput);
             }
             case 1 -> {
                 addRenderableWidget(newButton(cx+2, ly, "蓄力Tick:"));
@@ -130,6 +137,10 @@ public class ArrowDmgConfigScreen extends Screen {
             if (expandInput instanceof EditBox e && !e.getValue().isEmpty())
                 cfg.expandHitbox = Math.max(0.5, Math.min(5, Double.parseDouble(e.getValue())));
         } catch (Exception ignored) {}
+        // 自定义弓ID（逗号分隔的物品ID列表）
+        if (customBowIdsInput != null) {
+            cfg.customBowIds = customBowIdsInput.getValue().trim();
+        }
         ArrowDmgConfig.save();
     }
 
@@ -180,6 +191,11 @@ public class ArrowDmgConfigScreen extends Screen {
         if (bypassDelInput instanceof EditBox e) e.render(g, mx, my, pt);
         if (rangeInput instanceof EditBox e) e.render(g, mx, my, pt);
         if (expandInput instanceof EditBox e) e.render(g, mx, my, pt);
+        // 自定义弓ID输入框（仅基础Tab显示）
+        if (activeTab == 0 && customBowIdsInput != null) {
+            g.drawString(font, "§7逗号分隔多个物品ID，如: §fmymod:mybow,othermod:otherbow", cx + 5, cy + H - 38, 0x888888);
+            customBowIdsInput.render(g, mx, my, pt);
+        }
         // 底部提示
         if (activeTab == 0)
             g.drawString(font, "§7提示: 高发包数+VClip开启易卡死", cx + 5, cy + H - 12, 0x666666);
@@ -191,6 +207,7 @@ public class ArrowDmgConfigScreen extends Screen {
         if (bypassDelInput instanceof EditBox e) e.mouseClicked(mx, my, btn);
         if (rangeInput instanceof EditBox e) e.mouseClicked(mx, my, btn);
         if (expandInput instanceof EditBox e) e.mouseClicked(mx, my, btn);
+        if (customBowIdsInput != null) customBowIdsInput.mouseClicked(mx, my, btn);
         return super.mouseClicked(mx, my, btn);
     }
     @Override public boolean keyPressed(int k, int s, int m) {
@@ -200,6 +217,7 @@ public class ArrowDmgConfigScreen extends Screen {
         if (bypassDelInput instanceof EditBox e && e.isFocused()) return e.keyPressed(k,s,m);
         if (rangeInput instanceof EditBox e && e.isFocused()) return e.keyPressed(k,s,m);
         if (expandInput instanceof EditBox e && e.isFocused()) return e.keyPressed(k,s,m);
+        if (customBowIdsInput != null && customBowIdsInput.isFocused()) return customBowIdsInput.keyPressed(k,s,m);
         if (k == 256) { saveInputs(); this.minecraft.setScreen(null); return true; }
         return super.keyPressed(k,s,m);
     }

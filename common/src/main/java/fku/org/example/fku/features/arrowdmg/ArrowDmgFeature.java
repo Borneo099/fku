@@ -17,6 +17,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -246,12 +247,22 @@ public class ArrowDmgFeature {
         if(cfg.useOffset) mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-0.01,z,true));
     }
 
-    /** 判断物品是否为弓（支持原版弓 + 模组弓） */
+    /** 判断物品是否为弓（支持原版弓 + 模组弓 + 自定义物品ID） */
     public static boolean isBowItem(net.minecraft.world.item.ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         net.minecraft.world.item.Item item = stack.getItem();
         // 兼容原版弓与模组弓（BowItem / ProjectileWeaponItem 子类）
-        return item instanceof net.minecraft.world.item.ProjectileWeaponItem;
+        if (item instanceof net.minecraft.world.item.ProjectileWeaponItem) return true;
+        // ★ 检查自定义物品ID列表（用于无法自动识别的模组弓）
+        ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
+        if (cfg.customBowIds != null && !cfg.customBowIds.isEmpty()) {
+            String itemId = ForgeRegistries.ITEMS.getKey(item).toString();
+            String[] ids = cfg.customBowIds.split(",");
+            for (String id : ids) {
+                if (id.trim().equalsIgnoreCase(itemId)) return true;
+            }
+        }
+        return false;
     }
 
     private static void sendPos(double x, double y, double z, boolean onGround) {

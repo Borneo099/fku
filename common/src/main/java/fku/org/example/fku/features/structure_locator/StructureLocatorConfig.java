@@ -22,6 +22,8 @@ public class StructureLocatorConfig {
     public int searchRadius = 16;
     /** 标记自动清除距离（格），玩家进入此距离自动清除 #goal 标记 */
     public int markClearDistance = 10;
+    /** 前往模式: "baritone" 或 "tpgoto" */
+    public String gotoMode = "baritone";
 
     private StructureLocatorConfig() {}
 

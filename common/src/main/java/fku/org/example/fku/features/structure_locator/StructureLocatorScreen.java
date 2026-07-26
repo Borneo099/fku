@@ -25,6 +25,7 @@ public class StructureLocatorScreen extends Screen {
     private Button locateBtn, coordBtn, nextBtn, clearBtn;
     private Button r10m, r1m, r1p, r10p;
     private Button cd10m, cd1m, cd1p, cd10p;
+    private Button gotoModeBtn;
 
     private final List<Button> structButtons = new ArrayList<>();
     private boolean showList = false;
@@ -73,14 +74,23 @@ public class StructureLocatorScreen extends Screen {
         cd1p  = mkBtn("+1",  cdX0 + (cdw+cdGap)*2,     cdY, cdw, 16, () -> { cfg.markClearDistance = Math.min(128, cfg.markClearDistance + 1);  cfg.save(); });
         cd10p = mkBtn("+10", cdX0 + (cdw+cdGap)*3,     cdY, cdw, 16, () -> { cfg.markClearDistance = Math.min(128, cfg.markClearDistance + 10); cfg.save(); });
 
+        // ── 前往模式 ──
+        String modeLabel = "baritone".equals(cfg.gotoMode) ? "§bBaritone" : "§aTpGotoPos";
+        gotoModeBtn = mkBtn("前往: " + modeLabel, cx + 10, cy + 196, W - 20, 16, () -> {
+            var c = StructureLocatorConfig.getInstance();
+            c.gotoMode = "baritone".equals(c.gotoMode) ? "tpgoto" : "baritone";
+            c.save();
+            gotoModeBtn.setMessage(Component.literal("前往: " + ("baritone".equals(c.gotoMode) ? "§bBaritone" : "§aTpGotoPos")));
+        });
+
         // ── 操作（3 列布局） ──
         int bw3 = (W - 40) / 3, bh = 16, gap3 = 5;
-        locateBtn = mkBtn("§a定位并前往", cx + 10,                  cy + 192, bw3, bh, () -> StructureLocatorFeature.locate(true));
-        coordBtn  = mkBtn("§7只显示坐标",  cx + 15 + bw3,            cy + 192, bw3, bh, () -> StructureLocatorFeature.locate(false));
-        mkBtn("§b标记结构",              cx + 20 + (bw3+gap3)*2, cy + 192, bw3, bh, () -> StructureLocatorFeature.markLocation());
-        nextBtn   = mkBtn("§e空点→找下一个", cx + 10,                  cy + 212, bw3, bh, () -> StructureLocatorFeature.skipAndNext());
-        clearBtn  = mkBtn("§7清空跳过记录",  cx + 15 + bw3,            cy + 212, bw3, bh, () -> StructureLocatorFeature.clearSkips());
-        mkBtn("§c清除标记",                 cx + 20 + (bw3+gap3)*2, cy + 212, bw3, bh, () -> StructureLocatorFeature.clearMark());
+        locateBtn = mkBtn("§a定位并前往", cx + 10,                  cy + 216, bw3, bh, () -> StructureLocatorFeature.locate(true));
+        coordBtn  = mkBtn("§7只显示坐标",  cx + 15 + bw3,            cy + 216, bw3, bh, () -> StructureLocatorFeature.locate(false));
+        mkBtn("§b标记结构",              cx + 20 + (bw3+gap3)*2, cy + 216, bw3, bh, () -> StructureLocatorFeature.markLocation());
+        nextBtn   = mkBtn("§e空点→找下一个", cx + 10,                  cy + 236, bw3, bh, () -> StructureLocatorFeature.skipAndNext());
+        clearBtn  = mkBtn("§7清空跳过记录",  cx + 15 + bw3,            cy + 236, bw3, bh, () -> StructureLocatorFeature.clearSkips());
+        mkBtn("§c清除标记",                 cx + 20 + (bw3+gap3)*2, cy + 236, bw3, bh, () -> StructureLocatorFeature.clearMark());
 
         rebuildStructList();
     }
@@ -148,6 +158,8 @@ public class StructureLocatorScreen extends Screen {
         }
 
         g.drawString(font, "§7§o①取种子 ②选结构(▶) ③定位", cx + 10, cy + H - 14, 0x888888);
+        // 渲染前往模式按钮
+        if (gotoModeBtn != null) gotoModeBtn.render(g, mx, my, pt);
     }
 
     private String seedStr(StructureLocatorConfig cfg) {
