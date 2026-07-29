@@ -14,6 +14,7 @@ import fku.org.example.fku.features.sprint.SprintHandler;
 import fku.org.example.fku.features.antilag.AntiLagFeature;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import fku.org.example.fku.features.tpaura.TpAuraFeature;
+import fku.org.example.fku.features.standattack.StandAttackFeature;
 import fku.org.example.fku.features.pearlphase.PearlPhaseFeature;
 import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import fku.org.example.fku.features.loot.LootConfig;
@@ -63,6 +64,7 @@ public class Fku
         MinecraftForge.EVENT_BUS.register(KnockbackFeature.class);
         MinecraftForge.EVENT_BUS.register(AntiLagFeature.class);
         MinecraftForge.EVENT_BUS.register(TpAuraFeature.class);
+        MinecraftForge.EVENT_BUS.register(StandAttackFeature.class);
         MinecraftForge.EVENT_BUS.register(LootFeature.class);
         MinecraftForge.EVENT_BUS.register(PearlPhaseFeature.class);
         MinecraftForge.EVENT_BUS.register(FakePlayerFeature.class);
@@ -88,6 +90,7 @@ public class Fku
         KnockbackFeature.init();
         AntiLagFeature.init();
         TpAuraFeature.init();
+        StandAttackFeature.init();
         LootConfig.load();
         KillFXFeature.init();
         PearlPhaseFeature.init();
@@ -110,6 +113,12 @@ public class Fku
             () -> tpa.hotkeyKey, v -> tpa.setHotkeyKey(v),
             () -> tpa.hotkeyName, v -> tpa.setHotkeyName(v),
             () -> fku.org.example.fku.features.tpaura.TpAuraConfig.save()));
+
+        var sa = fku.org.example.fku.features.standattack.StandAttackConfig.getInstance();
+        FeatureHotkeyManager.linkConfig("替身攻击", new FeatureHotkeyManager.LinkedConfig(
+            () -> sa.hotkeyKey, v -> sa.setHotkeyKey(v),
+            () -> sa.hotkeyName, v -> sa.setHotkeyName(v),
+            () -> fku.org.example.fku.features.standattack.StandAttackConfig.save()));
 
         var loot = fku.org.example.fku.features.loot.LootConfig.getInstance();
         FeatureHotkeyManager.linkConfig("一键取物", new FeatureHotkeyManager.LinkedConfig(
@@ -169,6 +178,7 @@ public class Fku
         });
         HotkeySystem.registerFeature("自伤", () -> SelfDamageFeature.applyDamage());
         HotkeySystem.registerFeature("如来神掌", () -> TpAuraFeature.setEnabled(!TpAuraFeature.isEnabled()));
+        HotkeySystem.registerFeature("替身攻击", () -> StandAttackFeature.setEnabled(!StandAttackFeature.isEnabled()));
         HotkeySystem.registerFeature("假人", () -> FakePlayerFeature.toggle());
     }
 }

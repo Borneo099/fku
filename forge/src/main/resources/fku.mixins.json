@@ -19,8 +19,23 @@
     "MixinEntityPush",
     "MixinCheatModDetector",
     "MixinPacketSendModList",
-    "MixinLiquidBlockJesus"
-  ],
+    "MixinLiquidBlockJesus",
+    "MixinTaCZRecoil",
+    "MixinTaCZInaccuracy",
+    "MixinTaCZCameraShake",
+    "TaczClientShootMixin",
+    "TaczBoltBypassMixin",
+    "TaczSniperFullAutoMixin",
+    "TaczNoSpreadMixin",
+    "TaczNoRecoilMixin",
+    "TaczInstantAimMixin",
+    "TaczNoSprintMixin",
+    "CameraMixin",
+    "LocalPlayerFreecamMixin",
+    "KeyboardInputFreecamMixin",
+    "MouseHandlerMixin",
+    "MinecraftFreecamPickMixin"
+],
   "injectors": {
     "defaultRequire": 1
   }

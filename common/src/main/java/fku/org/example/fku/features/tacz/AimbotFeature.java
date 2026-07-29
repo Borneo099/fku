@@ -68,6 +68,12 @@ public class AimbotFeature {
         TaCZConfig cfg = TaCZConfig.getInstance();
         if (!cfg.masterEnabled || !cfg.aimbotEnabled || mc.player == null || mc.level == null) return;
 
+        // ★ 排除弓箭：仅手持 TaCZ 枪械时生效
+        if (!isHoldingTaCZ()) {
+            if (hasTarget) { hasTarget = false; currentTarget = null; }
+            return;
+        }
+
         if (cfg.aimbotOnlyWhenAiming && !isPlayerAiming(mc.player)) {
             if (hasTarget) { hasTarget = false; currentTarget = null; }
             return;

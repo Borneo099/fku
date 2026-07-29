@@ -188,7 +188,9 @@ public class AStarPathFinder {
             Vec3 current = path.get(i);
             if (i < path.size() - 1) {
                 Vec3 next = path.get(i + 1);
-                if (lastPos.distanceTo(next) > maxStep || !collisionHelper.canSweep(lastPos, next)) {
+                // ★ 垂直步长限制：单次垂直传送最多10格，否则服务端会回弹
+                double vertDist = Math.abs(next.y - lastPos.y);
+                if (lastPos.distanceTo(next) > maxStep || vertDist > 10 || !collisionHelper.canSweep(lastPos, next)) {
                     simple.add(current);
                     lastPos = current;
                 }

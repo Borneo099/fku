@@ -4,6 +4,7 @@ import fku.org.example.fku.Fku;
 import fku.org.example.fku.features.attackindicator.AttackIndicatorConfig;
 import fku.org.example.fku.features.attackindicator.AttackIndicatorRenderer;
 import fku.org.example.fku.features.tpaura.TpAuraFeature;
+import fku.org.example.fku.features.standattack.StandAttackFeature;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -40,6 +41,8 @@ public class AttackIndicatorFeature {
     private static final List<SwordWave> activeSwordWaves = new ArrayList<>();
     /** TpAura攻击计数器 — 上次记录的TpAura攻击次数，用于检测新攻击事件 */
     private static int lastTpAuraAttackCount = 0;
+    /** StandAttack攻击计数器 — 上次记录的StandAttack攻击次数，用于检测新攻击事件 */
+    private static int lastStandAttackCount = 0;
 
     /** 初始化攻击指示器 — 加载配置、注册事件 */
     public static void init() {
@@ -119,6 +122,26 @@ public class AttackIndicatorFeature {
             }
         }
 
+        // ★ 2.5 StandAttack攻击计数器检测
+        StandAttackFeature standAttack = StandAttackFeature.getInstance();
+        int currentStAttacks = StandAttackFeature.attackCounter;
+        if (currentStAttacks != lastStandAttackCount) {
+            int diff = Math.min(currentStAttacks - lastStandAttackCount, 5);
+            lastStandAttackCount = currentStAttacks;
+            String mode = cfg.triggerMode;
+            if (("BOTH".equals(mode) || "ON_TPAURA_LOCK".equals(mode)) && standAttack.currentTarget != null) {
+                setTarget(standAttack.currentTarget);
+                // 生成剑波
+                if (cfg.enableSwordWave && mc.player != null) {
+                    for (int i = 0; i < diff; i++) {
+                        Vec3 playerPos = mc.player.position().add(0.0, mc.player.getBbHeight() * 0.5, 0.0);
+                        Vec3 targetPos = standAttack.currentTarget.position().add(0.0, standAttack.currentTarget.getBbHeight() * 0.5, 0.0);
+                        activeSwordWaves.add(new SwordWave(playerPos, targetPos));
+                    }
+                }
+            }
+        }
+
         // 3. BOTH/ON_TPAURA_LOCK模式：持续跟随TpAura目标
         //    每次tick都将目标设为TpAura的当前目标，确保目标更新
         //    ★ 修复：添加 !triggeredByAttack 条件，防止TpAura覆盖普通攻击刚触发的目标
@@ -126,12 +149,19 @@ public class AttackIndicatorFeature {
             setTarget(tpAura.currentTarget);
         }
 
-        // 4. 普通攻击超时清理（仅当无TpAura目标时）
-        //    如果TpAura有目标，则持续跟随TpAura目标，不清理
+        // ★ 3.5 持续跟随StandAttack目标
+        if (!"ON_ATTACK".equals(cfg.triggerMode) && !triggeredByAttack && standAttack != null && standAttack.currentTarget != null) {
+            setTarget(standAttack.currentTarget);
+        }
+
+        // 4. 普通攻击超时清理（仅当无TpAura/StandAttack目标时）
+        //    如果TpAura或StandAttack有目标，则持续跟随，不清理
         if (triggeredByAttack && ticksSinceLastAttack > ATTACK_TIMEOUT_TICKS) {
             boolean hasTpAuraTarget = tpAura != null && tpAura.currentTarget != null
                 && !"ON_ATTACK".equals(cfg.triggerMode);
-            if (!hasTpAuraTarget) {
+            boolean hasStandAttackTarget = standAttack != null && standAttack.currentTarget != null
+                && !"ON_ATTACK".equals(cfg.triggerMode);
+            if (!hasTpAuraTarget && !hasStandAttackTarget) {
                 clearTarget();
                 triggeredByAttack = false;
                 ticksSinceLastAttack = 0;

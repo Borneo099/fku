@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
  * ArrowDmg（32k弓）配置 — 静默保存 + ESP 渲染选项
  */
 public class ArrowDmgConfigScreen extends Screen {
-    private static final int W = 280, H = 240;
+    private static final int W = 280, H = 260;
     private int activeTab = 0;
     private AbstractWidget packetsInput, chargeInput, bypassStrInput, bypassDelInput, rangeInput, expandInput;
     private EditBox customBowIdsInput;
@@ -45,6 +45,22 @@ public class ArrowDmgConfigScreen extends Screen {
         int ly = cy + 24, sp = 20;
         switch (activeTab) {
             case 0 -> {
+                // ★ 模式选择：大狙/机关枪
+                addRenderableWidget(Button.builder(Component.literal("§6大狙模式"), b -> {
+                    ArrowDmgConfig c = ArrowDmgConfig.getInstance();
+                    c.packets = 7000; c.autoShoot = false; ArrowDmgConfig.save();
+                    if (packetsInput instanceof EditBox e) e.setValue("7000");
+                    // 同步连射按钮状态
+                    init();
+                }).bounds(cx+2, ly, 80, 16).build());
+                addRenderableWidget(Button.builder(Component.literal("§b机关枪模式"), b -> {
+                    ArrowDmgConfig c = ArrowDmgConfig.getInstance();
+                    c.packets = 500; c.autoShoot = true; ArrowDmgConfig.save();
+                    if (packetsInput instanceof EditBox e) e.setValue("500");
+                    init();
+                }).bounds(cx+84, ly, 90, 16).build());
+                ly += 18;
+
                 addRenderableWidget(newButton(cx+2, ly, "发包数(建议≤10000):"));
                 packetsInput = mkEdit(cx+115, ly, 50, String.valueOf((int)cfg.packets), "packets");
                 addC(cx+2, ly+sp, "VClip瞬移", cfg.vClip, v -> cfg.vClip = v);

@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  */
 public class TaCZScreen extends Screen {
 
-    private static final int W = 340, H = 280;
+    private static final int W = 340, H = 320;
     private int bx, by;
 
     public TaCZScreen() {
@@ -43,6 +43,10 @@ public class TaCZScreen extends Screen {
         cy += sp;
         addToggle(cx, cy, "瞬镜", () -> cfg.instantAimEnabled, v -> { cfg.instantAimEnabled = v; TaCZConfig.save(); });
         addToggle(cx + 165, cy, "无后座", () -> cfg.noRecoilEnabled, v -> { cfg.noRecoilEnabled = v; TaCZConfig.save(); });
+        cy += sp;
+        // ★ 新增：无扩散/防抖（参考 NoSpread 02 实现）
+        addToggle(cx, cy, "无扩散", () -> cfg.noSpreadEnabled, v -> { cfg.noSpreadEnabled = v; TaCZConfig.save(); });
+        addToggle(cx + 165, cy, "防抖", () -> cfg.antiShakeEnabled, v -> { cfg.antiShakeEnabled = v; TaCZConfig.save(); });
         cy += sp;
         addToggle(cx, cy, "疾跑不断", () -> cfg.noSprintInterruptEnabled, v -> { cfg.noSprintInterruptEnabled = v; TaCZConfig.save(); });
         addToggle(cx + 165, cy, "全狙自动", () -> cfg.sniperFullAutoEnabled, v -> { cfg.sniperFullAutoEnabled = v; TaCZConfig.save(); });
@@ -87,6 +91,7 @@ public class TaCZScreen extends Screen {
         g.drawString(font, "§lTaCZ 枪械辅助 配置", bx + 10, by + 10, 0xFFFFFF);
         // 说明文字
         g.drawString(font, "§7左键开关主开关，右键打开配置，中键绑定热键", bx + 10, by + 24, 0xCCCCCC);
+        
         super.render(g, mx, my, pt);
     }
 

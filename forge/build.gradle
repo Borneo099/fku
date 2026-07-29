@@ -79,12 +79,16 @@ repositories {
     maven { url = 'https://maven.minecraftforge.net/' }
     maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
     maven { url = 'https://mirrors.huaweicloud.com/repository/maven/' }
+    maven { url = 'https://cursemaven.com' }
     mavenCentral()
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // TaCZ (Timeless and Classics Zero) — 编译依赖（用于 Mixin 注入无后座/无扩散/防抖等功能）
+    implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:7745481")
 }
 
 mixin {

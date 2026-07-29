@@ -16,6 +16,9 @@ import fku.org.example.fku.features.killaura.KillAuraFeature;
 import fku.org.example.fku.features.teleport.TeleportFeature;
 import fku.org.example.fku.features.quickcommand.QuickCommandFeature;
 import fku.org.example.fku.features.waterwalk.WaterWalkFeature;
+import fku.org.example.fku.features.tacz.AutoReloadFeature;
+import fku.org.example.fku.features.tacz.FullAutoFeature;
+import fku.org.example.fku.features.tacz.SniperFullAutoFeature;
 import fku.org.example.fku.features.attackindicator.AttackIndicatorFeature;
 import fku.org.example.fku.features.trail.TrailFeature;
 import net.minecraftforge.api.distmarker.Dist;
@@ -62,6 +65,10 @@ public class ClientSetup {
         TeleportFeature.init();
         QuickCommandFeature.init();
         WaterWalkFeature.init();
+        // ★ TaCZ：自动换弹 / 全枪自动 / 全狙自动（连发逻辑由 MixinTaCZGunData 驱动）
+        AutoReloadFeature.init();
+        FullAutoFeature.init();
+        SniperFullAutoFeature.init();
 
         // ★ 客户端设置完成 = 启动完成
         CrashMonitor.endPhase("客户端设置");

@@ -99,14 +99,66 @@ public class TpGotoPosFeature {
         Vec3 start = mc.player.position();
         Vec3 end = new Vec3(targetBlock.getX() + 0.5, targetBlock.getY() + 0.01, targetBlock.getZ() + 0.5);
         TpGotoConfig cfg = TpGotoConfig.getInstance();
+
+        // 根据寻路模式选择路径生成方式
+        if ("vclip".equals(cfg.pathMode)) {
+            return computeVClipPath(start, end, cfg.maxStep);
+        }
+
+        // 默认 A* 智能寻路
         try {
             AStarPathFinder finder = new AStarPathFinder(mc.level);
             finder.setAirPath(cfg.airPath);
             finder.setAttackRange(3.0);
             return finder.findPath(start, end, cfg.maxStep);
         } catch (Exception e) {
-            LOGGER.error("路径计算失败", e);
+            LOGGER.error("A*路径计算失败", e);
             return null;
+        }
+    }
+
+    /**
+     * VClip 路径生成 — 垂直上升 → 水平直达 → 垂直下降
+     * 适合主世界开阔天空场景，比 A* 寻路更快更直接
+     * 该路径由赛博教员实现
+     */
+    private static List<Vec3> computeVClipPath(Vec3 start, Vec3 target, double maxStep) {
+        List<Vec3> path = new ArrayList<>();
+        path.add(start); // 起点
+
+        // 安全高度：高于起点和终点的最高点 + 20，但不超过建筑上限 310
+        double safeY = Math.max(start.y, target.y) + 20;
+        safeY = Math.min(safeY, 310);
+
+        // 阶段1：垂直上升到安全高度
+        Vec3 upPoint = new Vec3(start.x, safeY, start.z);
+        segmentLine(path, start, upPoint, maxStep);
+
+        // 阶段2：在安全高度水平移动到目标上方
+        Vec3 overPoint = new Vec3(target.x, safeY, target.z);
+        segmentLine(path, upPoint, overPoint, maxStep);
+
+        // 阶段3：垂直下降到目标位置
+        segmentLine(path, overPoint, target, maxStep);
+
+        return path;
+    }
+
+    /** 将线段分解为多个小步（每步不超过 maxStep） */
+    private static void segmentLine(List<Vec3> path, Vec3 from, Vec3 to, double maxStep) {
+        double dist = from.distanceTo(to);
+        if (dist <= maxStep) {
+            path.add(to);
+            return;
+        }
+        int steps = (int) Math.ceil(dist / maxStep);
+        for (int i = 1; i <= steps; i++) {
+            double t = (double) i / steps;
+            path.add(new Vec3(
+                from.x + (to.x - from.x) * t,
+                from.y + (to.y - from.y) * t,
+                from.z + (to.z - from.z) * t
+            ));
         }
     }
 

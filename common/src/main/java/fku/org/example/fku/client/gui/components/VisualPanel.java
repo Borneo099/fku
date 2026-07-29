@@ -7,6 +7,7 @@ import fku.org.example.fku.features.killicon.KillIconComponent;
 import fku.org.example.fku.features.attackindicator.AttackIndicatorComponent;
 import fku.org.example.fku.features.trail.TrailComponent;
 import fku.org.example.fku.features.playeresp.PlayerEspComponent;
+import fku.org.example.fku.features.freecam.FreecamComponent;
 
 public class VisualPanel extends GuiPanel {
 
@@ -25,6 +26,8 @@ public class VisualPanel extends GuiPanel {
         addComponent(new TrailComponent(0, 0, 110, 20));
         // ★ 玩家ESP功能开关（移植自 Lexis PlayerEspHack）
         addComponent(new PlayerEspComponent(0, 0, 110, 20));
+        // ★ 灵魂出窍（自由相机）功能开关
+        addComponent(new FreecamComponent(0, 0, 110, 20));
     }
 
     @Override

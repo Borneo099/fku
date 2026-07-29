@@ -29,6 +29,10 @@ public class TaCZConfig {
     public boolean sniperFullAutoEnabled = false;
     public boolean fullAutoEnabled = false;
 
+    // ★ 以下三个功能由赛博教员参考 NoSpread 02 版本实现
+    public boolean noSpreadEnabled = false;   // 无扩散
+    public boolean antiShakeEnabled = false;  // 防抖
+
     // Aimbot 参数
     public int aimbotCircleSize = 100;
     public float aimbotRotationSpeed = 30.0f;
@@ -48,7 +52,7 @@ public class TaCZConfig {
     public float recoilReduction = 1.0f;
 
     // EndlessAimbot 参数
-    public float endlessRotationSpeed = 90f;
+    public float endlessRotationSpeed = 360f;
     public boolean endlessOnlyWhenAiming = true;
     public boolean endlessAllowThroughWalls = false;
     public String endlessBodyPart = "身体";

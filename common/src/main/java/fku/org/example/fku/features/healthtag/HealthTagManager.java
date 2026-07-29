@@ -121,6 +121,8 @@ public class HealthTagManager {
     public static boolean shouldDisplay() {
         if (!HealthTagConfig.getInstance().enabled) return false;
         if (isEditing()) return true;
+        // ★ 替身攻击激活时隐藏HealthTag（玩家已TP到目标附近，物理位置不匹配）
+        if (fku.org.example.fku.features.standattack.StandAttackFeature.getInstance().isActiveState()) return false;
         return targetEntity != null && getAlpha() > 0;
     }
 

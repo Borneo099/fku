@@ -6,7 +6,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
@@ -38,7 +37,7 @@ public class EndlessAimbotFeature {
     private static LivingEntity currentTarget = null;
     private static boolean hasTarget = false;
     private static long lastShootTime = 0L;
-    private static final long SHOOT_COOLDOWN = 120L;
+    private static final long SHOOT_COOLDOWN = 40L; // 40ms = 25发/秒
 
     // 反射调用 shoot
     private static Class<?> clientPlayerGunOperatorClass;
@@ -77,9 +76,9 @@ public class EndlessAimbotFeature {
         Fku.LOGGER.info("[EndlessAimbotFeature] 无尽自瞄已初始化");
     }
 
-    public static boolean isEnabled() { 
+    public static boolean isEnabled() {
         TaCZConfig cfg = TaCZConfig.getInstance();
-        return cfg.masterEnabled && cfg.endlessAimbotEnabled; 
+        return cfg.masterEnabled && cfg.endlessAimbotEnabled;
     }
 
     @SubscribeEvent
@@ -119,25 +118,34 @@ public class EndlessAimbotFeature {
             isLooking = true;
         }
 
-        // 平滑旋转
+        // ★ 动态旋转速度 — 距离目标越远旋转越快，接近时减速
         float yawDiff = normalizeAngle(targetYaw - currentYaw);
         float pitchDiff = targetPitch - currentPitch;
-        float maxRot = cfg.endlessRotationSpeed * 0.05f;
-        currentYaw = normalizeAngle(currentYaw + Mth.clamp(yawDiff, -maxRot, maxRot));
-        currentPitch = Mth.clamp(currentPitch + Mth.clamp(pitchDiff, -maxRot, maxRot), -90, 90);
+        float absDiff = Math.max(Math.abs(yawDiff), Math.abs(pitchDiff));
+        // 基础速度 + 距离修正（远距离更快，近距离更精确）
+        float speedMultiplier = 0.12f + (Math.min(absDiff, 60f) / 60f) * 0.08f;
+        float maxRot = cfg.endlessRotationSpeed * speedMultiplier;
+        // 当接近目标时直接吸附（降低分段感）
+        if (absDiff < 1.0f) {
+            currentYaw = targetYaw;
+            currentPitch = targetPitch;
+        } else {
+            currentYaw = normalizeAngle(currentYaw + Mth.clamp(yawDiff, -maxRot, maxRot));
+            currentPitch = Mth.clamp(currentPitch + Mth.clamp(pitchDiff, -maxRot, maxRot), -90, 90);
+        }
         player.setYRot(currentYaw);
         player.setXRot(currentPitch);
         mc.getConnection().send(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Rot(currentYaw, currentPitch, player.onGround()));
 
-        // 开火（反射调用，TaCZ 未安装时静默跳过）
-        if (!shootReflectionFailed && Math.abs(yawDiff) < 3.5f && Math.abs(pitchDiff) < 3.5f) {
+        // ★ 自动开火 — 当目标已锁定且距离足够近时持续射击
+        if (!shootReflectionFailed) {
             long now = System.currentTimeMillis();
             if (now - lastShootTime >= SHOOT_COOLDOWN) {
                 try {
                     Object operator = fromLocalPlayerMethod.invoke(null, player);
                     if (operator != null) {
-                        Object result = shootMethod.invoke(operator);
-                        if (result == shootResultSuccess) lastShootTime = now;
+                        shootMethod.invoke(operator);
+                        lastShootTime = now;
                     }
                 } catch (Exception ignored) {}
             }

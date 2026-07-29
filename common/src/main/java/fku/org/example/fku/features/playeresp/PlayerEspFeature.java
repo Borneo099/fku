@@ -75,7 +75,7 @@ public class PlayerEspFeature {
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
 
-        // ── 单次渲染所有内容（方框+连线+六面），避免 Tesselator 状态冲突 ──
+        // ── 统一渲染：六面 + 方框 + 连线，共享同一个 translate(-cam) 矩阵 ──
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         Tesselator t = Tesselator.getInstance();
         BufferBuilder buf = t.getBuilder();
@@ -83,7 +83,17 @@ public class PlayerEspFeature {
         poseStack.translate(-cam.x, -cam.y, -cam.z);
         Matrix4f mat = poseStack.last().pose();
 
-        for (Player p : players) {
+        // 先收集所有需要渲染的连线的终点坐标
+        Vec3[] lineEnds = null;
+        if (showLines) {
+            lineEnds = new Vec3[players.size()];
+            for (int i = 0; i < players.size(); i++) {
+                lineEnds[i] = players.get(i).getBoundingBox().inflate(0.1).getCenter();
+            }
+        }
+
+        for (int pi = 0; pi < players.size(); pi++) {
+            Player p = players.get(pi);
             AABB bb = p.getBoundingBox().inflate(0.1);
             double minX = bb.minX, minY = bb.minY, minZ = bb.minZ;
             double maxX = bb.maxX, maxY = bb.maxY, maxZ = bb.maxZ;
@@ -96,32 +106,26 @@ public class PlayerEspFeature {
                 float sb = (sidesArgb & 0xFF) / 255f;
                 float sa = ((sidesArgb >> 24) & 0xFF) / 255f;
                 buf.begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
-                // 底面
                 buf.vertex(mat, (float)minX, (float)minY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
-                // 顶面
                 buf.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
-                // 前面
                 buf.vertex(mat, (float)minX, (float)minY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(sr, sg, sb, sa).endVertex();
-                // 后面
                 buf.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
-                // 左面
                 buf.vertex(mat, (float)minX, (float)minY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
-                // 右面
                 buf.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(sr, sg, sb, sa).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)maxZ).color(sr, sg, sb, sa).endVertex();
@@ -131,13 +135,13 @@ public class PlayerEspFeature {
 
             // 方框边框 — 12条线
             if (showBox) {
+                RenderSystem.lineWidth(2.0f);
                 int boxArgb = cfg.boxColor;
                 float br = ((boxArgb >> 16) & 0xFF) / 255f;
                 float bg = ((boxArgb >> 8) & 0xFF) / 255f;
                 float bb2 = (boxArgb & 0xFF) / 255f;
                 float ba = ((boxArgb >> 24) & 0xFF) / 255f;
-                buf.begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR);
-                // 底面
+                buf.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
                 buf.vertex(mat, (float)minX, (float)minY, (float)minZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(br, bg, bb2, ba).endVertex();
@@ -146,7 +150,6 @@ public class PlayerEspFeature {
                 buf.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)minY, (float)minZ).color(br, bg, bb2, ba).endVertex();
-                // 顶面
                 buf.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)minZ).color(br, bg, bb2, ba).endVertex();
@@ -155,7 +158,6 @@ public class PlayerEspFeature {
                 buf.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(br, bg, bb2, ba).endVertex();
-                // 竖线
                 buf.vertex(mat, (float)minX, (float)minY, (float)minZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)minZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)maxX, (float)minY, (float)minZ).color(br, bg, bb2, ba).endVertex();
@@ -164,24 +166,37 @@ public class PlayerEspFeature {
                 buf.vertex(mat, (float)maxX, (float)maxY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)minY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
                 buf.vertex(mat, (float)minX, (float)maxY, (float)maxZ).color(br, bg, bb2, ba).endVertex();
-                t.end();
-            }
-
-            // 连线（准星到玩家中心）
-            if (showLines) {
-                int linesArgb = cfg.linesColor;
-                float lr = ((linesArgb >> 16) & 0xFF) / 255f;
-                float lg = ((linesArgb >> 8) & 0xFF) / 255f;
-                float lb = (linesArgb & 0xFF) / 255f;
-                float la = ((linesArgb >> 24) & 0xFF) / 255f;
-                Vec3 center = p.getBoundingBox().getCenter();
-                buf.begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR);
-                // 从相机到玩家中心（相机在 translate(-cam) 后位于原点）
-                buf.vertex(mat, 0.0f, 0.0f, 0.0f).color(lr, lg, lb, la).endVertex();
-                buf.vertex(mat, (float)center.x, (float)center.y, (float)center.z).color(lr, lg, lb, la).endVertex();
                 t.end();
             }
         }
+
+        // ── 连线渲染 — 参考 Wurst 的 drawTracers 方法，起点使用相机前方 10 格而非 (0,0,0)
+        //   避免 Minecraft 线着色器在穿过近裁剪面时的 Bug
+        //   参考: https://github.com/Wurst-Imperium/Wurst7 (RenderUtils.drawTracers)
+        if (showLines) {
+            int linesArgb = cfg.linesColor;
+            float lr = ((linesArgb >> 16) & 0xFF) / 255f;
+            float lg = ((linesArgb >> 8) & 0xFF) / 255f;
+            float lb = (linesArgb & 0xFF) / 255f;
+            float la = ((linesArgb >> 24) & 0xFF) / 255f;
+            // 获取相机朝向向量，计算起点 = 相机位置 + 朝向 * 10
+            // 使用 Camera.getLookVector() 返回的 Vector3f 转换为 Vec3
+            org.joml.Vector3f lookVec3f = event.getCamera().getLookVector();
+            Vec3 lookVec = new Vec3(lookVec3f.x, lookVec3f.y, lookVec3f.z);
+            Vec3 tracerOrigin = cam.add(lookVec.scale(10));
+            RenderSystem.lineWidth(2.0f);
+            buf.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+            for (int i = 0; i < players.size(); i++) {
+                Vec3 center = lineEnds[i];
+                // 起点：相机前方 10 格 → 经 mat 变换后为 (lookVec * 10)
+                buf.vertex(mat, (float)tracerOrigin.x, (float)tracerOrigin.y, (float)tracerOrigin.z).color(lr, lg, lb, la).endVertex();
+                // 终点：玩家中心世界坐标 → 经 mat 变换后为 (center - cam)
+                buf.vertex(mat, (float)center.x, (float)center.y, (float)center.z).color(lr, lg, lb, la).endVertex();
+            }
+            t.end();
+            RenderSystem.lineWidth(1.0f);
+        }
+
         poseStack.popPose();
 
         RenderSystem.depthMask(true);

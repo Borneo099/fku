@@ -16,6 +16,8 @@ public class TpGotoConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static TpGotoConfig instance;
 
+    /** 寻路模式: "astar" = A*智能寻路, "vclip" = 垂直上升+水平直达+垂直下降 */
+    public String pathMode = "vclip";
     /** TP时自动启用飞行 */
     public boolean tpFlightEnabled = true;
     /** 等待区块加载后再发送下一包 */

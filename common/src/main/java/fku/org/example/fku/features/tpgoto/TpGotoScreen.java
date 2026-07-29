@@ -32,6 +32,10 @@ public class TpGotoScreen extends Screen {
         TpGotoConfig cfg = TpGotoConfig.getInstance();
         int cx = guiLeft + 15, cy = guiTop + 30, sp = 24;
 
+        // 寻路模式选择
+        addPathModeButton(cx, cy, cfg);
+        cy += sp;
+
         // 开关
         addToggle(cx, cy, "§bTP时启用飞行", () -> cfg.tpFlightEnabled, v -> cfg.setTpFlightEnabled(v));
         addToggle(cx + 150, cy, "等待区块加载", () -> cfg.waitForChunk, v -> cfg.setWaitForChunk(v));
@@ -89,6 +93,27 @@ public class TpGotoScreen extends Screen {
             return true;
         }
         return super.keyPressed(key, scan, mod);
+    }
+
+    // ──────── 寻路模式按钮 ────────
+
+    private void addPathModeButton(int x, int y, TpGotoConfig cfg) {
+        addRenderableWidget(new net.minecraft.client.gui.components.Button(
+                x, y, 170, 18, Component.literal(""),
+                btn -> {
+                    cfg.pathMode = "vclip".equals(cfg.pathMode) ? "astar" : "vclip";
+                    TpGotoConfig.save();
+                },
+                btn -> Component.literal("")) {
+            @Override
+            public void renderWidget(GuiGraphics g, int mx, int my, float pt) {
+                boolean isVClip = "vclip".equals(cfg.pathMode);
+                int color = isVClip ? 0xFF2196F3 : 0xFFFF9800;
+                GuiRenderHelper.drawRoundedRect(g, getX(), getY(), width, height, color, 3);
+                String txt = "§f寻路模式: " + (isVClip ? "§bVClip直飞" : "§eA*寻路");
+                g.drawString(Minecraft.getInstance().font, txt, getX() + 5, getY() + 5, 0xFFFFFF);
+            }
+        });
     }
 
     // ──────── 辅助方法 ────────
