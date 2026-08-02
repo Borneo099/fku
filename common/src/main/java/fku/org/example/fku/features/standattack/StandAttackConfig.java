@@ -154,6 +154,8 @@ public class StandAttackConfig {
             instance = new StandAttackConfig();
             save();
         }
+        // ★ 强制关闭：每次启动都默认关闭，避免误开启
+        if (instance != null) instance.enabled = false;
     }
 
     public static void save() {
@@ -195,7 +197,8 @@ public class StandAttackConfig {
     }
 
     // ════════ Setter ════════
-    public void setEnabled(boolean v) { this.enabled = v; save(); }
+    /** 开关：不静默保存，默认关闭，避免进游戏误开启 */
+    public void setEnabled(boolean v) { this.enabled = v; }
     public void setAttackMode(String v) { this.attackMode = ("Smart".equals(v) || "Fast".equals(v) || "Universal".equals(v)) ? v : "Smart"; save(); }
     public void setCooldownThreshold(double v) { this.cooldownThreshold = Math.max(0.1, Math.min(1.0, v)); save(); }
     public void setAttackDelay(int v) { this.attackDelay = Math.max(0, Math.min(20, v)); save(); }

@@ -41,8 +41,10 @@ public class HealthTagManager {
                 return;
             }
         }
-        Vec3 eyePos = mc.player.getEyePosition();
-        Vec3 lookVec = mc.player.getLookAngle();
+        // ★ 以相机准星为准（含灵魂出窍模式），不依赖玩家本体位置/视角
+        var cam = mc.gameRenderer.getMainCamera();
+        Vec3 eyePos = cam.getPosition();
+        Vec3 lookVec = new Vec3(cam.getLookVector());
         
         List<Entity> entities = mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(128.0));
         LivingEntity bestCandidate = null;
@@ -111,6 +113,13 @@ public class HealthTagManager {
     public static float getAlpha() {
         if (isEditing()) return 0.8f;
         if (targetEntity == null) return 0f;
+
+        // ★ 替身攻击选中模式：选中目标时保持HealthTag常亮，不渐隐
+        var sa = fku.org.example.fku.features.standattack.StandAttackFeature.getInstance();
+        if (sa.selectedEntity != null && sa.selectedEntity == targetEntity && sa.selectedEntity.isAlive()) {
+            return 0.5f;
+        }
+
         long timeSinceLastAttack = System.currentTimeMillis() - lastAttackTime;
         if (timeSinceLastAttack > DISPLAY_DURATION) return 0f;
         if (timeSinceLastAttack < 1000) return 0.5f;

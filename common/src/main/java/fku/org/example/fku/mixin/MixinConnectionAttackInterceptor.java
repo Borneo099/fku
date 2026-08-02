@@ -3,6 +3,7 @@ package fku.org.example.fku.mixin; /* water */
 import fku.org.example.fku.features.criticals.CriticalsFeature;
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
+import fku.org.example.fku.util.PacketAttackDetector;
 import io.netty.channel.Channel;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -59,10 +60,15 @@ public abstract class MixinConnectionAttackInterceptor {
         if (fku$sendingPending) return;
         if (!(packet instanceof ServerboundInteractPacket)) return;
 
+        // ★ 区分攻击与右键交互：仅攻击类型才触发秒切和暴击，右键使用物品不触发
+        // ServerboundInteractPacket.Action 是包内可见类型，无法通过 @Accessor 直接访问，
+        // 故通过 PacketAttackDetector 的 dispatch(Handler) 回调检测动作类型。
+        boolean isAttack = PacketAttackDetector.isAttack((ServerboundInteractPacket) packet);
+
         boolean hasRotation = FakeRotationManager.hasPending();
-        // ★ 状态机：仅 IDLE 状态下才走秒切
-        boolean hasQuickSwitch = QuickSwitchFeature.isIdle() && QuickSwitchFeature.isEnabled();
-        boolean hasCriticals = CriticalsFeature.isEnabled();
+        // ★ 状态机：仅 IDLE 状态下且为攻击包时才走秒切
+        boolean hasQuickSwitch = isAttack && QuickSwitchFeature.isIdle() && QuickSwitchFeature.isEnabled();
+        boolean hasCriticals = isAttack && CriticalsFeature.isEnabled();
 
         if (!hasRotation && !hasQuickSwitch && !hasCriticals) return;
 

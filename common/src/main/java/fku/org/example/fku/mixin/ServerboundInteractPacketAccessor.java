@@ -5,13 +5,14 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /**
- * ServerboundInteractPacketAccessor —— 暴露 ServerboundInteractPacket 的私有 entityId 字段
+ * ServerboundInteractPacketAccessor —— 暴露 ServerboundInteractPacket 的私有字段
  *
  * ★ 用途：
- *   在 QuickSwitchFeature 中拦截攻击包时，需要获取目标实体的 entityId
- *   以从世界实体列表中检索实体对象，进而创建新的攻击包。
+ *   - entityId：在 QuickSwitchFeature 中拦截攻击包时获取目标实体
  *
- *   该字段为 package-private，不通过 Accessor 无法在 features 包中访问。
+ * ★ 注意：
+ *   不提供 getAction() 访问器，因为 Action 接口是包内可见类型，
+ *   无法从外部引用。如需检测攻击类型，使用 packet.dispatch(Handler) 方式。
  *
  * ★ 该方法是赛博教员实现
  */

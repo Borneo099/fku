@@ -234,7 +234,7 @@ public class FkuCommand {
 
                             if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
                                 net.minecraft.core.BlockPos pos = ((net.minecraft.world.phys.BlockHitResult) hit).getBlockPos();
-                                Vec3 targetPos = new Vec3(pos.getX(), pos.getY(), pos.getZ());
+                                Vec3 targetPos = new Vec3(pos.getX(), pos.getY() + 1, pos.getZ());
                                 TpGotoPosFeature.startTeleport(targetPos.x, targetPos.y, targetPos.z);
                             } else {
                                 ctx.getSource().sendSuccess(() -> Component.literal("§c未检测到准星瞄准的方块（请对准方块再试）"), false);

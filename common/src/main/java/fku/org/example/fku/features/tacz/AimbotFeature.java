@@ -68,8 +68,8 @@ public class AimbotFeature {
         TaCZConfig cfg = TaCZConfig.getInstance();
         if (!cfg.masterEnabled || !cfg.aimbotEnabled || mc.player == null || mc.level == null) return;
 
-        // ★ 排除弓箭：仅手持 TaCZ 枪械时生效
-        if (!isHoldingTaCZ()) {
+        // ★ 排除弓箭：仅手持枪械（TaCZ / SuperbWarfare）时生效
+        if (!isHoldingGunWeapon()) {
             if (hasTarget) { hasTarget = false; currentTarget = null; }
             return;
         }
@@ -122,8 +122,8 @@ public class AimbotFeature {
     public static void onRenderGui(RenderGuiEvent event) {
         TaCZConfig cfg = TaCZConfig.getInstance();
         if (!cfg.masterEnabled || !cfg.aimbotEnabled || mc.player == null) return;
-        // 仅手持 TaCZ 枪械时显示自瞄圈
-        if (!isHoldingTaCZ()) return;
+        // 仅手持枪械（TaCZ / SuperbWarfare）时显示自瞄圈
+        if (!isHoldingGunWeapon()) return;
         // 【修复】使用 GUI 缩放坐标而非屏幕物理像素
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();
@@ -286,6 +286,12 @@ public class AimbotFeature {
     }
 
     private static boolean isPlayerAiming(LocalPlayer player) {
+        // SuperbWarfare 枪械：检测右键是否按下（SBW 右键开镜，但会取消 vanilla 事件，所以 isUsingItem 不可靠）
+        if (isHoldingSBW()) {
+            long window = mc.getWindow().getWindow();
+            return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_2) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        }
+
         if (!taczReflectionFailed) {
             try {
                 if (taczDataField == null) {
@@ -308,14 +314,30 @@ public class AimbotFeature {
         return player.isUsingItem();
     }
 
-    /** 检测玩家是否手持 TaCZ 枪械 */
-    private static boolean isHoldingTaCZ() {
+    /** 检测玩家是否手持 SuperbWarfare 枪械 */
+    private static boolean isHoldingSBW() {
         if (mc.player == null) return false;
+        try {
+            Class<?> gunItemClass = Class.forName("com.atsuishio.superbwarfare.item.gun.GunItem");
+            return gunItemClass.isInstance(mc.player.getMainHandItem().getItem());
+        } catch (Exception e) { return false; }
+    }
+
+    /** 检测玩家是否手持 TaCZ 或 SuperbWarfare 枪械 */
+    private static boolean isHoldingGunWeapon() {
+        if (mc.player == null) return false;
+        // TaCZ 检测
         try {
             Class<?> iGunClass = Class.forName("com.tacz.guns.api.item.IGun");
             java.lang.reflect.Method getIGunOrNull = iGunClass.getMethod("getIGunOrNull", net.minecraft.world.item.ItemStack.class);
             Object gun = getIGunOrNull.invoke(null, mc.player.getMainHandItem());
-            return gun != null;
-        } catch (Exception e) { return false; }
+            if (gun != null) return true;
+        } catch (Exception ignored) {}
+        // SuperbWarfare 检测
+        try {
+            Class<?> gunItemClass = Class.forName("com.atsuishio.superbwarfare.item.gun.GunItem");
+            if (gunItemClass.isInstance(mc.player.getMainHandItem().getItem())) return true;
+        } catch (Exception ignored) {}
+        return false;
     }
 }
