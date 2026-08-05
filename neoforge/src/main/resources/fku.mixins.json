@@ -15,7 +15,8 @@
     "MixinClientPacketListener",
     "ServerboundInteractPacketAccessor",
     "MixinEntityPush",
-    "MixinLiquidBlockJesus"
+    "MixinLiquidBlockJesus",
+    "MixinCheatutilsChunk"
   ],
   "injectors": {
     "defaultRequire": 1

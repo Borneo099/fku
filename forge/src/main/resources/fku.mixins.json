@@ -34,8 +34,11 @@
     "LocalPlayerFreecamMixin",
     "KeyboardInputFreecamMixin",
     "MouseHandlerMixin",
-    "MinecraftFreecamPickMixin"
-],
+    "MinecraftFreecamPickMixin",
+    "MixinCheatutilsChunk",
+    "MixinPacketSendHwid",
+    "MixinOpmodDosLoop"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

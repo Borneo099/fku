@@ -34,6 +34,8 @@ public class FkuConfig {
     public static ForgeConfigSpec.IntValue combatPanelX;
     public static ForgeConfigSpec.IntValue combatPanelY;
     public static ForgeConfigSpec.BooleanValue disableConnectionTimeout;
+    // 关闭 CheatUtils 的忽略服务器视距，修复远处地图不加载的问题
+    public static ForgeConfigSpec.BooleanValue disableCheatutilsChunkBypass;
 
     static {
         BUILDER.push("GUI Settings");
@@ -82,6 +84,9 @@ public class FkuConfig {
         disableConnectionTimeout = BUILDER
                 .comment("禁用连接超时检测，开启后断开连接时不会弹出超时提示")
                 .define("disable_connection_timeout", false);
+        disableCheatutilsChunkBypass = BUILDER
+                .comment("修复 CheatUtils 的 IgnoreServerViewDistance：开启后强制让 CheatUtils 不拦截服务端忘记区块包，远处地图正常加载")
+                .define("disable_cheatutils_chunk_bypass", false);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

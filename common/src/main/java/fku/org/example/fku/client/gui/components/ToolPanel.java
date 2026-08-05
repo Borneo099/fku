@@ -27,6 +27,7 @@ public class ToolPanel extends GuiPanel {
         addComponent(new DisableTimeoutComponent(0, 0, 110, 25));
         addComponent(new FastJoinComponent(0, 0, 110, 25));
         addComponent(new AntiLagComponent(0, 0, 110, 25));
+        addComponent(new DisableCheatutilsChunkComponent(0, 0, 110, 25));
         addComponent(new PearlPhaseComponent(0, 0, 110, 25));
         addComponent(new FakePlayerComponent(0, 0, 110, 25));
         addComponent(new WorldEditComponent(0, 0, 110, 25));

