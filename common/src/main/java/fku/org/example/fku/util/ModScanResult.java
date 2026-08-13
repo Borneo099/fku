@@ -17,4 +17,6 @@ public class ModScanResult {
     public final Map<String, Integer> mainMods = new HashMap<>();
     /** jarjar 内嵌 mod → 出现次数 */
     public final Map<String, Integer> jarjarMods = new HashMap<>();
+    /** 该目录是否检测到携带 MixinExtras（任意形式：jar-in-jar / relocate / META-INF services） */
+    public boolean hasMixinExtras = false;
 }

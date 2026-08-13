@@ -39,6 +39,26 @@ public abstract class MixinPacketSendModList {
     /** 伪装用的候选 modId（轮询使用） */
     private static final String[] FAKE_MOD_IDS = {"netease_official", "opmod"};
 
+    /**
+     * 依赖型 / jarjar 内嵌子 mod 白名单。
+     *
+     * 这些 modId 通常由父 mod 通过 META-INF/jarjar 内嵌打包（例如 Puzzles Lib 内嵌
+     * puzzlesaccessapi，MixinExtras 被 relocate 进各种 mod），本身是父 mod 的依赖，
+     * 不是玩家独立安装的 mod，且在服主/玩家两侧暴露不一致时会被 OpMod 误判为
+     * "多出模组 / 缺少模组"。
+     *
+     * 伪装逻辑遇到这些 id 时强制替换（不受目录 count 比较限制），使玩家上报列表里
+     * 绝不携带它们，OpMod 的差集计算便不会把它们算作差异。服主侧若也使用本伪装逻辑，
+     * 同样会替换掉这些 id，两侧对称 → 不再播报。
+     */
+    private static final Set<String> EMBEDDED_DEPENDENCY_MODIDS = new HashSet<>(java.util.Arrays.asList(
+            "puzzlesaccessapi",
+            "mixinextras",
+            "mixinextrasforge",
+            "kotlinforforge",
+            "xaerolib"
+    ));
+
     /** 默认目录1（回退值） */
     private static final String DEFAULT_DIR_1 = "D:\\MCLDownload\\cache\\game\\V_1_20\\mods";
     /** 默认目录2（回退值） */
@@ -84,7 +104,15 @@ public abstract class MixinPacketSendModList {
                 int count2 = result2.mainMods.getOrDefault(id, 0) + result2.jarjarMods.getOrDefault(id, 0);
 
                 // 目录2 有该 mod 且目录2 的个数 ≤ 目录1 的个数 → 伪装
-                boolean shouldSpoof = count2 > 0 && count2 <= count1;
+                // 内嵌依赖型 modId（jarjar 子 mod 等）强制伪装，避免被 OpMod 误判为差异
+                //   1) 出现在 EMBEDDED_DEPENDENCY_MODIDS 白名单
+                //   2) 出现在任一目录的 jarjarMods（即由某父 mod 通过 META-INF/jarjar 内嵌打包）——
+                //      自动覆盖 kotlinforforge / xaerolib / puzzlesaccessapi 等所有内嵌子 mod，
+                //      不再依赖 count 比较的边界，彻底规避"内嵌 mod 时好时坏漏伪装"的问题
+                boolean isEmbedded = result1.jarjarMods.containsKey(id) || result2.jarjarMods.containsKey(id);
+                boolean shouldSpoof = isEmbedded
+                        || EMBEDDED_DEPENDENCY_MODIDS.contains(id)
+                        || (count2 > 0 && count2 <= count1);
 
                 if (shouldSpoof) {
                     result.add(FAKE_MOD_IDS[fakeIdx % FAKE_MOD_IDS.length]);
@@ -149,16 +177,7 @@ public abstract class MixinPacketSendModList {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.jar")) {
             for (Path jarPath : stream) {
                 try {
-                    // 提取所有主 modId（mods.toml 中可能有多个 [[mods]] 条目）
-                    Set<String> mainModIds = extractAllModIdsFromJar(jarPath);
-                    for (String mid : mainModIds) {
-                        result.mainMods.merge(mid, 1, Integer::sum);
-                    }
-                    // 提取 jarjar 内嵌 modId（单独存储，不参与重复计数）
-                    Map<String, Integer> jarjarMods = extractJarjarModIds(jarPath);
-                    for (Map.Entry<String, Integer> e : jarjarMods.entrySet()) {
-                        result.jarjarMods.merge(e.getKey(), e.getValue(), Integer::sum);
-                    }
+                    scanSingleJar(jarPath, result, 0);
                 } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
@@ -170,12 +189,109 @@ public abstract class MixinPacketSendModList {
     }
 
     /**
-     * 从 .jar 文件中读取 META-INF/mods.toml，提取所有 [[mods]] 下的 modId
+     * 扫描单个 jar：提取主 modId、递归提取内层 jarjar/jars 内嵌 modId，
+     * 并累加该 jar（含其所有内层 jar）是否携带 MixinExtras 的标志。
+     *
+     * @param depth 递归深度，防止极端嵌套导致栈溢出
+     */
+    private static void scanSingleJar(Path jarPath, ModScanResult result, int depth) {
+        try (JarFile jar = new JarFile(jarPath.toFile())) {
+            // 1) 主 modId（顶层 mods.toml，可能多个 [[mods]]）
+            //    depth>0 表示这是某个父 mod 通过 META-INF/jarjar 内嵌的子 jar，
+            //    其 modId 视为"内嵌依赖"，同时记入 mainMods（保持既有计数对比行为）
+            //    与 jarjarMods（供 isEmbedded 强制伪装判定使用）
+            for (String mid : extractAllModIdsFromJar(jar)) {
+                result.mainMods.merge(mid, 1, Integer::sum);
+                if (depth > 0) {
+                    result.jarjarMods.merge(mid, 1, Integer::sum);
+                }
+            }
+            // 2) 本 jar 是否携带 MixinExtras（顶层 namelist 即可判断，覆盖 relocate 包路径 / services 标识）
+            if (jarCarriesMixinExtras(jar)) {
+                result.hasMixinExtras = true;
+            }
+            // 3) 递归扫描内层 jar（META-INF/jarjar/* 与 META-INF/jars/*），解开后再扫其中的 jarjar
+            List<JarEntry> innerJars = new ArrayList<>();
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry e = entries.nextElement();
+                String name = e.getName();
+                if (!e.isDirectory()
+                        && (name.startsWith("META-INF/jarjar/") || name.startsWith("META-INF/jars/"))
+                        && name.endsWith(".jar")) {
+                    innerJars.add(e);
+                }
+            }
+            for (JarEntry innerEntry : innerJars) {
+                try (InputStream is = jar.getInputStream(innerEntry);
+                     java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(is)) {
+                    // 把内层 jar 内容抽到一个临时文件再递归扫描，避免 ZipInputStream 不可随机访问
+                    Path tmp = Files.createTempFile("fku_jarjar_", ".jar");
+                    try {
+                        Files.copy(zis, tmp, StandardCopyOption.REPLACE_EXISTING);
+                        if (depth < 6) scanSingleJar(tmp, result, depth + 1);
+                    } finally {
+                        try { Files.deleteIfExists(tmp); } catch (Exception ignored) {}
+                    }
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * 可靠检测一个 jar 是否携带 MixinExtras，覆盖以下情形：
+     *   1) 原始包路径 ca/spottedleaf/mixinextras/
+     *   2) 被重定位（relocate）后的任意包路径，如 ca/fxco/memoryleakfix/mixinextras/（按 "mixinextras/" 段匹配）
+     *   3) 含 mixinextras 的内嵌 jar 文件名，如 mixinextras-forge-*.jar / mixinextras-*.jar
+     *   4) META-INF/services/org.spongepowered.asm.service.mixin.IMixinService 内容含 MixinExtrasService
+     */
+    private static boolean jarCarriesMixinExtras(JarFile jar) {
+        boolean servicesHit = false;
+        Enumeration<JarEntry> entries = jar.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry e = entries.nextElement();
+            String name = e.getName();
+            // (1)(2) 任意包路径下出现 mixinextras/ 子目录段
+            if (name.contains("mixinextras/")) {
+                return true;
+            }
+            // (3) 内嵌 jar 文件名含 mixinextras（如 META-INF/jarjar/mixinextras-forge-0.4.0.jar）
+            int slash = name.lastIndexOf('/');
+            String fileName = slash >= 0 ? name.substring(slash + 1) : name;
+            if (fileName.contains("mixinextras") && fileName.endsWith(".jar")) {
+                return true;
+            }
+            // (4) 收集 services 文件稍后读内容判断
+            if (name.equals("META-INF/services/org.spongepowered.asm.service.mixin.IMixinService")) {
+                servicesHit = true;
+            }
+        }
+        if (servicesHit) {
+            try {
+                JarEntry se = jar.getJarEntry("META-INF/services/org.spongepowered.asm.service.mixin.IMixinService");
+                if (se != null) {
+                    try (BufferedReader r = new BufferedReader(
+                            new InputStreamReader(jar.getInputStream(se), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = r.readLine()) != null) {
+                            if (line.contains("MixinExtrasService")) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return false;
+    }
+
+    /**
+     * 从已打开的 jar 中读取 META-INF/mods.toml，提取所有 [[mods]] 下的 modId
      * （一个 mods.toml 中可能包含多个 [[mods]] 条目，如 setcommandblock + filterdetector）
      */
-    private static Set<String> extractAllModIdsFromJar(Path jarPath) {
+    private static Set<String> extractAllModIdsFromJar(JarFile jar) {
         Set<String> result = new HashSet<>();
-        try (JarFile jar = new JarFile(jarPath.toFile())) {
+        try {
             JarEntry entry = jar.getJarEntry("META-INF/mods.toml");
             if (entry == null) return result;
 
@@ -201,61 +317,6 @@ public abstract class MixinPacketSendModList {
                         }
                     }
                 }
-            }
-        } catch (Exception ignored) {}
-        return result;
-    }
-
-    /**
-     * 扫描 jar 内 META-INF/jarjar/ 目录下的内嵌 jar，提取其 modId → 出现次数
-     */
-    private static Map<String, Integer> extractJarjarModIds(Path jarPath) {
-        Map<String, Integer> result = new HashMap<>();
-        try (JarFile jar = new JarFile(jarPath.toFile())) {
-            // 收集所有 jarjar 条目
-            List<JarEntry> jarjarEntries = new ArrayList<>();
-            Enumeration<JarEntry> entries = jar.entries();
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                String name = entry.getName();
-                if (name.startsWith("META-INF/jarjar/") && name.endsWith(".jar") && !entry.isDirectory()) {
-                    jarjarEntries.add(entry);
-                }
-            }
-
-            // 解析每个 jarjar 内嵌 jar
-            for (JarEntry jarjarEntry : jarjarEntries) {
-                try (InputStream is = jar.getInputStream(jarjarEntry);
-                     JarInputStream jis = new JarInputStream(is)) {
-                    JarEntry inner;
-                    boolean inModsSection = false;
-                    while ((inner = jis.getNextJarEntry()) != null) {
-                        if (inner.getName().equals("META-INF/mods.toml")) {
-                            BufferedReader reader = new BufferedReader(
-                                    new InputStreamReader(jis, StandardCharsets.UTF_8));
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                String trimmed = line.trim();
-                                if (trimmed.startsWith("[[mods]]")) {
-                                    inModsSection = true;
-                                    continue;
-                                }
-                                if (trimmed.startsWith("[[")) {
-                                    inModsSection = false;
-                                }
-                                if (inModsSection) {
-                                    Matcher m = MODID_PATTERN.matcher(trimmed);
-                                    if (m.find()) {
-                                        String modId = m.group(1);
-                                        if (modId != null && !modId.isEmpty()) {
-                                            result.merge(modId, 1, Integer::sum);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
         return result;
