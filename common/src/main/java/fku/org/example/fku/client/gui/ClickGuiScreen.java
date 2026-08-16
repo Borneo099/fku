@@ -7,6 +7,7 @@ import fku.org.example.fku.client.gui.components.VisualPanel;
 import fku.org.example.fku.client.gui.components.ToolPanel;
 import fku.org.example.fku.client.gui.components.EntertainmentPanel;
 import fku.org.example.fku.client.gui.components.CombatPanel;
+import fku.org.example.fku.client.gui.components.WorldPanel;
 import fku.org.example.fku.util.HotkeySystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -34,6 +35,7 @@ public class ClickGuiScreen extends Screen {
         panels.add(new ToolPanel());
         panels.add(new EntertainmentPanel());
         panels.add(new CombatPanel());
+        panels.add(new WorldPanel());
         
         // ★ 错峰：每个面板延迟启动，形成依次弹出的效果
         for (int i = 0; i < panels.size(); i++) {

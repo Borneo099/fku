@@ -33,6 +33,8 @@ public class FkuConfig {
     public static ForgeConfigSpec.IntValue entertainmentPanelY;
     public static ForgeConfigSpec.IntValue combatPanelX;
     public static ForgeConfigSpec.IntValue combatPanelY;
+    public static ForgeConfigSpec.IntValue worldXPos;
+    public static ForgeConfigSpec.IntValue worldYPos;
     public static ForgeConfigSpec.BooleanValue disableConnectionTimeout;
     // 关闭 CheatUtils 的忽略服务器视距，修复远处地图不加载的问题
     public static ForgeConfigSpec.BooleanValue disableCheatutilsChunkBypass;
@@ -78,6 +80,12 @@ public class FkuConfig {
         combatPanelY = BUILDER
                 .comment("战斗面板Y坐标")
                 .defineInRange("combat_panel_y_pos", 260, 0, Integer.MAX_VALUE);
+        worldXPos = BUILDER
+                .comment("世界面板X坐标")
+                .defineInRange("world_panel_x_pos", 620, 0, Integer.MAX_VALUE);
+        worldYPos = BUILDER
+                .comment("世界面板Y坐标")
+                .defineInRange("world_panel_y_pos", 100, 0, Integer.MAX_VALUE);
         BUILDER.pop();
 
         BUILDER.push("Feature Toggles");
