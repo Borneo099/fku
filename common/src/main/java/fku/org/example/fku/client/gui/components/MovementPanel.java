@@ -1,6 +1,7 @@
 package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.MovementConfig;
+import fku.org.example.fku.features.antiknockback.AntiKnockbackComponent;
 import fku.org.example.fku.features.antipush.AntiPushComponent;
 import fku.org.example.fku.features.flight.FlightComponent;
 import fku.org.example.fku.features.nofall.NoFallComponent;
@@ -26,6 +27,7 @@ public class MovementPanel extends GuiPanel {
         addComponent(new TeleportComponent(0, 0, 110, 22));
         addComponent(new TpGotoComponent(0, 0, 110, 20));
         addComponent(new WaterWalkComponent(0, 0, 110, 20));
+        addComponent(new AntiKnockbackComponent(0, 0, 110, 20));
     }
 
     @Override

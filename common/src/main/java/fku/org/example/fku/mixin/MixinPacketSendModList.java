@@ -24,10 +24,20 @@ import java.util.regex.Pattern;
  * 绕过 OpMod 的模组列表检测。
  *
  * 对比两个目录的 modId：
- *   列表1 = 客户端本地模组目录（可在 fku/opmod_bypass.json 中配置）
- *   列表2 = 服务器自动安装的模组目录（可在 fku/opmod_bypass.json 中配置）
- * 仅当某 mod 同时出现在两个目录中，且目录2 中该 mod 的出现次数 ≤ 目录1 的出现次数时，才伪装。
- * 如果目录2 中的出现次数严格大于目录1（即用户多装了副本），则保留真实 ID，不伪装。
+ *   目录1 = 客户端本地模组目录（可在 fku/opmod_bypass.json 中配置）
+ *   目录2 = 服务器/平台自动安装的模组目录（可在 fku/opmod_bypass.json 中配置）
+ *
+ * 核心判定（无任何硬编码 modId 白名单）：
+ *   每个 modId 的"出现次数" = 主 mod 计数 + jarjar 内嵌计数，jarjar 与主 mod 一块计数
+ *   （两侧目录分别累加）。jarjar 内嵌依赖通过三种来源识别：mods.toml / MANIFEST.MF /
+ *   内层 jar 文件名，覆盖 puzzlesaccessapi / kotlinforforge / xaerolib / mixinextras 等
+ *   所有被父 mod 内嵌打包的依赖，无需硬编码。
+ *
+ *   判定规则（统一适用于普通 mod 与 jarjar 依赖，不存在"无条件伪装"）：
+ *     仅当"目录2 出现次数 > 0 且 ≤ 目录1 出现次数"时才伪装。
+ *     - 目录2（房间侧）含该 mod、且玩家没有多装副本 → 伪装，绕过"多出模组"。
+ *     - 目录2 不含该 mod（count2 == 0）→ 保留真实 ID 上报，不会凭空移除导致"缺少模组"。
+ *   这样既不硬编码名单，也不会因无条件移除内嵌依赖而触发房主侧"缺少依赖"的播报。
  * 该功能由赛博教员实现
  */
 @Pseudo
@@ -38,26 +48,6 @@ public abstract class MixinPacketSendModList {
 
     /** 伪装用的候选 modId（轮询使用） */
     private static final String[] FAKE_MOD_IDS = {"netease_official", "opmod"};
-
-    /**
-     * 依赖型 / jarjar 内嵌子 mod 白名单。
-     *
-     * 这些 modId 通常由父 mod 通过 META-INF/jarjar 内嵌打包（例如 Puzzles Lib 内嵌
-     * puzzlesaccessapi，MixinExtras 被 relocate 进各种 mod），本身是父 mod 的依赖，
-     * 不是玩家独立安装的 mod，且在服主/玩家两侧暴露不一致时会被 OpMod 误判为
-     * "多出模组 / 缺少模组"。
-     *
-     * 伪装逻辑遇到这些 id 时强制替换（不受目录 count 比较限制），使玩家上报列表里
-     * 绝不携带它们，OpMod 的差集计算便不会把它们算作差异。服主侧若也使用本伪装逻辑，
-     * 同样会替换掉这些 id，两侧对称 → 不再播报。
-     */
-    private static final Set<String> EMBEDDED_DEPENDENCY_MODIDS = new HashSet<>(java.util.Arrays.asList(
-            "puzzlesaccessapi",
-            "mixinextras",
-            "mixinextrasforge",
-            "kotlinforforge",
-            "xaerolib"
-    ));
 
     /** 默认目录1（回退值） */
     private static final String DEFAULT_DIR_1 = "D:\\MCLDownload\\cache\\game\\V_1_20\\mods";
@@ -103,16 +93,13 @@ public abstract class MixinPacketSendModList {
                 int count1 = result1.mainMods.getOrDefault(id, 0) + result1.jarjarMods.getOrDefault(id, 0);
                 int count2 = result2.mainMods.getOrDefault(id, 0) + result2.jarjarMods.getOrDefault(id, 0);
 
-                // 目录2 有该 mod 且目录2 的个数 ≤ 目录1 的个数 → 伪装
-                // 内嵌依赖型 modId（jarjar 子 mod 等）强制伪装，避免被 OpMod 误判为差异
-                //   1) 出现在 EMBEDDED_DEPENDENCY_MODIDS 白名单
-                //   2) 出现在任一目录的 jarjarMods（即由某父 mod 通过 META-INF/jarjar 内嵌打包）——
-                //      自动覆盖 kotlinforforge / xaerolib / puzzlesaccessapi 等所有内嵌子 mod，
-                //      不再依赖 count 比较的边界，彻底规避"内嵌 mod 时好时坏漏伪装"的问题
-                boolean isEmbedded = result1.jarjarMods.containsKey(id) || result2.jarjarMods.containsKey(id);
-                boolean shouldSpoof = isEmbedded
-                        || EMBEDDED_DEPENDENCY_MODIDS.contains(id)
-                        || (count2 > 0 && count2 <= count1);
+                // 计数时 jarjar 内嵌 mod 已与主 mod 合并（count = mainMods + jarjarMods），
+                // 因此 jarjar 依赖与普通 mod 走完全相同的判定，不单独强制伪装：
+                //   仅当"目录2 出现次数 > 0 且 ≤ 目录1 出现次数"时才伪装。
+                // 这样既能绕过"多出模组"（目录2 把内嵌依赖算进去后，次数对齐），
+                // 又不会误触发"缺少模组"——若房间侧没有该依赖（count2==0）则保留真实 ID 上报，
+                // 不会凭空移除导致房主侧比对发现缺失。完全不依赖任何硬编码白名单。
+                boolean shouldSpoof = count2 > 0 && count2 <= count1;
 
                 if (shouldSpoof) {
                     result.add(FAKE_MOD_IDS[fakeIdx % FAKE_MOD_IDS.length]);
@@ -196,16 +183,35 @@ public abstract class MixinPacketSendModList {
      */
     private static void scanSingleJar(Path jarPath, ModScanResult result, int depth) {
         try (JarFile jar = new JarFile(jarPath.toFile())) {
-            // 1) 主 modId（顶层 mods.toml，可能多个 [[mods]]）
-            //    depth>0 表示这是某个父 mod 通过 META-INF/jarjar 内嵌的子 jar，
-            //    其 modId 视为"内嵌依赖"，同时记入 mainMods（保持既有计数对比行为）
-            //    与 jarjarMods（供 isEmbedded 强制伪装判定使用）
-            for (String mid : extractAllModIdsFromJar(jar)) {
-                result.mainMods.merge(mid, 1, Integer::sum);
-                if (depth > 0) {
-                    result.jarjarMods.merge(mid, 1, Integer::sum);
-                }
+            // 1) 从三种来源提取 modId 候选：
+            //    a) mods.toml      —— 真实 forge mod（[[mods]] 声明的 modId）
+            //    b) MANIFEST.MF    —— 库/依赖型 mod（仅 Automatic-Module-Name / Implementation-Title /
+            //                         Bundle-SymbolicName 声明，没有 mods.toml 的情况，例如部分被 shaded 的依赖）
+            //    c) 内层 jar 文件名 —— 当该 jar 处于 META-INF/jarjar 或 META-INF/jars 内层时，
+            //                         用文件名（去掉版本号）作为兜底 modId，覆盖 mods.toml 缺失的内嵌依赖
+            Set<String> tomlIds = extractAllModIdsFromJar(jar);
+            Set<String> manifestIds = extractModIdsFromManifest(jar);
+            Set<String> nameIds = new HashSet<>();
+            if (depth > 0) {
+                nameIds.add(stripVersion(jarPath.getFileName().toString()));
             }
+
+            // 计数统一：每个 id 出现一次只计入一张表，避免 mainMods+jarjarMods 合并时重复计数。
+            //   - 真实 mod（来自 mods.toml）→ 仅 mainMods
+            //   - 库 / 依赖型 modId（来自 MANIFEST 或内层 jar 文件名，且不在 mods.toml 中）
+            //     → 仅 jarjarMods（无论顶层还是内层都视为内嵌依赖）
+            // 最终判定时 count = mainMods + jarjarMods，jarjar 与主 mod 一块参与比较。
+            for (String mid : tomlIds) {
+                result.mainMods.merge(mid, 1, Integer::sum);
+            }
+            for (String mid : manifestIds) {
+                if (tomlIds.contains(mid)) continue; // 已在 mods.toml 中按真实 mod 处理
+                result.jarjarMods.merge(mid, 1, Integer::sum);
+            }
+            for (String mid : nameIds) {
+                result.jarjarMods.merge(mid, 1, Integer::sum);
+            }
+
             // 2) 本 jar 是否携带 MixinExtras（顶层 namelist 即可判断，覆盖 relocate 包路径 / services 标识）
             if (jarCarriesMixinExtras(jar)) {
                 result.hasMixinExtras = true;
@@ -223,12 +229,16 @@ public abstract class MixinPacketSendModList {
                 }
             }
             for (JarEntry innerEntry : innerJars) {
-                try (InputStream is = jar.getInputStream(innerEntry);
-                     java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(is)) {
-                    // 把内层 jar 内容抽到一个临时文件再递归扫描，避免 ZipInputStream 不可随机访问
+                try (InputStream is = jar.getInputStream(innerEntry)) {
+                    // 把内层 jar 的原始字节抽到一个临时文件再递归扫描。
+                    // 注意：必须用 jar.getInputStream(innerEntry) 的原始流直接拷贝，
+                    // 不能套 ZipInputStream —— ZipInputStream 在未调用 getNextEntry() 前
+                    // read() 立即返回 -1，会导致拷贝出空文件，从而使所有内嵌 jarjar 依赖
+                    // （kotlinforforge / puzzlesaccessapi / xaerolib 等）扫描不到、
+                    // 计数缺失、最终被 OpMod 误报为"多出模组"。
                     Path tmp = Files.createTempFile("fku_jarjar_", ".jar");
                     try {
-                        Files.copy(zis, tmp, StandardCopyOption.REPLACE_EXISTING);
+                        Files.copy(is, tmp, StandardCopyOption.REPLACE_EXISTING);
                         if (depth < 6) scanSingleJar(tmp, result, depth + 1);
                     } finally {
                         try { Files.deleteIfExists(tmp); } catch (Exception ignored) {}
@@ -236,6 +246,46 @@ public abstract class MixinPacketSendModList {
                 } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * 从 META-INF/MANIFEST.MF 中提取库/依赖型 modId 候选：
+     *   Automatic-Module-Name / Implementation-Title / Bundle-SymbolicName
+     * 这些字段常见于被 shaded / relocated 的依赖 jar（本身没有 mods.toml）。
+     */
+    private static Set<String> extractModIdsFromManifest(JarFile jar) {
+        Set<String> ids = new HashSet<>();
+        try {
+            JarEntry me = jar.getJarEntry("META-INF/MANIFEST.MF");
+            if (me == null) return ids;
+            try (BufferedReader r = new BufferedReader(
+                    new InputStreamReader(jar.getInputStream(me), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    String t = line.trim();
+                    for (String key : new String[]{
+                            "Automatic-Module-Name:",
+                            "Implementation-Title:",
+                            "Bundle-SymbolicName:"}) {
+                        if (t.startsWith(key)) {
+                            String v = t.substring(key.length()).trim();
+                            if (!v.isEmpty()) ids.add(stripVersion(v));
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return ids;
+    }
+
+    /**
+     * 去掉文件扩展名与末尾的版本号，得到干净的 modId 候选。
+     * 例：xaerolib-1.0.jar → xaerolib；mixinextras-forge-0.4.0 → mixinextras-forge
+     */
+    private static String stripVersion(String s) {
+        if (s.toLowerCase().endsWith(".jar")) s = s.substring(0, s.length() - 4);
+        // 去掉末尾 -1.2.3 / -v4 / _build 之类的版本/构建后缀
+        return s.replaceAll("[-_][0-9]+([.][0-9A-Za-z]+)*([.-][0-9A-Za-z]+)*$", "");
     }
 
     /**
