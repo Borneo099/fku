@@ -8,6 +8,8 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import fku.org.example.fku.Fku;
 import net.minecraft.client.Minecraft;
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -49,6 +51,9 @@ public class AimbotFeature {
     private static LivingEntity currentTarget = null;
     private static boolean hasTarget = false;
     private static long lastUpdateTime = 0L;
+    // 自定义实体 id 解析缓存（配置变化或内容变化时刷新）
+    private static long customEntitiesCacheKey = 0L;
+    private static Set<String> customEntityIds = new HashSet<>();
 
     public static void init() {
         if (initialized) return;
@@ -231,13 +236,47 @@ public class AimbotFeature {
     private static List<LivingEntity> getValidTargets() {
         List<LivingEntity> targets = new ArrayList<>();
         if (mc.player == null || mc.level == null) return targets;
+        TaCZConfig cfg = TaCZConfig.getInstance();
+        String mode = cfg.aimbotTargetMode;
+        boolean isCustom = "自定义".equals(mode);
+        if (isCustom) refreshCustomEntities();
         // 遍历所有世界中的实体
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity living)) continue;
             if (entity == mc.player || !living.isAlive()) continue;
+            if (!matchTarget(living, mode, isCustom)) continue;
             targets.add(living);
         }
         return targets;
+    }
+
+    /** 根据对象选择器过滤目标 */
+    private static boolean matchTarget(LivingEntity e, String mode, boolean isCustom) {
+        if ("仅玩家".equals(mode)) {
+            return e instanceof Player;
+        }
+        if (isCustom) {
+            if (customEntityIds.isEmpty()) return false;
+            ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType());
+            return id != null && customEntityIds.contains(id.toString());
+        }
+        // 全部实体：任意活着的 LivingEntity
+        return true;
+    }
+
+    /** 解析自定义实体 id（逗号分隔），配置变化时刷新缓存 */
+    private static void refreshCustomEntities() {
+        TaCZConfig cfg = TaCZConfig.getInstance();
+        String raw = cfg.aimbotCustomEntities == null ? "" : cfg.aimbotCustomEntities;
+        long key = raw.hashCode() * 31L + cfg.aimbotTargetMode.hashCode();
+        if (key == customEntitiesCacheKey) return;
+        customEntitiesCacheKey = key;
+        Set<String> set = new HashSet<>();
+        for (String s : raw.split(",")) {
+            String t = s.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!t.isEmpty()) set.add(t);
+        }
+        customEntityIds = set;
     }
 
     private static Vec3 getAimPoint(LivingEntity e, String bodyPart) {

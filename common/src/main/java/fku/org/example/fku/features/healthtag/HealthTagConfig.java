@@ -28,6 +28,13 @@ public class HealthTagConfig {
     public int x = 100;
     public int y = 100;
 
+    /** 准星瞄准：开启后只要实体在准星附近即显示 HealthTag，无需持弓或攻击到目标 */
+    public boolean crosshairAim = false;
+    /** 准星探测距离（方块） */
+    public double aimRange = 128.0;
+    /** 准星基础夹角（度，距离为0时的允许偏差，随距离衰减） */
+    public double aimAngle = 15.0;
+
     private static HealthTagConfig instance;
 
     public static HealthTagConfig getInstance() {
@@ -56,4 +63,8 @@ public class HealthTagConfig {
             e.printStackTrace();
         }
     }
+
+    public void setCrosshairAim(boolean v) { this.crosshairAim = v; save(); }
+    public void setAimRange(double v) { this.aimRange = Math.max(8.0, Math.min(256.0, v)); save(); }
+    public void setAimAngle(double v) { this.aimAngle = Math.max(1.0, Math.min(90.0, v)); save(); }
 }

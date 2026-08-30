@@ -1,6 +1,7 @@
 package fku.org.example.fku.mixin;
 
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.util.LinkInterruptState;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -54,7 +55,7 @@ public abstract class ConnectionMixin {
             cancellable = true
     )
     public void onExceptionCaught(ChannelHandlerContext context, Throwable ex, CallbackInfo ci) {
-        if (FkuConfig.disableConnectionTimeout.get()) {
+        if (FkuConfig.disableConnectionTimeout.get() && !LinkInterruptState.active) {
             ci.cancel();
         }
     }

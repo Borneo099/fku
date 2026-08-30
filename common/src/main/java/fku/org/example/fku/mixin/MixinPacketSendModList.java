@@ -3,6 +3,7 @@ package fku.org.example.fku.mixin; /* water */
 import fku.org.example.fku.config.OpmodBypassConfig;
 import fku.org.example.fku.config.OpmodDosConfig;
 import fku.org.example.fku.util.ModScanResult;
+import fku.org.example.fku.util.FakeModsUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
@@ -45,9 +46,6 @@ import java.util.regex.Pattern;
 public abstract class MixinPacketSendModList {
 
     @Shadow private Set<String> modIds;
-
-    /** 伪装用的候选 modId（轮询使用） */
-    private static final String[] FAKE_MOD_IDS = {"netease_official", "opmod"};
 
     /** 默认目录1（回退值） */
     private static final String DEFAULT_DIR_1 = "D:\\MCLDownload\\cache\\game\\V_1_20\\mods";
@@ -102,7 +100,8 @@ public abstract class MixinPacketSendModList {
                 boolean shouldSpoof = count2 > 0 && count2 <= count1;
 
                 if (shouldSpoof) {
-                    result.add(FAKE_MOD_IDS[fakeIdx % FAKE_MOD_IDS.length]);
+                    String[] fakes = FakeModsUtil.loadFakeModIds();
+                    result.add(fakes[fakeIdx % fakes.length]);
                     fakeIdx++;
                 } else {
                     result.add(id);

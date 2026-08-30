@@ -15,7 +15,7 @@ import fku.org.example.fku.features.selfdamage.SelfDamageComponent;
 public class ToolPanel extends GuiPanel {
 
     public ToolPanel() {
-        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 120, 330);
+        super("工具", FkuConfig.toolXPos.get(), FkuConfig.toolYPos.get(), 120, 360);
     }
 
     @Override
@@ -34,6 +34,7 @@ public class ToolPanel extends GuiPanel {
         addComponent(new StructureLocatorComponent(0, 0, 110, 25));
         addComponent(new BaritoneComponent(0, 0, 110, 25));
         addComponent(new SelfDamageComponent(0, 0, 110, 25));
+        addComponent(new LinkInterruptComponent(0, 0, 110, 25));
         addComponent(new QuickCommandComponent(0, 0, 110, 22));
     }
 

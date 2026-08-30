@@ -29,6 +29,16 @@ public class HealthTagManager {
         if (holdingBow) {
             findAndLockBestTarget(mc);
         }
+
+        // ★ 准星瞄准模式：不持弓也持续探测准星附近实体并显示 HealthTag
+        //   攻击显示优先：若刚攻击/受伤的目标仍在显示窗口内（DISPLAY_DURATION），
+        //   不执行准星扫描去覆盖它，确保攻击后 HealthTag UI 完整保留而非被快速冲掉。
+        if (HealthTagConfig.getInstance().crosshairAim) {
+            long sinceLastAttack = System.currentTimeMillis() - lastAttackTime;
+            if (sinceLastAttack >= DISPLAY_DURATION) {
+                findAndLockBestTarget(mc);
+            }
+        }
     }
 
     private static void findAndLockBestTarget(Minecraft mc) {
@@ -46,7 +56,11 @@ public class HealthTagManager {
         Vec3 eyePos = cam.getPosition();
         Vec3 lookVec = new Vec3(cam.getLookVector());
         
-        List<Entity> entities = mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(128.0));
+        HealthTagConfig cfg = HealthTagConfig.getInstance();
+        double range = Math.max(8.0, cfg.aimRange);
+        double baseAngle = Math.max(1.0, cfg.aimAngle);
+
+        List<Entity> entities = mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(range));
         LivingEntity bestCandidate = null;
         double bestScore = Double.MAX_VALUE;
 
@@ -59,10 +73,10 @@ public class HealthTagManager {
             Vec3 entityPos = entity.position().add(0, entity.getBbHeight() * 0.5, 0);
             Vec3 entityVec = entityPos.subtract(eyePos);
             double distance = entityVec.length();
-            if (distance > 128.0) continue;
+            if (distance > range) continue;
 
             double angle = Math.toDegrees(Math.acos(lookVec.dot(entityVec.normalize())));
-            double maxAllowedAngle = 15.0 / (1.0 + distance * 0.1); 
+            double maxAllowedAngle = baseAngle / (1.0 + distance * 0.1);
             
             if (angle < maxAllowedAngle) {
                 double score = angle * (1.0 + distance * 0.05); 

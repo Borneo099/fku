@@ -42,6 +42,10 @@ public class TaCZConfig {
     public boolean aimbotOnlyWhenAiming = true;
     public boolean aimbotAllowThroughWalls = false;
     public String aimbotBodyPart = "身体";
+    // ★ 自瞄对象选择器：全部实体 / 仅玩家 / 自定义
+    public String aimbotTargetMode = "全部实体";
+    // 自定义模式下生效：逗号分隔的实体 registry id（如 minecraft:zombie, tacz:xxx）
+    public String aimbotCustomEntities = "";
 
     // BulletTracers 参数
     public int tracerColor = 0xFFFF0000;

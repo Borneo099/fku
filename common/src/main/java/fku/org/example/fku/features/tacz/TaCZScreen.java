@@ -5,6 +5,7 @@ import fku.org.example.fku.client.gui.GuiRenderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -19,8 +20,9 @@ import java.util.function.Supplier;
  */
 public class TaCZScreen extends Screen {
 
-    private static final int W = 340, H = 320;
+    private static final int W = 340, H = 388;
     private int bx, by;
+    private EditBox customEntitiesBox;
 
     public TaCZScreen() {
         super(Component.literal("TaCZ 配置"));
@@ -68,6 +70,28 @@ public class TaCZScreen extends Screen {
         addLabel(cx, cy, "§7锁定部位: §b" + cfg.aimbotBodyPart);
         addCycleButton(cx + 100, cy, 80, new String[]{"头", "身体", "腿", "脚", "自动"}, cfg.aimbotBodyPart,
             v -> { cfg.aimbotBodyPart = v; TaCZConfig.save(); });
+        cy += sp;
+
+        // ★ 自瞄对象选择器：全部实体 / 仅玩家 / 自定义
+        addLabel(cx, cy, "§7自瞄对象: §b" + cfg.aimbotTargetMode);
+        addCycleButton(cx + 100, cy, 70, new String[]{"全部实体", "仅玩家", "自定义"}, cfg.aimbotTargetMode,
+            v -> {
+                cfg.aimbotTargetMode = v;
+                TaCZConfig.save();
+                if (customEntitiesBox != null) customEntitiesBox.setVisible("自定义".equals(v));
+            });
+        cy += sp;
+
+        // 自定义模式下的实体 id 输入框（逗号分隔，如 minecraft:zombie,tacz:xxx）
+        customEntitiesBox = new EditBox(font, cx, cy, 320, 16, Component.literal("实体id，逗号分隔"));
+        customEntitiesBox.setMaxLength(2000);
+        customEntitiesBox.setValue(cfg.aimbotCustomEntities == null ? "" : cfg.aimbotCustomEntities);
+        customEntitiesBox.setVisible("自定义".equals(cfg.aimbotTargetMode));
+        customEntitiesBox.setResponder(s -> { cfg.aimbotCustomEntities = s; TaCZConfig.save(); });
+        addRenderableWidget(customEntitiesBox);
+        cy += sp;
+
+        addLabel(cx, cy, "§7" + ("自定义".equals(cfg.aimbotTargetMode) ? "当前生效实体id: §b" + cfg.aimbotCustomEntities : "（选择自定义后填写实体id）"));
         cy += sp;
 
         addToggle(cx, cy, "开镜锁定", () -> cfg.aimbotOnlyWhenAiming, v -> { cfg.aimbotOnlyWhenAiming = v; TaCZConfig.save(); });
