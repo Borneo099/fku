@@ -73,6 +73,11 @@ import java.util.function.Consumer;
  *   → BREAK_REMAINING_LEVER_START/PROGRESS(挖拉杆)
  *   → BREAK_REMAINING_PISTON_START/PROGRESS(挖剩余活塞)
  *   → INIT(空闲, 处理队列下一个)
+ *
+ * ★ 创造模式分支（mc.player.getAbilities().instabuild）：瞬间破坏，跳过挖掘积攒。
+ *   PLACE_LEVER 之后不进入 BREAK_PISTON_START/PROGRESS，而是直接拉拉杆（激活）→
+ *   WAIT_PISTON_EXTEND 中改用 START_DESTROY（即时移除活塞体）替代 STOP_DESTROY。
+ *   生存模式状态机完全不变。
  */
 public class BedrockBreakerManager {
 
@@ -393,13 +398,25 @@ public class BedrockBreakerManager {
         // ★ 下蹲+右键放置拉杆，避免打开容器 GUI
         sendUseItemOnSneak(InteractionHand.MAIN_HAND, leverPlaceHitResult, getSequenceNumber());
 
-        // ★ 同 tick 链式调用 BREAK_PISTON_START（恢复原状态机流程）
-        //   矛盾定性：粘性活塞/普通活塞的放置和挖掘需在同 tick 完成时序，
-        //   下一 tick 再开始挖掘会导致服务端侧活塞已完全放置，
-        //   挖掘包到达时服务端时序不同步，出现刚放置就被挖掘掉的问题。
-        //   实践路线：同 tick 链式调用，利用后发包顺序保证在处理序列中的时序。
-        state = State.BREAK_PISTON_START;
-        state.handle(this);
+        if (isCreativeMode()) {
+            // ★ 创造模式：瞬间破坏，无需 START_DESTROY 积攒挖掘进度。
+            //   直接拉拉杆（激活）让活塞伸出，下一阶段（WAIT_PISTON_EXTEND）等伸出后
+            //   破坏活塞体并放置反向活塞即可。
+            mc.player.connection.send(new ServerboundUseItemOnPacket(
+                    InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atCenterOf(leverPos), Direction.UP, leverPos, false),
+                    getSequenceNumber()));
+            state = State.WAIT_PISTON_EXTEND;
+            tickCount = 0;
+        } else {
+            // ★ 生存模式：同 tick 链式调用 BREAK_PISTON_START（恢复原状态机流程）
+            //   矛盾定性：粘性活塞/普通活塞的放置和挖掘需在同 tick 完成时序，
+            //   下一 tick 再开始挖掘会导致服务端侧活塞已完全放置，
+            //   挖掘包到达时服务端时序不同步，出现刚放置就被挖掘掉的问题。
+            //   实践路线：同 tick 链式调用，利用后发包顺序保证在处理序列中的时序。
+            state = State.BREAK_PISTON_START;
+            state.handle(this);
+        }
     }
 
     // ================================================================
@@ -581,12 +598,23 @@ public class BedrockBreakerManager {
                     new BlockHitResult(Vec3.atCenterOf(leverPos), Direction.UP, leverPos, false),
                     getSequenceNumber()));
 
-            // ② STOP_DESTROY（移除活塞体 → 无头活塞诞生）
-            mc.player.connection.send(new ServerboundPlayerActionPacket(
-                    ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
-                    pistonPos,
-                    Direction.UP,
-                    blockDestroySeqNumber));
+            // ② 破坏活塞体（移除活塞体 → 无头活塞诞生）
+            if (isCreativeMode()) {
+                // ★ 创造模式：瞬间破坏，用 START_DESTROY（服务端立即移除方块），
+                //   替代生存模式的 STOP_DESTROY（STOP_DESTROY 在创造模式下不会移除方块）。
+                blockDestroySeqNumber = getSequenceNumber();
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                        pistonPos,
+                        Direction.UP,
+                        blockDestroySeqNumber));
+            } else {
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                        pistonPos,
+                        Direction.UP,
+                        blockDestroySeqNumber));
+            }
 
             // ★ 不在此处客户端销毁活塞头！
             //   反向活塞需要点击活塞头所在位置来放置。
@@ -735,7 +763,18 @@ public class BedrockBreakerManager {
     // ★ 第7步：破坏剩余拉杆 —— 严格参考 CheatUtils
     // ================================================================
     private void handleBreakRemainingLeverStart() {
-        assert mc.player != null;
+        assert mc.player != null && mc.level != null;
+
+        if (isCreativeMode()) {
+            // ★ 创造模式：START_DESTROY 即时破坏，无需积攒进度，直接清理拉杆后进入活塞清理
+            if (leverPos != null && !mc.level.getBlockState(leverPos).isAir()) {
+                mineBlock(leverPos);
+            }
+            state = State.BREAK_REMAINING_PISTON_START;
+            state.handle(this);
+            tickCount = 0;
+            return;
+        }
 
         blockDestroyProgress = getLeverDestroyProgress();
         blockDestroySeqNumber = getSequenceNumber();
@@ -775,7 +814,28 @@ public class BedrockBreakerManager {
     // ★ 第8步：破坏剩余活塞 —— 严格参考 CheatUtils
     // ================================================================
     private void handleBreakRemainingPistonStart() {
-        assert mc.player != null;
+        assert mc.player != null && mc.level != null;
+
+        if (isCreativeMode()) {
+            // ★ 创造模式：START_DESTROY 即时破坏，无需积攒挖掘进度，直接清理并结束
+            mineBlock(pistonPos);
+
+            // ★ 清理活塞头（无头活塞的活塞头）
+            BlockPos pistonHeadPos = pistonPos.relative(pistonFacing);
+            if (!mc.level.getBlockState(pistonHeadPos).isAir()) {
+                mc.level.destroyBlock(pistonHeadPos, false);
+                mineBlock(pistonHeadPos);
+            }
+
+            // ★ 兜底清理拉杆（若上一阶段跳过）
+            if (leverPos != null && mc.level.getBlockState(leverPos).is(Blocks.LEVER)) {
+                mineBlock(leverPos);
+            }
+
+            reset(null);
+            if (!queue.isEmpty()) start(queue.remove());
+            return;
+        }
 
         int pickaxeSlot = findPickaxe();
         if (pickaxeSlot >= 0) {
@@ -1422,6 +1482,11 @@ public class BedrockBreakerManager {
         int num = handler.currentSequence();
         handler.close();
         return num;
+    }
+
+    /** ★ 是否创造模式（瞬间破坏）：用于区分状态机分支 */
+    private boolean isCreativeMode() {
+        return mc.player != null && mc.player.getAbilities().instabuild;
     }
 
     /**

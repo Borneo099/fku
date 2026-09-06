@@ -242,9 +242,12 @@ public class ArrowDmgFeature {
         int n = Math.max(1, (int)cfg.packets);
         if (n > 10000) n = 10000;
         double x=mc.player.getX(), y=mc.player.getY(), z=mc.player.getZ();
+        // ★ 冲跑包：开始冲刺，配合位置包放大箭伤
         mc.player.connection.send(new ServerboundPlayerCommandPacket(mc.player, ServerboundPlayerCommandPacket.Action.START_SPRINTING));
         for(int i=0;i<n/2;i++) { mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-1.0E-10,z,true)); mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y+1.0E-10,z,false)); }
         if(cfg.useOffset) mc.player.connection.send(new ServerboundMovePlayerPacket.Pos(x,y-0.01,z,true));
+        // ★ 停下冲跑包：立即复位冲刺态，避免之后持续消耗饥饿值（箭伤已由上面的位置包爆发产生，不受此影响）
+        mc.player.connection.send(new ServerboundPlayerCommandPacket(mc.player, ServerboundPlayerCommandPacket.Action.STOP_SPRINTING));
     }
 
     /** 判断物品是否为弓（支持原版弓 + 模组弓 + 自定义物品ID） */
