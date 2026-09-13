@@ -20,24 +20,16 @@ public class HealthTagManager {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
 
-        // 持弓瞄准时寻找并锁定目标
+        // 持弓瞄准 或 准星瞄准模式：每 tick 持续探测准星/自瞄目标，
+        // 只要实体仍在视野内就持续刷新 lastAttackTime，使 HealthTag 常亮不淡出；
+        // 仅在实体离开视野（未选中）时才由 getAlpha() 自然淡出。
         ItemStack mainHand = mc.player.getMainHandItem();
         ItemStack offHand = mc.player.getOffhandItem();
         boolean holdingBow = fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isBowItem(mainHand)
                              || fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isBowItem(offHand);
 
-        if (holdingBow) {
+        if (holdingBow || HealthTagConfig.getInstance().crosshairAim) {
             findAndLockBestTarget(mc);
-        }
-
-        // ★ 准星瞄准模式：不持弓也持续探测准星附近实体并显示 HealthTag
-        //   攻击显示优先：若刚攻击/受伤的目标仍在显示窗口内（DISPLAY_DURATION），
-        //   不执行准星扫描去覆盖它，确保攻击后 HealthTag UI 完整保留而非被快速冲掉。
-        if (HealthTagConfig.getInstance().crosshairAim) {
-            long sinceLastAttack = System.currentTimeMillis() - lastAttackTime;
-            if (sinceLastAttack >= DISPLAY_DURATION) {
-                findAndLockBestTarget(mc);
-            }
         }
     }
 
@@ -88,14 +80,11 @@ public class HealthTagManager {
         }
 
         if (bestCandidate != null) {
+            // 实体仍被准星/自瞄锁定：刷新时间戳，HUD 常亮不淡出
             targetEntity = bestCandidate;
             lastAttackTime = System.currentTimeMillis();
-        } else if (targetEntity != null) {
-            long timeSinceLastUpdate = System.currentTimeMillis() - lastAttackTime;
-            if (timeSinceLastUpdate < 1500) {
-                lastAttackTime = System.currentTimeMillis() - 1500;
-            }
         }
+        // 未选中实体时不再刷新 lastAttackTime，由 getAlpha() 依据时间自然淡出
     }
 
     public static void onAttack(Entity entity) {
