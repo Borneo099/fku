@@ -40,7 +40,7 @@ public class BedrockBreakerComponent extends GuiComponent {
         boolean enabled = isEnabled();
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
 
-        String status = enabled ? "ON" : "OFF";
+        String status = enabled ? "开" : "关";
         String displayStr = "基岩破坏器: " + status;
         var hk = FeatureHotkeyManager.getInstance().getHotkey("基岩破坏器");
         if (hk.getHotkeyKey() >= 0) displayStr += " §7[" + hk.getHotkeyName() + "]";

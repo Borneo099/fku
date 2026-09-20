@@ -36,7 +36,7 @@ public class DuplicatorComponent extends GuiComponent {
 
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        String displayStr = "三叉戟复制: " + (enabled ? "ON" : "OFF");
+        String displayStr = "三叉戟复制: " + (enabled ? "开" : "关");
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
         // ★ 右键打开配置提示

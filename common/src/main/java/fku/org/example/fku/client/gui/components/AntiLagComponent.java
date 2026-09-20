@@ -39,7 +39,7 @@ public class AntiLagComponent extends GuiComponent {
 
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        String status = enabled ? "ON" : "OFF";
+        String status = enabled ? "开" : "关";
         String displayStr = "防拉回: " + status;
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);

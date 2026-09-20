@@ -1,5 +1,6 @@
 package fku.org.example.fku.client.gui;
 
+import fku.org.example.fku.client.gui.components.GuiComponent;
 import fku.org.example.fku.client.gui.components.GuiPanel;
 import fku.org.example.fku.client.gui.components.OtherPanel;
 import fku.org.example.fku.client.gui.components.MovementPanel;
@@ -8,6 +9,7 @@ import fku.org.example.fku.client.gui.components.ToolPanel;
 import fku.org.example.fku.client.gui.components.EntertainmentPanel;
 import fku.org.example.fku.client.gui.components.CombatPanel;
 import fku.org.example.fku.client.gui.components.WorldPanel;
+import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.util.HotkeySystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -26,6 +28,7 @@ import java.util.List;
  */
 public class ClickGuiScreen extends Screen {
     private final List<GuiPanel> panels = new ArrayList<>();
+    private final GuiBackground guiBackground = new GuiBackground();
     
     public ClickGuiScreen() {
         super(Component.literal("Fku ClickGUI"));
@@ -47,16 +50,33 @@ public class ClickGuiScreen extends Screen {
     public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
         // 不阻塞输入 — Apple §1: 即时反馈
         // 面板自身管理弹簧动画
-        
+
+        // 记录当前鼠标坐标，供组件 hover 判定复用（白边选中效果）
+        GuiComponent.hoveredMouseX = mx;
+        GuiComponent.hoveredMouseY = my;
+
+        // 动态背景层（开启时绘制在面板之下，不拦截交互）
+        GuiStyleConfig cfg = GuiStyleConfig.getInstance();
+        if (cfg.backgroundEnabled) {
+            guiBackground.setEnabled(true);
+            guiBackground.setStyle(cfg.backgroundStyle);
+            guiBackground.resize(width, height);
+            guiBackground.update();
+            guiBackground.render(g);
+        }
+
         // 按添加顺序渲染（后面板在上面，但鼠标点击反向遍历）
         for (GuiPanel panel : panels) {
             panel.render(g, mx, my, pt);
         }
 
-        // ★ 顶部提示：中键绑定热键
+        // ★ 顶部提示：中键绑定热键（半透明圆角底板，更精致）
         if (!HotkeySystem.isWaiting()) {
             String hint = "§7§o中键点击组件可绑定热键";
-            int hw = font.width(hint.replace("§7§o", "").replace("§r", ""));
+            String plain = hint.replace("§7§o", "").replace("§r", "");
+            int hw = font.width(plain);
+            int padX = 8;
+            GuiRenderHelper.drawRoundedRect(g, (width - hw) / 2 - padX, 4, hw + padX * 2, 16, (200 << 24) | 0x000000, 6);
             g.drawString(font, hint, (width - hw) / 2, 8, 0x888888);
         }
     }

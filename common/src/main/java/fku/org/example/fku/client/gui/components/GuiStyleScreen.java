@@ -3,6 +3,7 @@ package fku.org.example.fku.client.gui.components;
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.ClickGuiScreen;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.client.gui.GuiBackground;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -24,12 +25,16 @@ public class GuiStyleScreen extends Screen {
     private Button doneButton;
     private Button animationToggle;
     private Button shadowToggle;
+    private Button microAnimationToggle;
+    private Button backgroundToggle;
+    private Button backgroundStyleButton;
     
     // 颜色调整滑块
     private int primaryColorR, primaryColorG, primaryColorB;
     private int backgroundColorR, backgroundColorG, backgroundColorB;
     private int borderColorR, borderColorG, borderColorB;
     private int textColorR, textColorG, textColorB;
+    private int enabledColorR, enabledColorG, enabledColorB;
     
     // 当前编辑的颜色索引
     private int editingColorIndex = -1;
@@ -61,6 +66,9 @@ public class GuiStyleScreen extends Screen {
         textColorR = config.textColorR;
         textColorG = config.textColorG;
         textColorB = config.textColorB;
+        enabledColorR = config.enabledColorR;
+        enabledColorG = config.enabledColorG;
+        enabledColorB = config.enabledColorB;
     }
 
     @Override
@@ -103,6 +111,27 @@ public class GuiStyleScreen extends Screen {
             btn.setMessage(Component.literal(config.glowEnabled ? "高光: 开" : "高光: 关"));
         }).bounds(x + 150, y + 30, 130, 20).build();
         addRenderableWidget(glowToggle);
+
+        // 开启态微动效开关
+        microAnimationToggle = Button.builder(Component.literal(config.microAnimationEnabled ? "开启态微动效: 开" : "开启态微动效: 关"), btn -> {
+            config.setMicroAnimationEnabled(!config.microAnimationEnabled);
+            btn.setMessage(Component.literal(config.microAnimationEnabled ? "开启态微动效: 开" : "开启态微动效: 关"));
+        }).bounds(x + 150, y + 55, 130, 20).build();
+        addRenderableWidget(microAnimationToggle);
+
+        // 动态背景开关
+        backgroundToggle = Button.builder(Component.literal(config.backgroundEnabled ? "动态背景: 开" : "动态背景: 关"), btn -> {
+            config.setBackgroundEnabled(!config.backgroundEnabled);
+            btn.setMessage(Component.literal(config.backgroundEnabled ? "动态背景: 开" : "动态背景: 关"));
+        }).bounds(x + 10, y + 80, 130, 20).build();
+        addRenderableWidget(backgroundToggle);
+
+        // 背景样式选择（循环切换）
+        backgroundStyleButton = Button.builder(Component.literal("背景样式: " + GuiBackground.STYLE_NAMES[config.backgroundStyle]), btn -> {
+            config.setBackgroundStyle((config.backgroundStyle + 1) % GuiBackground.STYLE_NAMES.length);
+            btn.setMessage(Component.literal("背景样式: " + GuiBackground.STYLE_NAMES[config.backgroundStyle]));
+        }).bounds(x + 150, y + 80, 130, 20).build();
+        addRenderableWidget(backgroundStyleButton);
     }
     
     private void openColorPicker(int colorIndex) {
@@ -114,6 +143,7 @@ public class GuiStyleScreen extends Screen {
             case 1 -> colorPicker.setColor(String.format("%02X%02X%02X", backgroundColorR, backgroundColorG, backgroundColorB));
             case 2 -> colorPicker.setColor(String.format("%02X%02X%02X", borderColorR, borderColorG, borderColorB));
             case 3 -> colorPicker.setColor(String.format("%02X%02X%02X", textColorR, textColorG, textColorB));
+            case 4 -> colorPicker.setColor(String.format("%02X%02X%02X", enabledColorR, enabledColorG, enabledColorB));
         }
         
         colorPicker.open(width / 2, height / 2);
@@ -145,6 +175,12 @@ public class GuiStyleScreen extends Screen {
                 textColorB = b;
                 config.setTextColor(r, g, b);
             }
+            case 4 -> {
+                enabledColorR = r;
+                enabledColorG = g;
+                enabledColorB = b;
+                config.setEnabledColor(r, g, b);
+            }
         }
     }
 
@@ -163,15 +199,32 @@ public class GuiStyleScreen extends Screen {
         textColorR = defaultConfig.textColorR;
         textColorG = defaultConfig.textColorG;
         textColorB = defaultConfig.textColorB;
+        enabledColorR = defaultConfig.enabledColorR;
+        enabledColorG = defaultConfig.enabledColorG;
+        enabledColorB = defaultConfig.enabledColorB;
         
         config.cornerRadius = defaultConfig.cornerRadius;
         config.backgroundAlpha = defaultConfig.backgroundAlpha;
         config.blurStrength = defaultConfig.blurStrength;
         config.shadowStrength = defaultConfig.shadowStrength;
+        config.animationEnabled = defaultConfig.animationEnabled;
+        config.shadowEnabled = defaultConfig.shadowEnabled;
+        config.glowEnabled = defaultConfig.glowEnabled;
+        config.microAnimationEnabled = defaultConfig.microAnimationEnabled;
+        config.backgroundEnabled = defaultConfig.backgroundEnabled;
+        config.backgroundStyle = defaultConfig.backgroundStyle;
         config.setPrimaryColor(primaryColorR, primaryColorG, primaryColorB);
         config.setBackgroundColor(backgroundColorR, backgroundColorG, backgroundColorB);
         config.setBorderColor(borderColorR, borderColorG, borderColorB);
         config.setTextColor(textColorR, textColorG, textColorB);
+        config.setEnabledColor(enabledColorR, enabledColorG, enabledColorB);
+        
+        // 同步开关按钮文案
+        animationToggle.setMessage(Component.literal(config.animationEnabled ? "弹簧动画: 开" : "弹簧动画: 关"));
+        shadowToggle.setMessage(Component.literal(config.shadowEnabled ? "阴影: 开" : "阴影: 关"));
+        microAnimationToggle.setMessage(Component.literal(config.microAnimationEnabled ? "开启态微动效: 开" : "开启态微动效: 关"));
+        backgroundToggle.setMessage(Component.literal(config.backgroundEnabled ? "动态背景: 开" : "动态背景: 关"));
+        backgroundStyleButton.setMessage(Component.literal("背景样式: " + GuiBackground.STYLE_NAMES[config.backgroundStyle]));
         
         Minecraft.getInstance().player.displayClientMessage(Component.literal("§aGUI外观已重置为默认"), true);
     }
@@ -181,6 +234,7 @@ public class GuiStyleScreen extends Screen {
         config.setBackgroundColor(backgroundColorR, backgroundColorG, backgroundColorB);
         config.setBorderColor(borderColorR, borderColorG, borderColorB);
         config.setTextColor(textColorR, textColorG, textColorB);
+        config.setEnabledColor(enabledColorR, enabledColorG, enabledColorB);
         GuiStyleConfig.save();
         Minecraft.getInstance().player.displayClientMessage(Component.literal("§aGUI外观配置已保存"), true);
     }
@@ -199,7 +253,7 @@ public class GuiStyleScreen extends Screen {
         guiGraphics.drawString(font, "GUI外观设置", x + 10, y + 8, config.getTextColor());
         
         // 绘制颜色按钮
-        int btnY = y + 90;
+        int btnY = y + 115;
         int btnWidth = 120;
         int btnHeight = 20;
         
@@ -211,6 +265,7 @@ public class GuiStyleScreen extends Screen {
         drawColorButton(guiGraphics, mouseX, mouseY, x + 20, btnY + 60, btnWidth, btnHeight, "边框色", borderColorR, borderColorG, borderColorB, 2);
         // 文字色
         drawColorButton(guiGraphics, mouseX, mouseY, x + 20, btnY + 90, btnWidth, btnHeight, "文字色", textColorR, textColorG, textColorB, 3);
+        drawColorButton(guiGraphics, mouseX, mouseY, x + 20, btnY + 120, btnWidth, btnHeight, "启用颜色", enabledColorR, enabledColorG, enabledColorB, 4);
         
         // 绘制提示
         guiGraphics.drawString(font, "点击颜色按钮选择颜色", x + 20, y + HEIGHT - 55, 0x888888);
@@ -255,12 +310,12 @@ public class GuiStyleScreen extends Screen {
         int x = (width - WIDTH) / 2;
         int y = (height - HEIGHT) / 2;
         
-        // 检查颜色按钮点击
-        int btnY = y + 90;
+        // 检查颜色按钮点击（坐标必须与 render() 中绘制时一致：btnY = y + 115）
+        int btnY = y + 115;
         int btnWidth = 120;
         int btnHeight = 20;
         
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             int colorY = btnY + i * 30 + 15;
             if (mouseX >= x + 20 && mouseX <= x + 20 + btnWidth && mouseY >= colorY && mouseY <= colorY + btnHeight) {
                 openColorPicker(i);

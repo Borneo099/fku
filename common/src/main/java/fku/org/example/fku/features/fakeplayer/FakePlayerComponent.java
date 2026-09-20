@@ -30,7 +30,7 @@ public class FakePlayerComponent extends GuiComponent {
 
         boolean enabled = FakePlayerConfig.getInstance().enabled;
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String displayStr = "假人: " + (enabled ? "ON" : "OFF");
+        String displayStr = "假人: " + (enabled ? "开" : "关");
         var hk = FeatureHotkeyManager.getInstance().getHotkey("假人");
         if (hk.getHotkeyKey() >= 0) displayStr += " §7[" + hk.getHotkeyName() + "]";
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, enabled ? config.getTextColor() : 0xAAAAAA);

@@ -17,10 +17,15 @@ public class GuiComponent {
     protected String text;
     protected boolean visible = true;
     public boolean listeningForKey = false;
+    /** 该模块是否拥有可右键打开的配置菜单；为 true 时由面板/组件在右侧绘制 ">>" 标识 */
+    public boolean hasConfigMenu = false;
     
     // 交互状态
     protected boolean hovered = false;
     protected boolean pressed = false;
+
+    /** 当前鼠标坐标（由主界面渲染前设置，供 hover 判定复用，避免每个组件重复传参） */
+    public static int hoveredMouseX = -1, hoveredMouseY = -1;
     /** ★ 当前渲染透明度（0~1），由 renderWithAlpha 设置，子类 render 中读取 */
     protected float currentAlpha = 1.0f;
 

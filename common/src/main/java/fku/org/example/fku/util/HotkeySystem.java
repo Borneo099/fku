@@ -73,12 +73,11 @@ public class HotkeySystem {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = getMc();
         if (mc == null || mc.getWindow() == null) return;
-        long window = mc.getWindow().getWindow();
 
         // ── 绑定模式：捕获下一个有效按键 ──
         if (waitingFeature != null) {
             for (int key = 32; key < 512; key++) {
-                if (GLFW.glfwGetKey(window, key) != GLFW.GLFW_PRESS) continue;
+                if (!KeyInput.isKeyDown(key)) continue;
 
                 if (key == GLFW.GLFW_KEY_DELETE || key == GLFW.GLFW_KEY_BACKSPACE) {
                     IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(waitingFeature);
@@ -115,7 +114,7 @@ public class HotkeySystem {
                 IHotkeyInterface hk = FeatureHotkeyManager.getInstance().getHotkey(entry.getKey());
                 int keyCode = hk.getHotkeyKey();
                 if (keyCode < 0) continue;
-                boolean isDown = GLFW.glfwGetKey(window, keyCode) == GLFW.GLFW_PRESS;
+                boolean isDown = KeyInput.isKeyDown(keyCode);
                 prevKeyState.put(keyCode, isDown);
             }
             return;
@@ -126,7 +125,7 @@ public class HotkeySystem {
             int keyCode = hk.getHotkeyKey();
             if (keyCode < 0) continue;
 
-            boolean isDown = GLFW.glfwGetKey(window, keyCode) == GLFW.GLFW_PRESS;
+            boolean isDown = KeyInput.isKeyDown(keyCode);
             boolean wasDown = prevKeyState.getOrDefault(keyCode, false);
 
             // 按下瞬间触发一次（边缘触发）：当前按下 + 上一 tick 未按下

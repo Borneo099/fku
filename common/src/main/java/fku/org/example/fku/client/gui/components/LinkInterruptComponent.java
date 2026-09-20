@@ -35,7 +35,7 @@ public class LinkInterruptComponent extends GuiComponent {
         String displayStr = "链接中断";
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        // 该模块无配置菜单，不显示 ">>" 标识
     }
 
     @Override

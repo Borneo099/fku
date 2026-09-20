@@ -1,15 +1,15 @@
 package fku.org.example.fku.features.quickcommand; /* water */
 
 import com.mojang.blaze3d.platform.InputConstants;
+import fku.org.example.fku.util.KeyInput;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,19 +32,11 @@ public class QuickCommandScreen extends Screen {
     private static final int BASE_H = 90;
 
     private final QuickCommandConfig cfg;
-    private final List<Row> rows = new ArrayList<>();
+    private final List<QuickCommandRow> rows = new ArrayList<>();
     private int scrollY = 0;
 
     /** 正在等待绑定的行索引 */
     private int listeningRow = -1;
-
-    private static class Row {
-        EditBox input;
-        Button toggle;
-        Button bindBtn;
-        Button up;
-        Button down;
-    }
 
     public QuickCommandScreen() { super(Component.literal("快捷指令配置")); this.cfg = QuickCommandConfig.getInstance(); }
 
@@ -63,7 +55,7 @@ public class QuickCommandScreen extends Screen {
 
         for (int i = 0; i < cfg.commands.size(); i++) {
             var cmd = cfg.commands.get(i);
-            Row r = new Row();
+            QuickCommandRow r = new QuickCommandRow();
             r.input = new EditBox(font, cx + 10, ly, 140, 16, Component.literal(""));
             r.input.setMaxLength(32767);
             r.input.setValue(cmd.enabled ? cmd.command : "§7(已禁用)");
@@ -161,10 +153,9 @@ public class QuickCommandScreen extends Screen {
         if (listeningRow >= 0 && listeningRow < rows.size()) {
             var cmd = cfg.commands.get(listeningRow);
             // 捕获当前修饰键状态
-            long win = Minecraft.getInstance().getWindow().getWindow();
-            boolean shift = GLFW.glfwGetKey(win, 340) == 1 || GLFW.glfwGetKey(win, 344) == 1;
-            boolean ctrl = GLFW.glfwGetKey(win, 341) == 1 || GLFW.glfwGetKey(win, 345) == 1;
-            boolean alt = GLFW.glfwGetKey(win, 342) == 1 || GLFW.glfwGetKey(win, 346) == 1;
+            boolean shift = KeyInput.isKeyDown(340) || KeyInput.isKeyDown(344);
+            boolean ctrl = KeyInput.isKeyDown(341) || KeyInput.isKeyDown(345);
+            boolean alt = KeyInput.isKeyDown(342) || KeyInput.isKeyDown(346);
             int mods = (shift ? 1 : 0) | (ctrl ? 2 : 0) | (alt ? 4 : 0);
             cmd.hotkeyKey = keyCode;
             cmd.hotkeyModifiers = mods;

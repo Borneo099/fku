@@ -70,12 +70,28 @@ public abstract class ToggleComponent extends GuiComponent {
         if (renderHotkeyWait(g)) return;
 
         boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha);
+        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha, this);
 
-        String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
+        // 标签（带 开/关 状态，悬停白边由 Helper 统一处理）
         int textAlpha = (int)(255 * currentAlpha);
         int textColor = enabled ? ((textAlpha << 24) | (config.getTextColor() & 0xFFFFFF)) : ((textAlpha << 24) | 0xAAAAAA);
-        g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
+        String labelText = hotkeyAppend(withState(label));
+        int maxLabelW = width - 10;
+        g.drawString(Minecraft.getInstance().font, truncate(labelText, maxLabelW), x + 5, y + (height - 8) / 2, textColor);
+    }
+
+    /** 带 开/关 状态的标签文本（供 render 统一调用，内部读取 isEnabled，避免各子类变量名差异） */
+    protected String withState(String base) {
+        return base + ": " + (isEnabled() ? "开" : "关");
+    }
+
+    /** 文字超出宽度时截断并加省略号，防止与药丸重叠 */
+    protected String truncate(String s, int maxWidth) {
+        var font = Minecraft.getInstance().font;
+        if (font.width(s) <= maxWidth) return s;
+        StringBuilder sb = new StringBuilder(s);
+        while (sb.length() > 1 && font.width(sb.toString() + "…") > maxWidth) sb.setLength(sb.length() - 1);
+        return sb.toString() + "…";
     }
 
     @Override

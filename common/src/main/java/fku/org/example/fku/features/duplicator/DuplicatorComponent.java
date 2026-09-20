@@ -30,7 +30,7 @@ public class DuplicatorComponent extends GuiComponent {
 
         boolean enabled = DuplicatorFeature.isEnabled();
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String status = enabled ? "ON" : "OFF";
+        String status = enabled ? "开" : "关";
         var hk = FeatureHotkeyManager.getInstance().getHotkey("三叉戟复制");
         String hkStr = hk.getHotkeyKey() >= 0 ? " §7[" + hk.getHotkeyName() + "]" : "";
         g.drawString(Minecraft.getInstance().font, "三叉戟复制: " + status + hkStr,

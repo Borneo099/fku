@@ -89,7 +89,7 @@ public class EntityControlConfigScreen extends Screen {
                 b -> Minecraft.getInstance().setScreen(parent)).bounds(cx - w / 2, y, w, 20).build());
     }
 
-    private String btnText(String label, boolean on) { return label + ": " + (on ? "ON" : "OFF"); }
+    private String btnText(String label, boolean on) { return label + ": " + (on ? "开" : "关"); }
 
     private void parseDouble(String s, java.util.function.Consumer<Double> setter, double fallback) {
         try { setter.accept(Double.parseDouble(s)); }

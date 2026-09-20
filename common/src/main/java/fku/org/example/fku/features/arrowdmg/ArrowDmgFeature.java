@@ -48,10 +48,16 @@ public class ArrowDmgFeature {
     }
 
     public static void toggleEnabled() { setEnabled(!isEnabled()); }
-    public static void setEnabled(boolean v) {
+    public static void setEnabled(boolean v) { setEnabled(v, true); }
+    /**
+     * 设置开关状态。
+     * @param save 是否写盘；自伤等内部临时关闭应传 false，避免把 OFF 持久化到配置，
+     *             导致切换房间/实例时恢复未完成而永久丢失用户开启状态。
+     */
+    public static void setEnabled(boolean v, boolean save) {
         ArrowDmgConfig cfg = ArrowDmgConfig.getInstance();
         cfg.enabled = v;
-        cfg.save();
+        if (save) cfg.save();
         if (!v) { Minecraft mc = getMc(); if (forcedPress && mc != null) { mc.options.keyUse.setDown(false); forcedPress = false; } target = null; }
     }
     public static boolean isEnabled() { return ArrowDmgConfig.getInstance().enabled; }

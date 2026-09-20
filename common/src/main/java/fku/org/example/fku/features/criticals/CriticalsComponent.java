@@ -32,11 +32,11 @@ public class CriticalsComponent extends ToggleComponent {
         if (!visible) return;
         if (renderHotkeyWait(g)) return;
         boolean en = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, en);
-        String display = hotkeyAppend(label + ": " + (en ? "开" : "关"));
+        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, en, this);
+        String display = hotkeyAppend(withState(label));
         int c = en ? GuiStyleConfig.getInstance().getTextColor() : 0xAAAAAA;
         g.drawString(Minecraft.getInstance().font, display, x + 5, y + (height - 8) / 2, c);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
     }
 
     @Override

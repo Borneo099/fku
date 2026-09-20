@@ -1,7 +1,7 @@
 package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.FkuConfig;
-import fku.org.example.fku.features.fastjoin.FastJoinComponent;
+import fku.org.example.fku.features.entitycontrol.EntityControlComponent;
 import fku.org.example.fku.features.loot.LootComponent;
 import fku.org.example.fku.features.pearlphase.PearlPhaseComponent;
 import fku.org.example.fku.features.fakeplayer.FakePlayerComponent;
@@ -21,20 +21,17 @@ public class ToolPanel extends GuiPanel {
     @Override
     protected void init() {
         addComponent(new BedrockBreakerComponent(0, 0, 110, 25));
+        addComponent(new EntityControlComponent(0, 0, 110, 25));
         addComponent(new LootComponent(0, 0, 110, 25));
         addComponent(new AutoDropComponent(0, 0, 110, 25));
         addComponent(new DuplicatorComponent(0, 0, 110, 25));
-        addComponent(new DisableTimeoutComponent(0, 0, 110, 25));
-        addComponent(new FastJoinComponent(0, 0, 110, 25));
         addComponent(new AntiLagComponent(0, 0, 110, 25));
-        addComponent(new DisableCheatutilsChunkComponent(0, 0, 110, 25));
         addComponent(new PearlPhaseComponent(0, 0, 110, 25));
         addComponent(new FakePlayerComponent(0, 0, 110, 25));
         addComponent(new WorldEditComponent(0, 0, 110, 25));
         addComponent(new StructureLocatorComponent(0, 0, 110, 25));
         addComponent(new BaritoneComponent(0, 0, 110, 25));
         addComponent(new SelfDamageComponent(0, 0, 110, 25));
-        addComponent(new LinkInterruptComponent(0, 0, 110, 25));
         addComponent(new QuickCommandComponent(0, 0, 110, 22));
     }
 

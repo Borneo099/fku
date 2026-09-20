@@ -41,12 +41,12 @@ public class EntityControlComponent extends ToggleComponent {
         if (renderHotkeyWait(g)) return;
         GuiStyleConfig config = GuiStyleConfig.getInstance();
         boolean enabled = isEnabled();
-        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha);
-        String displayStr = hotkeyAppend(label + ": " + (enabled ? "ON" : "OFF"));
+        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha, this);
+        String displayStr = hotkeyAppend(withState(label));
         int textAlpha = (int)(255 * currentAlpha);
         int textColor = enabled ? ((textAlpha << 24) | (config.getTextColor() & 0xFFFFFF)) : ((textAlpha << 24) | 0xAAAAAA);
         g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2, 0x888888);
+        g.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
     }
 
     @Override

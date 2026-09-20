@@ -11,6 +11,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import fku.org.example.fku.util.KeyInput;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -143,10 +144,10 @@ public class EntityControlFeature {
 
     /** 检测左 Alt 是否处于按下状态（用于下降控制） */
     private static boolean isLeftAltDown(Minecraft mc) {
+        // ★ 改用 InputConstants.isKeyDown 安全查询按键状态（GLFW 上下文未就绪/已销毁时不会崩）
         try {
-            long window = mc.getWindow().getWindow();
-            return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS
-                    || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS;
+            return KeyInput.isKeyDown(GLFW.GLFW_KEY_LEFT_ALT)
+                    || KeyInput.isKeyDown(GLFW.GLFW_KEY_RIGHT_ALT);
         } catch (Exception ignored) {
             return false;
         }

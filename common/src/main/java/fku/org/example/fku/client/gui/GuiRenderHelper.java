@@ -1,6 +1,7 @@
 package fku.org.example.fku.client.gui;
 
 import fku.org.example.fku.config.GuiStyleConfig;
+import fku.org.example.fku.client.gui.components.GuiComponent;
 
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -12,7 +13,7 @@ import net.minecraft.client.gui.GuiGraphics;
  * - 材质感知绘制（边框高光）
  */
 public class GuiRenderHelper {
-    
+
     /**
      * 绘制圆角矩形
      * @param guiGraphics 图形上下文
@@ -198,30 +199,93 @@ public class GuiRenderHelper {
     }
     
     /**
-     * 绘制组件背景（兼容旧调用 — 5参数）
+     * 绘制组件背景（兼容旧调用 — 5参数，不带动画追踪，不绘制药丸/微动效）
+     * 供非开关型模块（常驻菜单按钮等）调用
      */
     public static void drawComponentBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean enabled) {
-        drawComponentBackground(guiGraphics, x, y, width, height, enabled, 1f);
+        drawComponentBackground(guiGraphics, x, y, width, height, enabled, 1f, null);
     }
-    
+
+    /**
+     * 绘制组件背景（传递组件实例以启用药丸动画）
+     */
+    public static void drawComponentBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean enabled, GuiComponent comp) {
+        drawComponentBackground(guiGraphics, x, y, width, height, enabled, 1f, comp);
+    }
+
     /**
      * 绘制组件背景（支持 alpha） — Apple: 清洁、无装饰的交互元素
+     * 悬停显示白色边框（选中感），开启态带呼吸高光微动效
      */
-    public static void drawComponentBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean enabled, float alpha) {
+    public static void drawComponentBackground(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean enabled, float alpha, GuiComponent comp) {
         GuiStyleConfig config = GuiStyleConfig.getInstance();
         int adjAlpha = (int)(180 * alpha);
-        
-        int bgColor = enabled ? 
-            (config.getEnabledColor() | (adjAlpha << 24)) : 
+
+        int bgColor = enabled ?
+            (config.getEnabledColor() | (adjAlpha << 24)) :
             config.getBackgroundColorWithAlpha(adjAlpha);
-        
+
         int radius = Math.max(2, config.cornerRadius / 2);
         drawRoundedRect(guiGraphics, x, y, width, height, bgColor, radius);
-        
-        // 启用状态下的发光内边框
-        if (enabled) {
+
+        // hover 判定（基于静态鼠标坐标 + 组件矩形，无需 comp 参与，所有重载通用）
+        boolean hovered = GuiComponent.hoveredMouseX >= x && GuiComponent.hoveredMouseX <= x + width
+                && GuiComponent.hoveredMouseY >= y && GuiComponent.hoveredMouseY <= y + height;
+
+        // 开启态微动效：呼吸光晕（边框外侧微光，随时间明灭）— 提亮趋向白色、外移2px，确保清晰可见
+        if (enabled && config.microAnimationEnabled && alpha > 0.5f) {
+            long t = System.currentTimeMillis();
+            float pulse = (float)(Math.sin(t / 380.0) * 0.5 + 0.5); // 0~1
+            int glowA = (int)(90 + 150 * pulse);                     // 90~240 明灭
+            int ec = config.getEnabledColor() & 0xFFFFFF;
+            int r = (ec >> 16) & 0xFF, gg = (ec >> 8) & 0xFF, b = ec & 0xFF;
+            int lr = Math.min(255, r + (255 - r) / 2);
+            int lg = Math.min(255, gg + (255 - gg) / 2);
+            int lb = Math.min(255, b + (255 - b) / 2);
+            int glow = (glowA << 24) | (lr << 16) | (lg << 8) | lb;
+            drawRoundedOutline(guiGraphics, x - 2, y - 2, width + 4, height + 4, glow, radius, 1);
+        }
+
+        // 边框：悬停时显示白色细边框（选中反馈），否则按开启态显示彩色边框
+        if (hovered) {
+            int white = (255 << 24) | 0xFFFFFF;
+            drawRoundedOutline(guiGraphics, x, y, width, height, white, radius, 1);
+        } else if (enabled) {
             int borderColor = config.getEnabledColor() | (255 << 24);
             drawRoundedOutline(guiGraphics, x, y, width, height, borderColor, radius, 1);
+            // 顶部高光（材质受光，灵动质感）
+            if (alpha > 0.5f) {
+                int glowAlpha = (int)(90 * alpha);
+                int topGlow = (glowAlpha << 24) | 0xFFFFFF;
+                if (radius > 0) guiGraphics.fill(x + radius, y, x + width - radius, y + 1, topGlow);
+            }
         }
+    }
+
+    /**
+     * 绘制入口型模块背景（蓝底，与 实体模型/创世神/结构定位/Baritone 一致）
+     * 悬停时显示白色边框（选中感），否则显示蓝色边框
+     */
+    public static void drawModuleEntryBackground(GuiGraphics guiGraphics, int x, int y, int w, int h, float alpha, boolean hovered, GuiStyleConfig config) {
+        int a = (int)(180 * alpha);
+        int bg = config.getPrimaryColorWithAlpha(a);
+        int r = Math.max(2, config.cornerRadius / 2);
+        drawRoundedRect(guiGraphics, x, y, w, h, bg, r);
+        int ba = (int)(255 * alpha);
+        if (hovered) {
+            int white = (255 << 24) | 0xFFFFFF;
+            drawRoundedOutline(guiGraphics, x, y, w, h, white, r, 1);
+        } else {
+            int bc = (ba << 24) | (config.getPrimaryColor() & 0xFFFFFF);
+            drawRoundedOutline(guiGraphics, x, y, w, h, bc, r, 1);
+        }
+    }
+
+    /**
+     * 绘制实心圆（用于背景粒子：雪花/气泡/星点），使用圆角矩形近似
+     */
+    public static void drawCircle(GuiGraphics guiGraphics, int cx, int cy, int radius, int color) {
+        if (radius <= 0) return;
+        drawRoundedRect(guiGraphics, cx - radius, cy - radius, radius * 2, radius * 2, color, radius);
     }
 }

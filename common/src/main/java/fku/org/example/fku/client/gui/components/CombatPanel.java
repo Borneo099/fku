@@ -40,7 +40,7 @@ public class CombatPanel extends GuiPanel {
                 GuiStyleConfig config = GuiStyleConfig.getInstance();
                 boolean enabled = isEnabled();
                 GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-                String displayStr = label + ": " + (enabled ? "ON" : "OFF");
+                String displayStr = label + ": " + (enabled ? "开" : "关");
                 int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
                 g.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2, textColor);
                 // ★ 右键打开配置提示

@@ -63,7 +63,7 @@ public class LootComponent extends GuiComponent {
 
         boolean enabled = isEnabled();
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled);
-        String status = enabled ? "ON" : "OFF";
+        String status = enabled ? "开" : "关";
         var hk = FeatureHotkeyManager.getInstance().getHotkey("一键取物");
         String hkStr = hk.getHotkeyKey() >= 0 ? " §7[" + hk.getHotkeyName() + "]" : "";
         g.drawString(Minecraft.getInstance().font, "一键取物: " + status + hkStr, x + 5, y + (height - 8) / 2 - 4, enabled ? config.getTextColor() : 0xAAAAAA);

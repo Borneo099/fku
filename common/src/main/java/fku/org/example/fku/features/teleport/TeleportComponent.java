@@ -15,7 +15,6 @@ public class TeleportComponent extends ToggleComponent {
     public void render(GuiGraphics g, int mx, int my, float pt) {
         if (!visible || currentAlpha <= 0.01f) return;
         super.render(g, mx, my, pt);
-        g.drawString(Minecraft.getInstance().font, ">>", x + width - 14, y + (height - 8) / 2, 0x888888);
     }
 
     @Override

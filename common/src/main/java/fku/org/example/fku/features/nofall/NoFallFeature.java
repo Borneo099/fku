@@ -29,10 +29,15 @@ public class NoFallFeature {
 
     public static void toggleEnabled() { setEnabled(!isEnabled()); }
 
-    public static void setEnabled(boolean val) {
+    public static void setEnabled(boolean val) { setEnabled(val, true); }
+    /**
+     * 设置开关状态。
+     * @param save 是否写盘；自伤等内部临时关闭应传 false，避免把 OFF 持久化到配置。
+     */
+    public static void setEnabled(boolean val, boolean save) {
         NoFallConfig cfg = NoFallConfig.getInstance();
         cfg.enabled = val;
-        cfg.save();
+        if (save) cfg.save();
     }
 
     public static boolean isEnabled() { return NoFallConfig.getInstance().enabled; }

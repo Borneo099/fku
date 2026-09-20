@@ -1,4 +1,4 @@
-package fku.org.example.fku.features.quickcommand; /* water */
+package fku.org.example.fku.features.clientop; /* water */
 
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import fku.org.example.fku.client.gui.components.ToggleComponent;
@@ -7,14 +7,28 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * 快捷指令 — 左键开关，右键打开配置面板，中键绑定热键
- * 视觉统一为蓝底入口风格（同 实体模型/创世神），悬停白边选中，开/关状态文字提示
+ * 客户端OP — 左键开关，右键打开配置面板，中键绑定热键
+ * 视觉风格与 快捷指令/实体模型 一致（蓝底入口 + 悬停白边 + 开/关状态 + >> 标识）。
  */
-public class QuickCommandComponent extends ToggleComponent {
-    public QuickCommandComponent(int x, int y, int w, int h) { super(x, y, w, h, "快捷指令"); }
-    @Override protected boolean isEnabled() { return QuickCommandConfig.getInstance().enabled; }
-    @Override protected void toggle() { var c = QuickCommandConfig.getInstance(); c.setEnabled(!c.enabled); }
-    @Override protected void saveConfig() {}
+public class ClientOPComponent extends ToggleComponent {
+
+    public ClientOPComponent(int x, int y, int w, int h) {
+        super(x, y, w, h, "客户端OP");
+        hasConfigMenu = true; // 拥有配置菜单，由面板/组件统一绘制 >> 标识
+    }
+
+    @Override
+    protected boolean isEnabled() {
+        return ClientOPConfig.getInstance().enabled;
+    }
+
+    @Override
+    protected void toggle() {
+        ClientOPConfig.getInstance().setEnabled(!ClientOPConfig.getInstance().enabled);
+    }
+
+    @Override
+    protected void saveConfig() {}
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
@@ -26,7 +40,7 @@ public class QuickCommandComponent extends ToggleComponent {
         GuiRenderHelper.drawComponentBackground(g, x, y, width, height, enabled, currentAlpha, this);
 
         // 标签 + 热键 + 开/关 状态提示
-        int textAlpha = (int)(255 * currentAlpha);
+        int textAlpha = (int) (255 * currentAlpha);
         int textColor = enabled ? ((textAlpha << 24) | (config.getTextColor() & 0xFFFFFF)) : ((textAlpha << 24) | 0xAAAAAA);
         String labelText = hotkeyAppend(withState(label));
         int maxLabelW = width - 10;
@@ -37,10 +51,21 @@ public class QuickCommandComponent extends ToggleComponent {
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         if (!isHovered(mx, my)) return false;
-        if (btn == 0) { if (listeningForKey) return false; toggle(); return true; }
-        if (btn == 1) { Minecraft.getInstance().setScreen(new QuickCommandScreen()); return true; }
+        if (btn == 0) {
+            if (listeningForKey) return false;
+            toggle();
+            return true;
+        }
+        if (btn == 1) {
+            Minecraft.getInstance().setScreen(new ClientOPScreen());
+            return true;
+        }
         if (btn == 2) return handleMiddleClick(mx, my, btn);
         return false;
     }
-    @Override public String getFeatureName() { return "快捷指令"; }
+
+    @Override
+    public String getFeatureName() {
+        return "客户端OP";
+    }
 }

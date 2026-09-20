@@ -35,10 +35,10 @@ public class DisableCheatutilsChunkComponent extends GuiComponent {
 
         GuiRenderHelper.drawComponentBackground(guiGraphics, x, y, width, height, enabled);
 
-        String displayStr = "禁CU区块: " + (enabled ? "ON" : "OFF");
+        String displayStr = "禁CU区块: " + (enabled ? "开" : "关");
         int textColor = enabled ? config.getTextColor() : 0xAAAAAA;
         guiGraphics.drawString(Minecraft.getInstance().font, displayStr, x + 5, y + (height - 8) / 2 - 4, textColor);
-        guiGraphics.drawString(Minecraft.getInstance().font, ">>", x + width - 18, y + (height - 8) / 2 - 4, 0x888888);
+        // 该模块无配置菜单，不显示 ">>" 标识
     }
 
     @Override

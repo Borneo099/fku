@@ -15,6 +15,7 @@ import fku.org.example.fku.features.duplicator.DuplicatorFeature;
 import fku.org.example.fku.features.killaura.KillAuraFeature;
 import fku.org.example.fku.features.teleport.TeleportFeature;
 import fku.org.example.fku.features.quickcommand.QuickCommandFeature;
+import fku.org.example.fku.features.clientop.ClientOPFeature;
 import fku.org.example.fku.features.waterwalk.WaterWalkFeature;
 import fku.org.example.fku.features.tacz.AutoReloadFeature;
 import fku.org.example.fku.features.tacz.FullAutoFeature;
@@ -64,6 +65,8 @@ public class ClientSetup {
         KillAuraFeature.init();
         TeleportFeature.init();
         QuickCommandFeature.init();
+        // ★ 初始化客户端OP（静默加载配置）
+        ClientOPFeature.init();
         WaterWalkFeature.init();
         // ★ TaCZ：自动换弹 / 全枪自动 / 全狙自动（连发逻辑由 MixinTaCZGunData 驱动）
         AutoReloadFeature.init();

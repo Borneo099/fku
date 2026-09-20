@@ -36,12 +36,8 @@ public class ConfigButtonComponent extends GuiComponent {
             return;
         }
 
-        int alpha = (int)(180 * currentAlpha);
-        int bgColor = config.getPrimaryColorWithAlpha(alpha);
-        GuiRenderHelper.drawRoundedRect(g, x, y, width, height, bgColor, Math.max(2, config.cornerRadius / 2));
-        int borderAlpha = (int)(255 * currentAlpha);
-        int borderColor = (borderAlpha << 24) | (config.getPrimaryColor() & 0xFFFFFF);
-        GuiRenderHelper.drawRoundedOutline(g, x, y, width, height, borderColor, Math.max(2, config.cornerRadius / 2), 1);
+        // 统一为启用色风格（与基岩破坏器开启态一致：启用色底+彩色边框+呼吸光晕+悬停白边）
+        GuiRenderHelper.drawComponentBackground(g, x, y, width, height, true, currentAlpha, this);
 
         String display = label;
         if (fn != null) {

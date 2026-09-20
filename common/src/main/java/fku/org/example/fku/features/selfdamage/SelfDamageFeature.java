@@ -24,6 +24,8 @@ public class SelfDamageFeature {
     // ── 延迟恢复防摔/32k弓 ──
     private static boolean pendingRestoreNoFall = false;
     private static boolean pendingRestoreArrow = false;
+    private static boolean nofallShouldBeOn = false; // 自伤前防摔本为开启，恢复时还原为开
+    private static boolean arrowShouldBeOn = false;  // 自伤前32k弓本为开启，恢复时还原为开
     private static int restoreDelayTicks = 0; // 剩余等待 tick 数
 
     public static void init() { SelfDamageConfig.load(); }
@@ -49,10 +51,11 @@ public class SelfDamageFeature {
         }
 
         // ── 临时关闭防摔和32k弓（否则摔落伤害被拦截） ──
+        // 注意：仅运行时关闭（不写盘），避免把 OFF 持久化到配置导致切换房间后仍为关
         boolean nofallWasOn = fku.org.example.fku.features.nofall.NoFallFeature.isEnabled();
         boolean arrowWasOn = fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isEnabled();
-        if (nofallWasOn) fku.org.example.fku.features.nofall.NoFallFeature.setEnabled(false);
-        if (arrowWasOn) fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(false);
+        if (nofallWasOn) { fku.org.example.fku.features.nofall.NoFallFeature.setEnabled(false, false); pendingRestoreNoFall = true; nofallShouldBeOn = true; }
+        if (arrowWasOn) { fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(false, false); pendingRestoreArrow = true; arrowShouldBeOn = true; }
 
         int amount = SelfDamageConfig.getInstance().damageAmount;
         Vec3 pos = mc.player.position();
@@ -65,8 +68,6 @@ public class SelfDamageFeature {
         sendPos(pos.x, pos.y, pos.z, true);
 
         // ── 安排延迟恢复（给服务端足够时间处理摔落包） ──
-        pendingRestoreNoFall = nofallWasOn;
-        pendingRestoreArrow = arrowWasOn;
         restoreDelayTicks = 5; // 5 tick ≈ 250ms
 
         mc.player.displayClientMessage(
@@ -81,12 +82,14 @@ public class SelfDamageFeature {
             restoreDelayTicks--;
             if (restoreDelayTicks == 0) {
                 if (pendingRestoreNoFall) {
-                    fku.org.example.fku.features.nofall.NoFallFeature.setEnabled(true);
+                    fku.org.example.fku.features.nofall.NoFallFeature.setEnabled(nofallShouldBeOn, false);
                     pendingRestoreNoFall = false;
+                    nofallShouldBeOn = false;
                 }
                 if (pendingRestoreArrow) {
-                    fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(true);
+                    fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.setEnabled(arrowShouldBeOn, false);
                     pendingRestoreArrow = false;
+                    arrowShouldBeOn = false;
                 }
             }
         }

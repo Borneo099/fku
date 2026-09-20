@@ -36,8 +36,8 @@ public class GuiStyleConfig {
     /** 弹簧刚度 — 值越高响应越快 (默认8.0) */
     public float springStiffness = 8.0f;
     
-    /** 是否启用发光/高光效果 */
-    public boolean glowEnabled = true;
+    /** 是否启用发光/高光效果 - 默认false（避免默认全开过于花哨） */
+    public boolean glowEnabled = false;
     
     /** 动画速度 (毫秒) - 默认200 (降级选项，默认动画使用弹簧) */
     public int animationSpeed = 200;
@@ -47,12 +47,21 @@ public class GuiStyleConfig {
     
     /** 阴影强度 (0-100) - 默认30 */
     public int shadowStrength = 30;
+
+    /** 开启态微动效 - 默认true */
+    public boolean microAnimationEnabled = true;
+
+    /** 是否启用 GUI 动态背景 - 默认true */
+    public boolean backgroundEnabled = true;
+
+    /** 背景动效样式 (0雪花/1彩带/2樱花/3气泡/4星河/5流光) - 默认1 */
+    public int backgroundStyle = 1;
     
     // ============ 颜色设置 ============
     
-    /** 主色调 RGB - 默认蓝色 */
-    public int primaryColorR = 0;
-    public int primaryColorG = 102;
+    /** 主色调 RGB - 默认紫 */
+    public int primaryColorR = 165;
+    public int primaryColorG = 62;
     public int primaryColorB = 204;
     
     /** 背景色 RGB - 默认深灰 */
@@ -70,10 +79,10 @@ public class GuiStyleConfig {
     public int textColorG = 255;
     public int textColorB = 255;
     
-    /** 启用状态颜色 RGB - 默认绿色 */
-    public int enabledColorR = 0;
-    public int enabledColorG = 200;
-    public int enabledColorB = 0;
+    /** 启用状态颜色 RGB - 默认紫 */
+    public int enabledColorR = 110;
+    public int enabledColorG = 81;
+    public int enabledColorB = 200;
     
     /** 禁用状态颜色 RGB - 默认红色 */
     public int disabledColorR = 200;
@@ -229,6 +238,21 @@ public class GuiStyleConfig {
     
     public void setShadowStrength(int value) {
         this.shadowStrength = Math.max(0, Math.min(100, value));
+        save();
+    }
+
+    public void setMicroAnimationEnabled(boolean value) {
+        this.microAnimationEnabled = value;
+        save();
+    }
+
+    public void setBackgroundEnabled(boolean value) {
+        this.backgroundEnabled = value;
+        save();
+    }
+
+    public void setBackgroundStyle(int value) {
+        this.backgroundStyle = Math.max(0, Math.min(5, value));
         save();
     }
     

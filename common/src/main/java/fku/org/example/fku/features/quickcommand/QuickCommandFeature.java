@@ -6,6 +6,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import fku.org.example.fku.util.KeyInput;
 import net.minecraftforge.fml.common.Mod;
 
 /**
@@ -41,12 +42,9 @@ public class QuickCommandFeature {
         if (mc.screen != null) return; // 有界面时不触发
 
         // 检查当前修饰键状态
-        boolean shift = org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), 340) == 1
-                || org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), 344) == 1;
-        boolean ctrl = org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), 341) == 1
-                || org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), 345) == 1;
-        boolean alt = org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), 342) == 1
-                || org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(), 346) == 1;
+        boolean shift = KeyInput.isKeyDown(340) || KeyInput.isKeyDown(344);
+        boolean ctrl = KeyInput.isKeyDown(341) || KeyInput.isKeyDown(345);
+        boolean alt = KeyInput.isKeyDown(342) || KeyInput.isKeyDown(346);
 
         int action = event.getAction(); // 1=press, 0=release
         if (action != 1) return; // 只检测按下
