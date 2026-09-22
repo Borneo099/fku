@@ -37,7 +37,10 @@
     "MinecraftFreecamPickMixin",
     "MixinCheatutilsChunk",
     "MixinPacketSendHwid",
-    "MixinOpmodDosLoop"
+    "MixinOpmodDosLoop",
+    "MixinClientOPCommandSuggestions",
+    "MixinClientOPChatPreview",
+    "DisconnectedScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

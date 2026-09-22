@@ -27,6 +27,9 @@ public class HealthTagConfig {
     public boolean enabled = true;
     public int x = 100;
     public int y = 100;
+    /** 相对位置（0~1，窗口宽高比例）。>=0 时优先于 x/y，窗口缩放保持相对位置 */
+    public float relX = -1.0F;
+    public float relY = -1.0F;
 
     /** 准星瞄准：开启后只要实体在准星附近即显示 HealthTag，无需持弓或攻击到目标 */
     public boolean crosshairAim = false;

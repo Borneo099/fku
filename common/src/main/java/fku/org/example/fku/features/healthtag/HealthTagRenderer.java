@@ -23,6 +23,13 @@ public class HealthTagRenderer {
 
         LivingEntity entity = HealthTagManager.getTargetEntity();
         HealthTagConfig config = HealthTagConfig.getInstance();
+        if (config.relX > 0.0F && config.relY > 0.0F) {
+            int gw = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+            int gh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+            config.x = Math.max(2, Math.min((int)(config.relX * (float)gw), gw - WIDTH - 2));
+            config.y = Math.max(2, Math.min((int)(config.relY * (float)gh), gh - HEIGHT - 2));
+        }
+
         float alpha = HealthTagManager.getAlpha();
         boolean editing = HealthTagManager.isEditing();
 
@@ -188,8 +195,10 @@ public class HealthTagRenderer {
     public static void onMouseDragged(double mouseX, double mouseY, int button) {
         if (dragging && button == 0) {
             HealthTagConfig config = HealthTagConfig.getInstance();
-            config.x = (int) mouseX - dragOffsetX;
-            config.y = (int) mouseY - dragOffsetY;
+            int gw = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+            int gh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+            config.relX = (float)((int) mouseX - dragOffsetX) / (float) gw;
+            config.relY = (float)((int) mouseY - dragOffsetY) / (float) gh;
         }
     }
 

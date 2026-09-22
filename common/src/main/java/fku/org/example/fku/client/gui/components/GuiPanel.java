@@ -43,6 +43,9 @@ public abstract class GuiPanel {
     protected int panelIndex = 0;
     /** 面板进入起始时间（错峰用） */
     protected long entryStartTime = 0;
+    /** UI 整体缩放（由 ClickGuiScreen 设置；橡皮筋边界等换算用） */
+    protected static float uiScale = 1f;
+    public static void setUiScale(float s) { uiScale = s; }
     
     // ——— 拖拽速度投射 ———
     /** 速度历史（最后 5 帧位置/时间） */

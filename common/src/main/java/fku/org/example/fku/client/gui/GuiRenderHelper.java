@@ -288,4 +288,32 @@ public class GuiRenderHelper {
         if (radius <= 0) return;
         drawRoundedRect(guiGraphics, cx - radius, cy - radius, radius * 2, radius * 2, color, radius);
     }
+
+    /**
+     * 绘制平滑圆角矩形（带真实圆弧近似）— 灵动岛 NotificationRenderer 使用
+     */
+    public static void drawRoundedRectSmooth(GuiGraphics guiGraphics, int x, int y, int width, int height, int color, int radius) {
+        if (width > 0 && height > 0) {
+            if (radius <= 0) {
+                guiGraphics.fill(x, y, x + width, y + height, color);
+            } else {
+                radius = Math.min(radius, Math.min(width / 2, height / 2));
+                if (radius <= 0) {
+                    guiGraphics.fill(x, y, x + width, y + height, color);
+                } else {
+                    guiGraphics.fill(x, y + radius, x + width, y + height - radius, color);
+                    guiGraphics.fill(x + radius, y, x + width - radius, y + height, color);
+                    for (int dy = 0; dy < radius; ++dy) {
+                        double d = (double)radius - 0.5 - (double)dy;
+                        double dx = Math.sqrt(Math.max(0.0, (double)radius * (double)radius - d * d));
+                        int inset = radius - (int)Math.round(dx);
+                        guiGraphics.fill(x + inset, y + dy, x + radius, y + dy + 1, color);
+                        guiGraphics.fill(x + width - radius, y + dy, x + width - inset, y + dy + 1, color);
+                        guiGraphics.fill(x + inset, y + height - 1 - dy, x + radius, y + height - dy, color);
+                        guiGraphics.fill(x + width - radius, y + height - 1 - dy, x + width - inset, y + height - dy, color);
+                    }
+                }
+            }
+        }
+    }
 }

@@ -4,7 +4,13 @@ import fku.org.example.fku.features.antilag.AntiLagFeature;
 import fku.org.example.fku.features.clientop.ClientOPFeature;
 import fku.org.example.fku.features.clientop.OpCommandDB;
 import fku.org.example.fku.features.tpaura.TpAuraConfig;
+import fku.org.example.fku.features.dynamicisland.DynamicIslandDamageHandler;
+import fku.org.example.fku.mixin.ServerboundInteractPacketAccessor;
 import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.Vec3;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -91,5 +97,21 @@ public abstract class MixinClientPacketListener {
                 root.addChild(node);
             }
         } catch (Exception ignored) {}
+    }
+
+    @Inject(
+            method = {"send(Lnet/minecraft/network/protocol/Packet;)V"},
+            at = {@At("HEAD")}
+    )
+    private void fku$onSendPacket(Packet packet, CallbackInfo ci) {
+        if (packet instanceof final ServerboundInteractPacket ip) {
+            ip.dispatch(new ServerboundInteractPacket.Handler() {
+                public void onAttack() {
+                    DynamicIslandDamageHandler.notifyAttack(((ServerboundInteractPacketAccessor)ip).getEntityId());
+                }
+                public void onInteraction(InteractionHand hand) {}
+                public void onInteraction(InteractionHand hand, Vec3 pos) {}
+            });
+        }
     }
 }

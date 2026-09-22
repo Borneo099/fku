@@ -33,19 +33,13 @@ public class QuickCommandScreen extends Screen {
     private static final int BASE_H = 90;
 
     private final QuickCommandConfig cfg;
-    private final List<Row> rows = new ArrayList<>();
+    private final List<QuickCommandRow> rows = new ArrayList<>();
     private int scrollY = 0;
 
     /** 正在等待绑定的行索引 */
     private int listeningRow = -1;
 
-    private static class Row {
-        EditBox input;
-        Button toggle;
-        Button bindBtn;
-        Button up;
-        Button down;
-    }
+    // 行控件容器已抽取为顶层类 QuickCommandRow（避免嵌套类运行时加载失败 -> NoClassDefFoundError）
 
     public QuickCommandScreen() { super(Component.literal("快捷指令配置")); this.cfg = QuickCommandConfig.getInstance(); }
 
@@ -64,7 +58,7 @@ public class QuickCommandScreen extends Screen {
 
         for (int i = 0; i < cfg.commands.size(); i++) {
             var cmd = cfg.commands.get(i);
-            Row r = new Row();
+            QuickCommandRow r = new QuickCommandRow();
             r.input = new EditBox(font, cx + 10, ly, 140, 16, Component.literal(""));
             r.input.setMaxLength(32767);
             r.input.setValue(cmd.enabled ? cmd.command : "§7(已禁用)");

@@ -2,6 +2,7 @@ package fku.org.example.fku.client.gui.components;
 
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.dynamicisland.NotificationCenter;
 import fku.org.example.fku.util.FeatureHotkeyManager;
 import fku.org.example.fku.util.HotkeySystem;
 import net.minecraft.client.Minecraft;
@@ -101,6 +102,7 @@ public abstract class ToggleComponent extends GuiComponent {
             if (HotkeySystem.isWaiting()) return false;
             toggle();
             saveConfig();
+            NotificationCenter.pushToggle(label, isEnabled());
             return true;
         } else if (button == 2) {
             return handleMiddleClick(mx, my, button);

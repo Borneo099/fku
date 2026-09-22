@@ -189,7 +189,13 @@ public class KillIconFeature {
         return false;
     }
     public static void onMouseDragged(double mx, double my, int btn) {
-        if (dragging && btn == 0) { var cfg = KillIconConfig.getInstance(); cfg.x = Math.max(0, (int)mx - dragOffsetX); cfg.y = Math.max(0, (int)my - dragOffsetY); }
+        if (dragging && btn == 0) {
+            var cfg = KillIconConfig.getInstance();
+            int gw = getMc().getWindow().getGuiScaledWidth();
+            int gh = getMc().getWindow().getGuiScaledHeight();
+            cfg.relX = (float)((int)mx - dragOffsetX) / (float) gw;
+            cfg.relY = (float)((int)my - dragOffsetY) / (float) gh;
+        }
     }
     public static void onMouseReleased(double mx, double my, int btn) {
         if (dragging && btn == 0) { dragging = false; KillIconConfig.save(); }
@@ -239,6 +245,13 @@ public class KillIconFeature {
             }
         }
         if (totalW == 0) totalW = 80; // 无记录时占位
+
+        int gw = getMc().getWindow().getGuiScaledWidth();
+        int gh = getMc().getWindow().getGuiScaledHeight();
+        if (cfg.relX > 0.0F && cfg.relY > 0.0F) {
+            cfg.x = Math.max(2, Math.min((int)(cfg.relX * (float)gw), gw - totalW - 4));
+            cfg.y = Math.max(2, Math.min((int)(cfg.relY * (float)gh), gh - totalH - 4));
+        }
 
         if (screenOpen) {
             // ★ GUI打开时：显示拖拽指示边框 + 提示文字

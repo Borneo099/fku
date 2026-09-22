@@ -17,6 +17,9 @@ public class KillIconConfig {
     public boolean enabled = false;
     public int x = 10;
     public int y = 10;
+    /** 相对位置（0~1，窗口宽高比例）。>=0 时优先于 x/y，窗口缩放保持相对位置 */
+    public float relX = -1.0F;
+    public float relY = -1.0F;
     public int displayDuration = 60;
     public int maxEntries = 5;
     public int entryHeight = 12;

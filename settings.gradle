@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net/' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        maven { url = 'https://mirrors.huaweicloud.com/repository/maven/' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+rootProject.name = 'fku'
+include 'forge'
+// forge 子项目使用自己的 build.gradle（独立构建配置）
+project(':forge').projectDir = file('forge')

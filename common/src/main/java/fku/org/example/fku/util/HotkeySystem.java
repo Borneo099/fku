@@ -1,6 +1,8 @@
 package fku.org.example.fku.util;
 
 import fku.org.example.fku.Fku;
+import fku.org.example.fku.features.dynamicisland.FeatureStateRegistry;
+import fku.org.example.fku.features.dynamicisland.NotificationCenter;
 import fku.org.example.fku.util.FeatureHotkeyManager.IHotkeyInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -132,6 +134,12 @@ public class HotkeySystem {
             if (isDown && !wasDown) {
                 try { entry.getValue().run(); }
                 catch (Exception ignored) {}
+                try {
+                    Boolean st = FeatureStateRegistry.isEnabled(entry.getKey());
+                    if (st != null) {
+                        NotificationCenter.pushToggle(entry.getKey(), st);
+                    }
+                } catch (Exception ignored) {}
             }
 
             // 持久跟踪状态

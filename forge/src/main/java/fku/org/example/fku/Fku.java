@@ -1,6 +1,7 @@
 package fku.org.example.fku;
 
 import fku.org.example.fku.config.FkuConfig;
+import fku.org.example.fku.util.FakeModsUtil;
 import fku.org.example.fku.features.healthtag.HealthTagConfig;
 import fku.org.example.fku.config.MovementConfig;
 import fku.org.example.fku.config.GuiStyleConfig;
@@ -12,6 +13,7 @@ import fku.org.example.fku.features.killfx.KillFXFeature;
 import fku.org.example.fku.features.knockback.KnockbackFeature;
 import fku.org.example.fku.features.sprint.SprintHandler;
 import fku.org.example.fku.features.antilag.AntiLagFeature;
+import fku.org.example.fku.features.antiknockback.AntiKnockbackFeature;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import fku.org.example.fku.features.tpaura.TpAuraFeature;
 import fku.org.example.fku.features.standattack.StandAttackFeature;
@@ -20,6 +22,7 @@ import fku.org.example.fku.features.fakeplayer.FakePlayerFeature;
 import fku.org.example.fku.features.loot.LootConfig;
 import fku.org.example.fku.features.loot.LootFeature;
 import fku.org.example.fku.features.worldedit.WorldEditFeature;
+import fku.org.example.fku.features.entitycontrol.EntityControlFeature;
 import fku.org.example.fku.features.structure_locator.StructureLocatorConfig;
 import fku.org.example.fku.features.baritone.BaritoneConfig;
 import fku.org.example.fku.features.selfdamage.SelfDamageFeature;
@@ -31,6 +34,8 @@ import fku.org.example.fku.features.waterwalk.WaterWalkConfig;
 import fku.org.example.fku.features.crashmonitor.CrashMonitor;
 import fku.org.example.fku.util.FeatureHotkeyManager;
 import fku.org.example.fku.util.HotkeySystem;
+import fku.org.example.fku.features.dynamicisland.DynamicIslandFeature;
+import fku.org.example.fku.features.dynamicisland.FeatureStateRegistry;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -78,6 +83,8 @@ public class Fku
 
         // 初始化配置文件，确保文件在游戏启动时被加载
         FkuConfig.init();
+        // ★ 确保 OpMod 绕过用的 fku/fake_mods.txt 在启动阶段生成（不依赖 OpMod 是否加载）
+        FakeModsUtil.ensureFakeModsFile();
         HealthTagConfig.load();
         MovementConfig.load();
         GuiStyleConfig.load();
@@ -98,6 +105,9 @@ public class Fku
         FakePlayerFeature.init();
         QuickSwitchFeature.init();
         WorldEditFeature.init();
+        EntityControlFeature.init();
+        AntiKnockbackFeature.init();
+        DynamicIslandFeature.init();
         StructureLocatorConfig.load();
         BaritoneConfig.load();
         SelfDamageFeature.init();
@@ -161,6 +171,7 @@ public class Fku
 
         // ★ 提前注册所有热键触发动作，确保 GUI 打开前也能响应
         HotkeySystem.registerFeature("防推", () -> fku.org.example.fku.features.antipush.AntiPushFeature.toggleEnabled());
+        HotkeySystem.registerFeature("防击退", () -> fku.org.example.fku.features.antiknockback.AntiKnockbackFeature.toggleEnabled());
         HotkeySystem.registerFeature("32k弓", () -> fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.toggleEnabled());
         HotkeySystem.registerFeature("快速加入", () -> fku.org.example.fku.features.fastjoin.FastJoinFeature.toggleEnabled());
         HotkeySystem.registerFeature("飞行", () -> fku.org.example.fku.features.flight.FlightFeature.toggleEnabled());
@@ -180,5 +191,21 @@ public class Fku
         HotkeySystem.registerFeature("如来神掌", () -> TpAuraFeature.setEnabled(!TpAuraFeature.isEnabled()));
         HotkeySystem.registerFeature("替身攻击", () -> StandAttackFeature.setEnabled(!StandAttackFeature.isEnabled()));
         HotkeySystem.registerFeature("假人", () -> FakePlayerFeature.toggle());
+        HotkeySystem.registerFeature("实体控制", () -> EntityControlFeature.toggleEnabled());
+
+        // ★ 灵动岛：注册各功能开关状态，用于顶部状态岛显示
+        FeatureStateRegistry.register("防推", () -> fku.org.example.fku.features.antipush.AntiPushFeature.isEnabled());
+        FeatureStateRegistry.register("32k弓", () -> fku.org.example.fku.features.arrowdmg.ArrowDmgFeature.isEnabled());
+        FeatureStateRegistry.register("快速加入", () -> fku.org.example.fku.features.fastjoin.FastJoinFeature.isEnabled());
+        FeatureStateRegistry.register("飞行", () -> fku.org.example.fku.features.flight.FlightFeature.isEnabled());
+        FeatureStateRegistry.register("血量显示", () -> HealthTagConfig.getInstance().enabled);
+        FeatureStateRegistry.register("击杀特效", () -> KillFXConfig.getInstance().enabled);
+        FeatureStateRegistry.register("防摔", () -> fku.org.example.fku.features.nofall.NoFallFeature.isEnabled());
+        FeatureStateRegistry.register("无跳跃延迟", () -> MovementConfig.getInstance().noJumpDelayEnabled);
+        FeatureStateRegistry.register("强制疾跑", () -> SprintHandler.isEnabled());
+        FeatureStateRegistry.register("Y坐标显示", () -> MovementConfig.getInstance().yPosOverlayEnabled);
+        FeatureStateRegistry.register("一键取物", () -> LootConfig.getInstance().enabled);
+        FeatureStateRegistry.register("如来神掌", () -> TpAuraFeature.isEnabled());
+        FeatureStateRegistry.register("替身攻击", () -> StandAttackFeature.isEnabled());
     }
 }
