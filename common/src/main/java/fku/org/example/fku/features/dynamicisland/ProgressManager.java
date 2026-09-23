@@ -13,10 +13,11 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.RecordItem;
 import net.minecraft.world.item.UseAnim;
+import fku.org.example.fku.features.displaymodel.DisplayModelManager;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class ProgressManager {
-   private static final ProgressProvider[] ORDER = new ProgressProvider[]{new MiningProvider(), new EatingProvider(), new BowChargeProvider(), new ShieldProvider(), new FishingProvider(), new XpProvider(), new MusicDiscProvider()};
+   private static final ProgressProvider[] ORDER = new ProgressProvider[]{new MiningProvider(), new EatingProvider(), new BowChargeProvider(), new ShieldProvider(), new FishingProvider(), new XpProvider(), new ModelPlaceProvider(), new MusicDiscProvider()};
    private static final Field PROG_FIELD;
    private static final Field POS_FIELD;
 
@@ -439,6 +440,47 @@ public class ProgressManager {
          long m = sec / 60L;
          long s = sec % 60L;
          return "" + m + ":" + (s < 10L ? "0" : "") + s;
+      }
+   }
+
+   static class ModelPlaceProvider implements ProgressProvider {
+      private final ItemStack icon = new ItemStack(Items.BAT_SPAWN_EGG);
+
+      public boolean isActive(LocalPlayer p, Minecraft mc) {
+         return DisplayModelManager.getInstance().isRunning();
+      }
+
+      public float getRatio() {
+         DisplayModelManager m = DisplayModelManager.getInstance();
+         int total = m.getTotalCount();
+         int cur = m.getCurrentIndex();
+         return total <= 0 ? 0.0F : ProgressManager.clamp((float)cur / (float)total);
+      }
+
+      public ItemStack getIcon() {
+         return this.icon;
+      }
+
+      public String getTitle() {
+         return "实体模型";
+      }
+
+      public String getSubtitle() {
+         DisplayModelManager m = DisplayModelManager.getInstance();
+         String raw = m.getStatusMessage();
+         if (raw != null) {
+            raw = raw.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+         }
+
+         return raw != null && !raw.isEmpty() ? raw : "已放置 " + m.getCurrentIndex() + "/" + m.getTotalCount();
+      }
+
+      public int getColor() {
+         return 2733814;
+      }
+
+      public boolean enabled(DynamicIslandConfig cfg) {
+         return cfg.showProgModelPlace;
       }
    }
 }

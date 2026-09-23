@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
@@ -127,7 +128,19 @@ public class NotificationRenderer {
       int ix = x + 12;
       int iy = y + (h - iconSize) / 2;
       GuiRenderHelper.drawRoundedRectSmooth(g, ix, iy, iconSize, iconSize, accent, iconSize / 2);
-      drawTypeGlyph(g, ix, iy, iconSize, n.type, contentAlpha);
+      if (n.skinLocation != null) {
+         // 玩家头像：在彩色圆角底上叠加皮肤头部贴图（面部 + 帽子层）
+         try {
+            int inset = 2;
+            int hs = iconSize - 2 * inset;
+            g.blit(n.skinLocation, ix + inset, iy + inset, 8, 8, hs, hs);
+            g.blit(n.skinLocation, ix + inset, iy + inset, 40, 8, hs, hs);
+         } catch (Throwable var15) {
+            drawTypeGlyph(g, ix, iy, iconSize, n.type, contentAlpha);
+         }
+      } else {
+         drawTypeGlyph(g, ix, iy, iconSize, n.type, contentAlpha);
+      }
       int tx = ix + iconSize + 10;
       int rightPad = cfg.showTimestamp ? 36 : 14;
       int maxTextW = Math.max(12, x + w - rightPad - tx);
@@ -373,6 +386,18 @@ public class NotificationRenderer {
             drawThickLine(g, cx, cy - 5, cx, cy + 1, white, 2);
             g.fill(cx - 1, cy + 3, cx + 1, cy + 5, white);
             break;
+         case SESSION: {
+            // 会话指示灯：实心圆点（在线/连接意象）
+            int r = Math.max(4, size / 4);
+            GuiRenderHelper.drawRoundedRectSmooth(g, cx - r / 2, cy - r / 2, r, r, white, r / 2);
+            break;
+         }
+         case PLAYER_JOIN:
+            drawChevron(g, cx, cy, white, true);
+            break;
+         case PLAYER_LEAVE:
+            drawChevron(g, cx, cy, white, false);
+            break;
          default:
             int d = Math.max(3, size / 4);
             GuiRenderHelper.drawRoundedRectSmooth(g, cx - d, cy - d, d * 2, d * 2, white, d);
@@ -391,6 +416,15 @@ public class NotificationRenderer {
          g.fill(px - half, py - half, px - half + thick, py - half + thick, color);
       }
 
+   }
+
+   /** 上下箭头图标：up=true 表示「进入」（向上箭头），up=false 表示「退出」（向下箭头） */
+   private static void drawChevron(GuiGraphics g, int cx, int cy, int color, boolean up) {
+      int tip = up ? cy - 4 : cy + 4;
+      int tail = up ? cy + 4 : cy - 4;
+      drawThickLine(g, cx, tail, cx, tip, color, 2);
+      drawThickLine(g, cx - 4, up ? cy - 1 : cy + 1, cx, tip, color, 2);
+      drawThickLine(g, cx + 4, up ? cy - 1 : cy + 1, cx, tip, color, 2);
    }
 
    private static void drawScaledText(GuiGraphics g, String text, float x, float y, float scale, int color) {

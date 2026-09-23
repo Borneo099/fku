@@ -33,8 +33,10 @@ public class DynamicIslandHud {
    public static void onRenderGui(RenderGuiEvent.Post event) {
       Minecraft mc = Minecraft.getInstance();
       GuiGraphics g = event.getGuiGraphics();
-      if (mc.screen == null) {
-         if (dragging) {
+      // 正常游戏内渲染；退游戏后处于「会话结束窗口期」时，允许在断连屏幕继续显示退出提示
+      boolean allow = mc.screen == null || DynamicIslandSession.isSessionEndActive();
+      if (allow) {
+         if (mc.screen == null && dragging) {
             updateDragFromMouse();
          }
 
@@ -236,6 +238,9 @@ public class DynamicIslandHud {
          if (!cfg.enabled) {
             return;
          }
+
+         // 每帧冲刷「退游戏」延迟判定（含加载/断连界面）
+         DynamicIslandSession.tick();
 
          Minecraft mc = Minecraft.getInstance();
          if (mc.getWindow() == null) {

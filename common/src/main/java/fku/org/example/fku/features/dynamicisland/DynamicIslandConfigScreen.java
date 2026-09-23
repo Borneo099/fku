@@ -349,6 +349,18 @@ public class DynamicIslandConfigScreen extends Screen {
          this.rebuildWidgets();
       });
       row += 26;
+      this.addToggle(row, "进/退游戏提示", this.cfg.showSessionNotify, () -> {
+         this.cfg.showSessionNotify = !this.cfg.showSessionNotify;
+         DynamicIslandConfig.save();
+         this.rebuildWidgets();
+      });
+      row += 26;
+      this.addToggle(row, "多人玩家进/退游戏", this.cfg.showPlayerJoinLeave, () -> {
+         this.cfg.showPlayerJoinLeave = !this.cfg.showPlayerJoinLeave;
+         DynamicIslandConfig.save();
+         this.rebuildWidgets();
+      });
+      row += 26;
       return row;
    }
 
@@ -492,6 +504,12 @@ public class DynamicIslandConfigScreen extends Screen {
          this.rebuildWidgets();
       });
       row += 26;
+      this.addToggle(row, "实体模型放置", this.cfg.showProgModelPlace, () -> {
+         this.cfg.showProgModelPlace = !this.cfg.showProgModelPlace;
+         DynamicIslandConfig.save();
+         this.rebuildWidgets();
+      });
+      row += 26;
       return row;
    }
 
@@ -591,6 +609,7 @@ public class DynamicIslandConfigScreen extends Screen {
       this.cfg.showProgFishing = d.showProgFishing;
       this.cfg.showProgXp = d.showProgXp;
       this.cfg.showProgMusic = d.showProgMusic;
+      this.cfg.showProgModelPlace = d.showProgModelPlace;
       this.cfg.musicSwayEnabled = d.musicSwayEnabled;
       this.cfg.damageShakeEnabled = d.damageShakeEnabled;
       this.cfg.animationEnabled = d.animationEnabled;
@@ -602,6 +621,8 @@ public class DynamicIslandConfigScreen extends Screen {
       this.cfg.mergeSameFeature = d.mergeSameFeature;
       this.cfg.showTimestamp = d.showTimestamp;
       this.cfg.showDamage = d.showDamage;
+      this.cfg.showSessionNotify = d.showSessionNotify;
+      this.cfg.showPlayerJoinLeave = d.showPlayerJoinLeave;
       this.cfg.capsuleWidth = d.capsuleWidth;
       this.cfg.capsuleHeight = d.capsuleHeight;
       this.cfg.expandedWidth = d.expandedWidth;

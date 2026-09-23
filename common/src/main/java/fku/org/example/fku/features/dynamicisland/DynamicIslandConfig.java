@@ -45,6 +45,7 @@ public class DynamicIslandConfig {
    public boolean showProgFishing = true;
    public boolean showProgXp = false;
    public boolean showProgMusic = true;
+   public boolean showProgModelPlace = true;
    public boolean musicSwayEnabled = true;
    public boolean damageShakeEnabled = true;
    public boolean animationEnabled = true;
@@ -56,6 +57,8 @@ public class DynamicIslandConfig {
    public boolean mergeSameFeature = true;
    public boolean showTimestamp = false;
    public boolean showDamage = true;
+   public boolean showSessionNotify = true;
+   public boolean showPlayerJoinLeave = true;
    public int capsuleWidth = 80;
    public int capsuleHeight = 24;
    public int expandedWidth = 300;

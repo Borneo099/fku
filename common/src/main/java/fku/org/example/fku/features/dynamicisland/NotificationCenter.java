@@ -2,6 +2,7 @@ package fku.org.example.fku.features.dynamicisland;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.resources.ResourceLocation;
 
 public class NotificationCenter {
    private static final List queue = new ArrayList();
@@ -36,6 +37,13 @@ public class NotificationCenter {
 
    public static void pushToggle(String featureName, boolean enabled) {
       push(featureName, featureName, enabled ? NotificationType.ENABLED : NotificationType.DISABLED, enabled ? "已开启" : "已关闭");
+   }
+
+   /** 多人世界玩家进/退游戏：携带玩家皮肤贴图，渲染时绘制头像 */
+   public static void pushPlayer(String name, NotificationType type, String text, ResourceLocation skin) {
+      IslandNotification n = new IslandNotification("player_session_" + name, name, type, text);
+      n.skinLocation = skin;
+      push(n);
    }
 
    static IslandNotification activeNotification() {
