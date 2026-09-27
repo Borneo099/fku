@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 参考自 Lexis TaczNoRecoilMixin
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.client.event.CameraSetupEvent"}, remap = false)
+@Mixin(value = com.tacz.guns.client.event.CameraSetupEvent.class, remap = false)
 public class TaczNoRecoilMixin {
 
     private static float pitchBefore;

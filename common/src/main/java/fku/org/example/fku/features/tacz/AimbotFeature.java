@@ -32,6 +32,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,6 +51,7 @@ public class AimbotFeature {
     private static boolean taczReflectionFailed = false;
     private static LivingEntity currentTarget = null;
     private static boolean hasTarget = false;
+    private static boolean attackDown = false;  // 扳机：当前是否已模拟按下左键
     private static long lastUpdateTime = 0L;
     // 自定义实体 id 解析缓存（配置变化或内容变化时刷新）
     private static long customEntitiesCacheKey = 0L;
@@ -121,6 +123,86 @@ public class AimbotFeature {
         mc.getConnection().send(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Rot(newYaw, newPitch, player.onGround()));
         hasTarget = true;
         currentTarget = best;
+    }
+
+    @SubscribeEvent
+    public static void onTriggerTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        TaCZConfig cfg = TaCZConfig.getInstance();
+        boolean want = cfg.masterEnabled && cfg.aimbotEnabled && cfg.aimbotTriggerEnabled
+                && mc.player != null && isHoldingGunWeapon() && isLocked();
+        if (want) {
+            pressAttack();   // 统一模拟真实左键长按；射速由武器自身决定，最可靠
+        } else {
+            releaseAttack();
+        }
+    }
+
+    /** 是否已锁定敌人（自瞄框变绿）：hasTarget 为真且目标存活 */
+    public static boolean isLocked() {
+        return hasTarget && currentTarget != null && currentTarget.isAlive();
+    }
+
+    /** 锁定时模拟真实鼠标左键“长按”开火（所有枪型统一走此路径）。
+     * 直接调用 MouseHandler.onPress —— 即 OS 真实鼠标事件进入游戏的入口，会完整执行
+     * KeyMapping 点击登记 / isDown 置位 / 派发 Forge 的 InputEvent.MouseButton，TaCZ、SuperbWarfare、
+     * 原版等任何监听左键开火的枪型都能原生收到，射速完全由武器自身决定（快枪连发、慢枪如狙击
+     * 按自然射速一发发来），不再有“射击包”的冷却/首枪卡死问题。
+     * 仅按下时发一次 PRESS、松手时发一次 RELEASE，其余靠 isDown 维持“长按”，与真人操作一致。 */
+    private static void pressAttack() {
+        if (attackDown) return;
+        attackDown = true;
+        postMouseButton(0, 1); // 左键按下（长按开始）
+    }
+
+    private static void releaseAttack() {
+        if (!attackDown) return;
+        attackDown = false;
+        postMouseButton(0, 0); // 左键释放（长按结束）
+    }
+
+    /** 模拟一次真实鼠标按键：优先直接调用 MouseHandler.onPress（最可靠，等价于 OS 真实事件，
+     *  完整处理 KeyMapping 点击与 Forge 鼠标事件）；失败回退到 GLFW 当前注册的鼠标回调；
+     *  再失败才退化成仅置 KeyMapping.isDown（兼容只按 isDown 轮询开火的枪型）。
+     *  action：1=按下，0=释放。 */
+    private static void postMouseButton(int button, int action) {
+        // 1) 直接走 MouseHandler.onPress —— 真实鼠标事件入口
+        Method onPress = findOnPressMethod(mc.mouseHandler.getClass());
+        if (onPress != null) {
+            try {
+                onPress.setAccessible(true);
+                onPress.invoke(mc.mouseHandler, mc.getWindow().getWindow(), button, action, 0);
+                return;
+            } catch (Throwable ignored) {}
+        }
+        // 2) 回退：GLFW 当前注册的鼠标回调（Forge/Minecraft 包装后的 handler）
+        try {
+            long window = mc.getWindow().getWindow();
+            Class<?> glfw = Class.forName("org.lwjgl.glfw.GLFW");
+            Object cb = glfw.getMethod("glfwGetMouseButtonCallback", long.class).invoke(null, window);
+            if (cb != null) {
+                Class<?> iface = Class.forName("org.lwjgl.glfw.GLFWMouseButtonCallbackI");
+                iface.getMethod("invoke", long.class, int.class, int.class, int.class)
+                     .invoke(cb, window, button, action, 0);
+                return;
+            }
+        } catch (Throwable ignored) {}
+        // 3) 最后兜底：至少维持 isDown（长按状态）
+        mc.options.keyAttack.setDown(action == 1);
+    }
+
+    /** 在 MouseHandler 及其父类中查找鼠标按下入口：返回 void、4 参数 (long,int,int,int)。 */
+    private static Method findOnPressMethod(Class<?> type) {
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Method m : c.getDeclaredMethods()) {
+                if (m.getReturnType() != void.class || m.getParameterCount() != 4) continue;
+                Class<?>[] p = m.getParameterTypes();
+                if (p[0] == long.class && p[1] == int.class && p[2] == int.class && p[3] == int.class) {
+                    return m;
+                }
+            }
+        }
+        return null;
     }
 
     @SubscribeEvent

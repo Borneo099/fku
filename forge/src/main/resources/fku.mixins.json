@@ -4,6 +4,7 @@
   "package": "fku.org.example.fku.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "fku.refmap.json",
+  "plugin": "fku.org.example.fku.mixin.FkuMixinConfigPlugin",
   "mixins": [
     "LivingEntityMixin",
     "ConnectionMixin",
@@ -32,6 +33,7 @@
     "TaczNoSprintMixin",
     "CameraMixin",
     "LocalPlayerFreecamMixin",
+    "LivingEntityTravelMixin",
     "KeyboardInputFreecamMixin",
     "MouseHandlerMixin",
     "MinecraftFreecamPickMixin",
@@ -40,7 +42,10 @@
     "MixinOpmodDosLoop",
     "MixinClientOPCommandSuggestions",
     "MixinClientOPChatPreview",
-    "DisconnectedScreenMixin"
+    "DisconnectedScreenMixin",
+    "MixinGui",
+    "MixinCommandNodeCanUse",
+    "NoFallPacketMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -8,7 +8,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.scores.PlayerTeam;
 
 public class TabListRenderer {
    private static final int LINE_H = 22;
@@ -16,13 +21,17 @@ public class TabListRenderer {
    private static final int PAD_Y = 12;
    private static final int TITLE_H = 26;
    private static final int GAP = 6;
+   private static final int DOT = 7;
+   private static final int DOT_GAP = 6;
 
    static final class Row {
-      final String text;
+      final GameType mode;
+      final Component name;
       final int ping;
 
-      Row(String text, int ping) {
-         this.text = text;
+      Row(GameType mode, Component name, int ping) {
+         this.mode = mode;
+         this.name = name;
          this.ping = ping;
       }
    }
@@ -49,10 +58,7 @@ public class TabListRenderer {
       List<Row> rows = new ArrayList<>();
 
       for(PlayerInfo pi : list) {
-         String mode = modeName(pi.getGameMode());
-         String id = pi.getProfile().getName();
-         int ping = pi.getLatency();
-         rows.add(new Row("[" + mode + "] " + id + " [" + ping + "ms]", ping));
+         rows.add(new Row(pi.getGameMode(), nameComponent(pi), pi.getLatency()));
       }
 
       return rows;
@@ -65,15 +71,21 @@ public class TabListRenderer {
          List<Row> rows = collectRows();
          Font font = Minecraft.getInstance().font;
          int maxW = font.width("玩家列表 (" + rows.size() + ")");
+         int contentMax = 0;
 
          for(Row r : rows) {
-            int w = font.width(r.text);
-            if (w > maxW) {
-               maxW = w;
+            String modeStr = "[" + modeName(r.mode) + "] ";
+            int cw = font.width(modeStr) + font.width(r.name) + 12 + font.width(r.ping + "ms");
+            if (cw > contentMax) {
+               contentMax = cw;
             }
          }
 
-         int boxW = maxW + PAD_X * 2;
+         if (contentMax > maxW) {
+            maxW = contentMax;
+         }
+
+         int boxW = maxW + PAD_X * 2 + DOT + DOT_GAP;
          int boxH = TITLE_H + GAP + LINE_H * rows.size() + PAD_Y;
          return new int[]{boxW, boxH};
       }
@@ -90,9 +102,99 @@ public class TabListRenderer {
       for(int i = 0; i < rows.size(); ++i) {
          int rowY = ly + i * LINE_H;
          Row r = rows.get(i);
-         int tc = pingColor(r.ping) & 0xFFFFFF;
-         g.drawString(font, r.text, x + PAD_X, rowY + (LINE_H - 9) / 2, alpha << 24 | tc);
+         int y0 = rowY + (LINE_H - 9) / 2;
+         // 斑马行背景，提升长列表可读性
+         if (i % 2 == 1) {
+            GuiRenderHelper.drawRoundedRectSmooth(g, x + PAD_X / 2, rowY - 1, w - PAD_X, LINE_H - 2, alpha << 24 | 0x16181C, 4);
+         }
+
+         // 模式色圆点（创造橘/生存绿/冒险红/旁观蓝）
+         int modeCol = modeColor(r.mode) & 0xFFFFFF;
+         GuiRenderHelper.drawRoundedRectSmooth(g, x + PAD_X, rowY + (LINE_H - DOT) / 2, DOT, DOT, alpha << 24 | modeCol, DOT / 2);
+         int cx = x + PAD_X + DOT + DOT_GAP;
+         // 模式名（彩色）
+         String modeStr = "[" + modeName(r.mode) + "] ";
+         g.drawString(font, modeStr, cx, y0, alpha << 24 | modeCol);
+         cx += font.width(modeStr);
+         // 玩家名（含原版队伍颜色：displayName + 队伍前缀/后缀；无队伍用默认浅灰）
+         g.drawString(font, r.name, cx, y0, alpha << 24 | 0xFFFFFF);
+         // ping（低绿/中黄/高红，右对齐）
+         String pingStr = r.ping + "ms";
+         int px = x + w - PAD_X - font.width(pingStr);
+         g.drawString(font, pingStr, px, y0, alpha << 24 | (pingColor(r.ping) & 0xFFFFFF));
       }
+   }
+
+   /** 取玩家在 Tab 列表应显示的名字：只把「队伍颜色」套到玩家 id 上，不拼接任何前缀/后缀文本
+    *  （避免和灵动岛自绘的延迟数重叠）；无队伍则用默认浅灰。 */
+   private static Component nameComponent(PlayerInfo pi) {
+      String id = pi.getProfile().getName();
+      TextColor c = teamColor(pi);
+      if (c != null) {
+         return Component.literal(id).withStyle(style -> style.withColor(c));
+      }
+      return Component.literal(id).withStyle(style -> style.withColor(TextColor.fromRgb(0xE8E8E8)));
+   }
+
+   /** 取玩家的队伍颜色（仅颜色，不取前缀/后缀文本）：优先队伍前缀色，其次后缀色，再次队伍色，
+    *  最后服务器下发的显示名颜色。无则回退默认浅灰。
+    *  ★ 兼容旧版 §/& 颜色码：很多服把队伍色写在 prefix 的 §c 里，getStyle().getColor() 取不到，
+    *    故 firstColor() 同时解析 legacy 码与子组件，避免「时而显示时而不显示」。 */
+   private static TextColor teamColor(PlayerInfo pi) {
+      Minecraft mc = Minecraft.getInstance();
+      // 取关卡计分板：mc.level 在刚进服/维度切换瞬间可能暂时为 null，但 mc.player 已就绪，
+      // 用 player.level() 兜底，避免计分板分支被跳过导致队伍色取不到（表现为要来回切一次才上色）。
+      Level lvl = mc.level;
+      if (lvl == null && mc.player != null) lvl = mc.player.level();
+      if (lvl != null) {
+         PlayerTeam team = lvl.getScoreboard().getPlayersTeam(pi.getProfile().getName());
+         if (team != null) {
+            TextColor c = firstColor(team.getPlayerPrefix());
+            if (c != null) return c;
+            c = firstColor(team.getPlayerSuffix());
+            if (c != null) return c;
+            ChatFormatting cf = team.getColor();
+            if (cf != null && cf != ChatFormatting.RESET) {
+               Integer rgb = cf.getColor();
+               if (rgb != null) return TextColor.fromRgb(rgb);
+            }
+         }
+      }
+      Component dn = pi.getTabListDisplayName();
+      if (dn != null) {
+         TextColor c = firstColor(dn);
+         if (c != null) return c;
+      }
+      return null;
+   }
+
+   /** 在组件（含子组件与旧版 §/& 颜色码）中找第一个颜色；找不到返回 null。 */
+   private static TextColor firstColor(Component c) {
+      if (c == null) return null;
+      TextColor col = c.getStyle().getColor();
+      if (col != null) return col;
+      String s = c.getString();
+      for (int i = 0; i < s.length() - 1; i++) {
+         char ch = s.charAt(i);
+         if (ch == '§' || ch == '&') {
+            TextColor lc = legacyColor(s.charAt(i + 1));
+            if (lc != null) return lc;
+         }
+      }
+      for (Component ch : c.getSiblings()) {
+         TextColor sc = firstColor(ch);
+         if (sc != null) return sc;
+      }
+      return null;
+   }
+
+   private static TextColor legacyColor(char code) {
+      ChatFormatting cf = ChatFormatting.getByCode(code);
+      if (cf != null && cf != ChatFormatting.RESET) {
+         Integer rgb = cf.getColor();
+         if (rgb != null) return TextColor.fromRgb(rgb);
+      }
+      return null;
    }
 
    private static String modeName(GameType t) {
@@ -107,8 +209,28 @@ public class TabListRenderer {
       }
    }
 
+   private static int modeColor(GameType t) {
+      if (t == GameType.CREATIVE) {
+         return 0xFF9F1C;
+      } else if (t == GameType.ADVENTURE) {
+         return 0xFF5C5C;
+      } else if (t == GameType.SPECTATOR) {
+         return 0x4DA6FF;
+      } else {
+         return 0x57C84D;
+      }
+   }
+
    private static int pingColor(int ping) {
-      int rgb = ping < 80 ? 14335846 : (ping < 180 ? 16762570 : 16734037);
+      int rgb;
+      if (ping < 120) {
+         rgb = 0x57C84D;
+      } else if (ping < 200) {
+         rgb = 0xE6C84B;
+      } else {
+         rgb = 0xFF5C5C;
+      }
+
       return -16777216 | rgb;
    }
 }

@@ -53,11 +53,19 @@ public class AnimationController {
 
       this.lastTime = now;
       ProgressManager.tickMusic(Minecraft.getInstance());
-      if (DynamicIslandDamageHandler.isActive()) {
+      if (TabListRenderer.isActive(cfg)) {
+         // ★ tab 玩家列表最高优先级：按下 Tab 立即抢占显示，不打断等待其他 HUD
+         this.activeProgress = null;
+         int[] sz = TabListRenderer.measure(cfg);
+         this.targetW = (float) sz[0];
+         this.targetH = (float) sz[1];
+         this.state = State.PLAYER_LIST;
+         this.springStep(dt, this.targetW, this.targetH, cfg);
+      } else if (DynamicIslandDamageHandler.isActive()) {
          this.activeProgress = null;
          this.targetW = this.computeDamageWidth(cfg, DynamicIslandDamageHandler.getDisplayName(), DynamicIslandDamageHandler.getMeasuredDamage());
          this.targetH = (float)(cfg.expandedHeight + 14);
-         this.state = AnimationController.State.PROGRESS;
+         this.state = State.PROGRESS;
          this.springStep(dt, this.targetW, this.targetH, cfg);
       } else {
          IslandNotification note = NotificationCenter.activeNotification();
@@ -78,38 +86,31 @@ public class AnimationController {
                this.targetH = (float)cfg.expandedHeight;
             }
 
-            if (this.state == AnimationController.State.EXPANDING) {
+            if (this.state == State.EXPANDING) {
                this.springStep(dt, this.targetW, this.targetH, cfg);
                if (this.settled(this.targetW, this.targetH)) {
-                  this.state = AnimationController.State.HOLDING;
+                  this.state = State.HOLDING;
                   this.holdTimer = 0.0F;
                }
-            } else if (this.state == AnimationController.State.HOLDING) {
+            } else if (this.state == State.HOLDING) {
                this.springStep(dt, this.targetW, this.targetH, cfg);
                this.holdTimer += dt;
                if (this.holdTimer >= (float)cfg.notificationDuration / 1000.0F) {
                   NotificationCenter.setActive((IslandNotification)null);
-                  this.state = AnimationController.State.IDLE;
+                  this.state = State.IDLE;
                }
             } else {
-               this.state = AnimationController.State.EXPANDING;
+               this.state = State.EXPANDING;
                this.springStep(dt, this.targetW, this.targetH, cfg);
             }
 
-         } else if (TabListRenderer.isActive(cfg)) {
-            this.activeProgress = null;
-            int[] sz = TabListRenderer.measure(cfg);
-            this.targetW = (float)sz[0];
-            this.targetH = (float)sz[1];
-            this.state = AnimationController.State.PLAYER_LIST;
-            this.springStep(dt, this.targetW, this.targetH, cfg);
          } else {
             ProgressProvider p = ProgressManager.getActive(cfg);
             if (p != null) {
                this.activeProgress = p;
                this.targetW = this.computeProgressWidth(cfg, p);
                this.targetH = p.isMusicProvider() ? (float)(cfg.expandedHeight + 10) : (float)cfg.expandedHeight;
-               this.state = AnimationController.State.PROGRESS;
+               this.state = State.PROGRESS;
                this.springStep(dt, this.targetW, this.targetH, cfg);
             } else {
                this.activeProgress = null;
@@ -121,7 +122,7 @@ public class AnimationController {
                   ++this.idleIndex;
                }
 
-               this.state = AnimationController.State.IDLE;
+               this.state = State.IDLE;
                this.springStep(dt, this.targetW, this.targetH, cfg);
             }
          }

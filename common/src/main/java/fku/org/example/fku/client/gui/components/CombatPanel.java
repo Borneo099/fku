@@ -10,6 +10,8 @@ import fku.org.example.fku.features.killaura.KillAuraComponent;
 import fku.org.example.fku.features.tpaura.TpAuraComponent;
 import fku.org.example.fku.features.standattack.StandAttackComponent;
 import fku.org.example.fku.features.tacz.TaCZComponent;
+import fku.org.example.fku.features.spear.SpearChargeComponent;
+import fku.org.example.fku.features.autoattack.AutoAttackComponent;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
 import fku.org.example.fku.config.GuiStyleConfig;
 import net.minecraft.client.Minecraft;
@@ -82,6 +84,12 @@ public class CombatPanel extends GuiPanel {
 
         // ★ TaCZ 枪械辅助（左键显示用法，右键打开配置；移植自 Lexis TaCZ 系列）
         addComponent(new TaCZComponent(0, 0, 110, 20));
+
+        // ★ 矛之冲锋（移植自 Meteor SpearExploit）：手持长矛蓄力时朝目标突进
+        addComponent(new SpearChargeComponent(0, 0, 110, 22));
+
+        // ★ 自动攻击（长按左键 + 准星瞄准实体自动攻击；接管原版长按，避免与挖掘冲突）
+        addComponent(new AutoAttackComponent(0, 0, 110, 22));
     }
 
     @Override

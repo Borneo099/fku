@@ -3,6 +3,7 @@ package fku.org.example.fku.features.dynamicisland;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import fku.org.example.fku.client.gui.GuiRenderHelper;
+import fku.org.example.fku.features.skija.SkijaText;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -77,13 +78,14 @@ public class NotificationRenderer {
             y = Math.max(margin, Math.min(y, sh - h - margin));
             int bg = parseColor(cfg.backgroundColor);
             int radius = Math.min(cfg.cornerRadius, h / 2);
-            IslandNotification n = NotificationCenter.activeNotification();
-            IslandNotification dmgN = DynamicIslandDamageHandler.toNotification();
+            boolean tabActive = TabListRenderer.isActive(cfg);
+            IslandNotification n = tabActive ? null : NotificationCenter.activeNotification();
+            IslandNotification dmgN = tabActive ? null : DynamicIslandDamageHandler.toNotification();
             if (dmgN != null) {
                n = dmgN;
             }
 
-            ProgressProvider p = ctrl.getActiveProgress();
+            ProgressProvider p = tabActive ? null : ctrl.getActiveProgress();
             Font font = mc.font;
             Motion mo = computeMotion(cfg, p, n, System.currentTimeMillis());
             PoseStack pose = g.pose();
@@ -149,12 +151,12 @@ public class NotificationRenderer {
       int blockH = titleH + 3 + 9;
       int ty = y + (h - blockH) / 2;
       String title = fit(n.displayName, maxTextW, titleScale);
-      drawScaledText(g, title, (float)tx, (float)ty, titleScale, contentAlpha << 24 | 16777215);
+      SkijaText.drawStringScaled(g, title, (float)tx, (float)ty, titleScale, contentAlpha << 24 | 16777215);
       String sub = fit(n.text, maxTextW, 1.0F);
-      g.drawString(font, sub, tx, ty + titleH + 3, contentAlpha << 24 | n.type.color & 16777215);
+      SkijaText.drawString(g, sub, tx, ty + titleH + 3, contentAlpha << 24 | n.type.color & 16777215);
       if (cfg.showTimestamp) {
          String ts = String.format("%02d:%02d", n.createTime / 60000L % 60L, n.createTime / 1000L % 60L);
-         g.drawString(font, ts, x + w - 10 - font.width(ts), y + 6, -2130706433);
+         SkijaText.drawString(g, ts, x + w - 10 - font.width(ts), y + 6, -2130706433);
       }
 
    }
@@ -175,7 +177,7 @@ public class NotificationRenderer {
       int dmgX = x + w - 14 - dmgW;
       int barW = Math.max(40, dmgX - 10 - tx);
       float titleScale = 1.1F;
-      drawScaledText(g, fit(n.targetEntity.getName().getString(), barW, titleScale), (float)tx, (float)(y + 7), titleScale, contentAlpha << 24 | 16777215);
+      SkijaText.drawStringScaled(g, fit(n.targetEntity.getName().getString(), barW, titleScale), (float)tx, (float)(y + 7), titleScale, contentAlpha << 24 | 16777215);
       float hp = n.targetEntity.isRemoved() ? 0.0F : n.targetEntity.getHealth();
       float mx = Math.max(1.0F, n.targetEntity.getMaxHealth());
       float ratio = clamp01(hp / mx);
@@ -192,14 +194,14 @@ public class NotificationRenderer {
 
       String var10000 = trim1(hp);
       String hpText = var10000 + "/" + trim1(mx);
-      g.drawString(font, hpText, tx, barY + barH + 3, contentAlpha << 24 | -1426063361);
-      g.drawString(font, "伤害", dmgX + dmgW - font.width("伤害"), y + 9, contentAlpha << 24 | 13421772);
+      SkijaText.drawString(g, hpText, tx, barY + barH + 3, contentAlpha << 24 | -1426063361);
+      SkijaText.drawString(g, "伤害", dmgX + dmgW - font.width("伤害"), y + 9, contentAlpha << 24 | 13421772);
       float dmgScale = 1.6F;
       String dmgShown = n.damageMeasured ? dmgText : "…";
       String shown = fit(dmgShown, dmgW, dmgScale);
       int dw = (int)((float)font.width(shown) * dmgScale);
       int dmgColor = n.damageMeasured ? 16754470 : -2003199591;
-      drawScaledText(g, shown, (float)(dmgX + dmgW - dw), (float)(y + h / 2 - 6), dmgScale, contentAlpha << 24 | dmgColor);
+      SkijaText.drawStringScaled(g, shown, (float)(dmgX + dmgW - dw), (float)(y + h / 2 - 6), dmgScale, contentAlpha << 24 | dmgColor);
    }
 
    private static void renderEntityAvatar(GuiGraphics g, LivingEntity e, int x, int y, int size, String fallbackName, int alpha, float offX, float offY) {
@@ -225,7 +227,7 @@ public class NotificationRenderer {
       Font font = Minecraft.getInstance().font;
       float s = 1.6F;
       int w = (int)((float)font.width(ch) * s);
-      drawScaledText(g, ch, (float)(x + (size - w) / 2), (float)(y + (size - 9) / 2 + 1), s, alpha << 24 | 14540253);
+      SkijaText.drawStringScaled(g, ch, (float)(x + (size - w) / 2), (float)(y + (size - 9) / 2 + 1), s, alpha << 24 | 14540253);
    }
 
    private static String trim1(float v) {
@@ -250,8 +252,8 @@ public class NotificationRenderer {
 
       int tx = sx + slot + 10;
       int maxTextW = Math.max(12, x + w - rightPad - tx);
-      g.drawString(font, fit(p.getTitle(), maxTextW, 1.0F), tx, y + 6, contentAlpha << 24 | 16777215);
-      g.drawString(font, fit(p.getSubtitle(), maxTextW, 1.0F), tx, y + 17, contentAlpha << 24 | -1143087617);
+      SkijaText.drawString(g, fit(p.getTitle(), maxTextW, 1.0F), tx, y + 6, contentAlpha << 24 | 16777215);
+      SkijaText.drawString(g, fit(p.getSubtitle(), maxTextW, 1.0F), tx, y + 17, contentAlpha << 24 | -1143087617);
       float freq = p.getBeatFrequency();
       double t = (double)System.currentTimeMillis() / 1000.0;
       float beat = (float)(0.5 + 0.5 * Math.sin(t * 2.0 * Math.PI * (double)freq));
@@ -282,7 +284,7 @@ public class NotificationRenderer {
       }
 
       String pct = (int)(ratio * 100.0F) + "%";
-      g.drawString(font, pct, x + w - rightPad - font.width(pct), y + 6, contentAlpha << 24 | -570425345);
+      SkijaText.drawString(g, pct, x + w - rightPad - font.width(pct), y + 6, contentAlpha << 24 | -570425345);
    }
 
    private static void renderProgress(GuiGraphics g, AnimationController ctrl, DynamicIslandConfig cfg, int x, int y, int w, int h, int radius, int bg, ProgressProvider p, Font font) {
@@ -305,13 +307,13 @@ public class NotificationRenderer {
 
       int barY;
       if (!p.hasBar()) {
-         g.drawString(font, fit(p.getTitle(), maxTextW, 1.0F), tx, y + 7, contentAlpha << 24 | -1711276033);
+         SkijaText.drawString(g, fit(p.getTitle(), maxTextW, 1.0F), tx, y + 7, contentAlpha << 24 | -1711276033);
          float pulse = (float)(Math.sin((double)System.currentTimeMillis() / 280.0) * 0.5 + 0.5);
          barY = (int)((float)contentAlpha * (0.75F + 0.25F * pulse));
-         drawScaledText(g, fit(p.getSubtitle(), maxTextW, 1.15F), (float)tx, (float)(y + 20), 1.15F, barY << 24 | p.getColor() & 16777215);
+         SkijaText.drawStringScaled(g, fit(p.getSubtitle(), maxTextW, 1.15F), (float)tx, (float)(y + 20), 1.15F, barY << 24 | p.getColor() & 16777215);
       } else {
-         g.drawString(font, fit(p.getTitle(), maxTextW, 1.0F), tx, y + 6, contentAlpha << 24 | 16777215);
-         g.drawString(font, fit(p.getSubtitle(), maxTextW, 1.0F), tx, y + 17, contentAlpha << 24 | -1143087617);
+         SkijaText.drawString(g, fit(p.getTitle(), maxTextW, 1.0F), tx, y + 6, contentAlpha << 24 | 16777215);
+         SkijaText.drawString(g, fit(p.getSubtitle(), maxTextW, 1.0F), tx, y + 17, contentAlpha << 24 | -1143087617);
          barY = y + h - 12;
          int barW = Math.max(40, x + w - rightPad - tx);
          int barH = 7;
@@ -325,7 +327,7 @@ public class NotificationRenderer {
          }
 
          String pct = (int)(ratio * 100.0F) + "%";
-         g.drawString(font, pct, x + w - rightPad - font.width(pct), y + 6, contentAlpha << 24 | -570425345);
+         SkijaText.drawString(g, pct, x + w - rightPad - font.width(pct), y + 6, contentAlpha << 24 | -570425345);
       }
    }
 
@@ -341,7 +343,7 @@ public class NotificationRenderer {
          int dotA = (int)(150.0F + 90.0F * pulse);
          GuiRenderHelper.drawRoundedRectSmooth(g, dx, y + (h - dot) / 2, dot, dot, dotA << 24 | 10217640, dot / 2);
          int tx = dx + dot + 7;
-         g.drawString(font, info, tx, y + (h - 9) / 2 + 1, -251658241);
+         SkijaText.drawString(g, info, tx, y + (h - 9) / 2 + 1, -251658241);
       } else {
          dot = Math.min(h - 12, 7);
          long t = System.currentTimeMillis();

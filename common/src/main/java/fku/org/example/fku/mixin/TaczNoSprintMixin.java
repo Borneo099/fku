@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * 参考自 Lexis TaczNoSprintMixin
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.client.gameplay.LocalPlayerSprint"}, remap = false)
+@Mixin(value = com.tacz.guns.client.gameplay.LocalPlayerSprint.class, remap = false)
 public class TaczNoSprintMixin {
 
     @Inject(method = {"getProcessedSprintStatus"}, at = @At("HEAD"),

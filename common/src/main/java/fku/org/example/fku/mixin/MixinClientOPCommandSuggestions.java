@@ -55,14 +55,27 @@ public abstract class MixinClientOPCommandSuggestions {
         try {
             String text = this.input.getValue();
             if (text == null || !text.startsWith("/") || !this.input.isFocused()) return;
-            // 原版（客户端指令树，已注入 OP 节点）已能给出补全时不接管
             if (this.pendingSuggestions == null || !this.pendingSuggestions.isDone()) return;
-            if (!this.pendingSuggestions.join().isEmpty()) return;
+            boolean argPos = ClientOPFeature.isArgPosition(text);
+            // 指令名位置：原版（配合 canUse 恒真）已能列出全部指令时不接管
+            if (!argPos && !this.pendingSuggestions.join().isEmpty()) return;
+
+            // 参数位置：服务端常因 ask_server 权限过滤回空、或返回占位符（如 gameMode），
+            // 无条件用本地参数补全替换，直接给出真实可选值（如 survival/creative/...），一步到位
             Suggestions local = ClientOPFeature.buildLocalSuggestions(text);
-            if (local == null || local.isEmpty()) return;
-            // 用本地参数补全替换后重走原版显示流程（updateUsageInfo → showSuggestions → sortSuggestions）
-            this.pendingSuggestions = CompletableFuture.completedFuture(local);
-            this.updateUsageInfo();
+            if (local != null && !local.isEmpty()) {
+                this.pendingSuggestions = CompletableFuture.completedFuture(local);
+                this.updateUsageInfo();
+                return;
+            }
+            if (argPos) {
+                // 本地无该参数候选时，用客户端命令树补全兜底
+                Suggestions tree = ClientOPFeature.buildTreeSuggestions(text);
+                if (tree != null && !tree.isEmpty()) {
+                    this.pendingSuggestions = CompletableFuture.completedFuture(tree);
+                    this.updateUsageInfo();
+                }
+            }
         } catch (Exception ignored) {}
     }
 }

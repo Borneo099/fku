@@ -21,6 +21,7 @@ import fku.org.example.fku.features.tacz.AutoReloadFeature;
 import fku.org.example.fku.features.tacz.FullAutoFeature;
 import fku.org.example.fku.features.tacz.SniperFullAutoFeature;
 import fku.org.example.fku.features.attackindicator.AttackIndicatorFeature;
+import fku.org.example.fku.features.skija.SkijaRenderer;
 import fku.org.example.fku.features.trail.TrailFeature;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
@@ -72,6 +73,9 @@ public class ClientSetup {
         AutoReloadFeature.init();
         FullAutoFeature.init();
         SniperFullAutoFeature.init();
+
+        // ★ Skija 渲染底层初始化（GUI 圆角/色轮/文字/灵动岛）；失败自动回退原版
+        SkijaRenderer.init();
 
         // ★ 客户端设置完成 = 启动完成
         CrashMonitor.endPhase("客户端设置");

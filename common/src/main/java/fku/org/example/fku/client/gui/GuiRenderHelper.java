@@ -2,6 +2,9 @@ package fku.org.example.fku.client.gui;
 
 import fku.org.example.fku.config.GuiStyleConfig;
 import fku.org.example.fku.client.gui.components.GuiComponent;
+import fku.org.example.fku.features.skija.SkijaConfig;
+import fku.org.example.fku.features.skija.SkijaRenderer;
+import fku.org.example.fku.features.skija.SkijaRoundRect;
 
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -25,6 +28,10 @@ public class GuiRenderHelper {
      * @param radius 圆角半径
      */
     public static void drawRoundedRect(GuiGraphics guiGraphics, int x, int y, int width, int height, int color, int radius) {
+        if (SkijaRenderer.isAvailable() && SkijaConfig.getInstance().enableRoundedCorners) {
+            SkijaRoundRect.drawRoundedRect(guiGraphics, x, y, width, height, color, radius);
+            return;
+        }
         if (radius <= 0 || width <= 0 || height <= 0) {
             if (width > 0 && height > 0) {
                 guiGraphics.fill(x, y, x + width, y + height, color);
@@ -71,6 +78,10 @@ public class GuiRenderHelper {
      * @param borderWidth 边框宽度
      */
     public static void drawRoundedOutline(GuiGraphics guiGraphics, int x, int y, int width, int height, int color, int radius, int borderWidth) {
+        if (SkijaRenderer.isAvailable() && SkijaConfig.getInstance().enableRoundedCorners) {
+            SkijaRoundRect.drawRoundedOutline(guiGraphics, x, y, width, height, color, radius, borderWidth);
+            return;
+        }
         if (width <= 0 || height <= 0) return;
         if (radius <= 0) {
             guiGraphics.renderOutline(x, y, width, height, color);
@@ -293,6 +304,10 @@ public class GuiRenderHelper {
      * 绘制平滑圆角矩形（带真实圆弧近似）— 灵动岛 NotificationRenderer 使用
      */
     public static void drawRoundedRectSmooth(GuiGraphics guiGraphics, int x, int y, int width, int height, int color, int radius) {
+        if (SkijaRenderer.isAvailable() && SkijaConfig.getInstance().enableRoundedCorners) {
+            SkijaRoundRect.drawRoundedRect(guiGraphics, x, y, width, height, color, radius);
+            return;
+        }
         if (width > 0 && height > 0) {
             if (radius <= 0) {
                 guiGraphics.fill(x, y, x + width, y + height, color);

@@ -62,9 +62,9 @@ public class ClickGuiScreen extends Screen {
         this.uiScale = Math.max(1.0f, Math.min(4.0f, uiScaleReal));
         GuiPanel.setUiScale(this.uiScale);
 
-        // 记录当前鼠标坐标，供组件 hover 判定复用（白边选中效果）
-        GuiComponent.hoveredMouseX = mx;
-        GuiComponent.hoveredMouseY = my;
+        // 记录当前鼠标坐标（设计坐标系，浮点），供组件 hover 判定复用（避免全屏 uiScale 放大时白框错位）
+        GuiComponent.hoveredMouseX = mx / this.uiScale;
+        GuiComponent.hoveredMouseY = my / this.uiScale;
 
         // 动态背景层（开启时绘制在面板之下，不拦截交互；背景铺满窗口不缩放）
         GuiStyleConfig cfg = GuiStyleConfig.getInstance();

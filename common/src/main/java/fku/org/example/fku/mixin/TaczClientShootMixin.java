@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
  * 参考自 Lexis TaczClientShootMixin
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.client.gameplay.LocalPlayerShoot"}, remap = false)
+@Mixin(value = com.tacz.guns.client.gameplay.LocalPlayerShoot.class, remap = false)
 public class TaczClientShootMixin {
 
     // ★ 不再覆盖 getCoolDown，武器以自然射速射击

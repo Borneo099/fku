@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
  * 参考自 Lexis TaczNoSpreadMixin
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.api.item.gun.AbstractGunItem"}, remap = false)
+@Mixin(value = com.tacz.guns.api.item.gun.AbstractGunItem.class, remap = false)
 public class TaczNoSpreadMixin {
 
     private static Method shoot6Method;

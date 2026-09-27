@@ -1,10 +1,13 @@
 package fku.org.example.fku.features.clientop;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -59,7 +62,8 @@ public class ClientOPFeature {
             int wordStart = text.lastIndexOf(' ') + 1;
             StringRange range = StringRange.between(wordStart, text.length());
             String prefix = text.substring(wordStart).toLowerCase(Locale.ROOT);
-            String[] tokens = text.substring(1).split("\\s");
+            // split 保留末尾空串："/gamemode " 的末尾空格表示已进入参数位（argIndex=1）
+            String[] tokens = text.substring(1).split("\\s", -1);
             String cmd = tokens[0].toLowerCase(Locale.ROOT);
             int argIndex = tokens.length - 1; // 0=正在补全指令名
 
@@ -206,6 +210,37 @@ public class ClientOPFeature {
             return list;
         } catch (Exception e) {
             return List.of();
+        }
+    }
+
+    /** 当前是否处于参数位置（指令名后已输入空格） */
+    public static boolean isArgPosition(String text) {
+        return text != null && text.length() > 1 && text.indexOf(' ', 1) != -1;
+    }
+
+    /**
+     * 用客户端本地命令树做真实补全（树由服务端下发、含全部 OP 节点，
+     * 配合 MixinCommandNodeCanUse 让所有节点视为可用）。
+     * 使用 getNow 立即取值：ask_server 异步建议未返回时返回 null，避免阻塞主线程。
+     *
+     * ★ 必须在“完整输入（含前导 /）”坐标系上解析并计算建议区间：
+     *   之前先 substring(1) 去掉 / 再解析，返回的区间整体左移 1 位，
+     *   客户端把这个区间应用到完整输入时会错位吞字符（/fku → /fkuarrowdmgfly）。
+     */
+    public static Suggestions buildTreeSuggestions(String text) {
+        try {
+            var conn = Minecraft.getInstance().getConnection();
+            if (conn == null || text == null || text.length() < 2) return null;
+            com.mojang.brigadier.StringReader reader = new com.mojang.brigadier.StringReader(text);
+            if (reader.canRead() && reader.peek() == '/') reader.skip();
+            int cursor = inputBox != null ? inputBox.getCursorPosition() : text.length();
+            if (cursor < reader.getCursor()) cursor = reader.getCursor();
+            if (cursor > text.length()) cursor = text.length();
+            CommandDispatcher<SharedSuggestionProvider> dispatcher = conn.getCommands();
+            ParseResults<SharedSuggestionProvider> parse = dispatcher.parse(reader, conn.getSuggestionsProvider());
+            return dispatcher.getCompletionSuggestions(parse, cursor).getNow(null);
+        } catch (Exception e) {
+            return null;
         }
     }
 

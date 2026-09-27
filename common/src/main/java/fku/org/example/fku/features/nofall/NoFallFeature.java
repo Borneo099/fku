@@ -42,6 +42,11 @@ public class NoFallFeature {
 
     public static boolean isEnabled() { return NoFallConfig.getInstance().enabled; }
 
+    /** 是否完全免疫（决定事件取消 + 发包伪造两条路径是否生效） */
+    public static boolean isImmune() { return NoFallConfig.getInstance().immune; }
+    /** 是否仅飞行时保护 */
+    public static boolean onlyWhenFlying() { return NoFallConfig.getInstance().onlyWhenFlying; }
+
     /**
      * LivingFallEvent — 拦截掉落伤害
      */

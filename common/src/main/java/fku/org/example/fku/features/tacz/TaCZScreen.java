@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -54,11 +55,14 @@ public class TaCZScreen extends Screen {
         addToggle(cx + 165, cy, "全狙自动", () -> cfg.sniperFullAutoEnabled, v -> { cfg.sniperFullAutoEnabled = v; TaCZConfig.save(); });
         cy += sp;
         addToggle(cx, cy, "全枪自动", () -> cfg.fullAutoEnabled, v -> { cfg.fullAutoEnabled = v; TaCZConfig.save(); });
+        cy += sp;
+        // ★ 扳机：锁定敌人即自动左键开火（需自瞄已开启并产生锁定）
+        addToggle(cx, cy, "扳机开火", () -> cfg.aimbotTriggerEnabled, v -> { cfg.aimbotTriggerEnabled = v; TaCZConfig.save(); });
         cy += sp + 2;
 
-        // 参数行
-        addLabel(cx, cy, "§7自瞄范围: §b" + cfg.aimbotCircleSize);
-        addCycleButton(cx + 100, cy, 60, new int[]{50, 80, 100, 150, 200, 300, 500}, cfg.aimbotCircleSize,
+        // 参数行（自瞄圈大小：连续滑动调节）
+        addDynamicLabel(cx, cy, () -> "§7自瞄范围: §b" + TaCZConfig.getInstance().aimbotCircleSize);
+        addSlider(cx + 100, cy, 100, 20, 600, cfg.aimbotCircleSize,
             v -> { cfg.aimbotCircleSize = v; TaCZConfig.save(); });
         cy += sp;
 
@@ -176,5 +180,28 @@ public class TaCZScreen extends Screen {
             .bounds(x, y, w, 16).build();
         addRenderableWidget(btn);
         return btn;
+    }
+
+    private void addDynamicLabel(int x, int y, Supplier<String> text) {
+        addRenderableOnly((g, mx, my, pt) -> g.drawString(font, text.get(), x, y + 4, 0xCCCCCC));
+    }
+
+    /** 连续滑动条：拖动实时写入配置（min~max 整数值） */
+    private void addSlider(int x, int y, int w, int min, int max, int current, Consumer<Integer> setter) {
+        double v = (double) (current - min) / (max - min);
+        v = Math.max(0, Math.min(1, v));
+        AbstractSliderButton slider = new AbstractSliderButton(x, y, w, 16, Component.literal(""), v) {
+            @Override
+            protected void updateMessage() {
+                int val = min + (int) Math.round(value * (max - min));
+                setMessage(Component.literal("§b" + val));
+            }
+            @Override
+            protected void applyValue() {
+                int val = min + (int) Math.round(value * (max - min));
+                setter.accept(val);
+            }
+        };
+        addRenderableWidget(slider);
     }
 }

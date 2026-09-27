@@ -13,7 +13,7 @@ import java.lang.reflect.Field;
  * 参考自 Lexis TaczInstantAimMixin
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.client.gameplay.LocalPlayerAim"}, remap = false)
+@Mixin(value = com.tacz.guns.client.gameplay.LocalPlayerAim.class, remap = false)
 public class TaczInstantAimMixin {
 
     private static Field dataField;

@@ -3,11 +3,14 @@ package fku.org.example.fku.mixin; /* water */
 import fku.org.example.fku.features.criticals.CriticalsFeature;
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
+import fku.org.example.fku.features.spear.SpearChargeFeature;
 import fku.org.example.fku.util.PacketAttackDetector;
 import io.netty.channel.Channel;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,24 +18,23 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * MixinConnectionAttackInterceptor — 在 Connection.send() 层拦截攻击包
+ * MixinConnectionAttackInterceptor — 在 Connection.send() 层拦截攻击包与 Blink 移动包
  *
  * ★ 职责：
- *   攻击包发出前，通过 netty channel 发送假旋转包和秒切换包。
- *
- * ★ v6 变更（状态机版）：
- *   - 秒切调用 QuickSwitchFeature.onAttackPacket(channel) 状态机入口
- *   - 不再有 RETURN 注入（状态机由 ClientTick 驱动）
+ *   1. 攻击包发出前，通过 netty channel 发送假旋转包和秒切换包。
+ *   2. Blink 模式蓄力矛时，拦截并缓存玩家自身发出的 ServerboundMovePlayerPacket，
+ *      松手时由 SpearKillFeature 一次性 flush，制造"瞬移突刺"。
  *
  * ★ 设计思想：
  *   channel.writeAndFlush 确保切换包在攻击包之前写入 netty 管道。
  *   攻击包由 Connection.send() 正常发送。
- *   切回包由状态机在延迟后通过 connection.send() 发送。
+ *   Blink 包由 SpearKillFeature.onClientMoveSent() 缓存并 ci.cancel() 取消发送。
  */
 @OnlyIn(Dist.CLIENT)
 @Mixin(Connection.class)
@@ -46,10 +48,6 @@ public abstract class MixinConnectionAttackInterceptor {
 
     /**
      * HEAD 注入：攻击包发出前，写入假旋转/秒切换包
-     *
-     * ★ 冗余发送优化（抗网络延迟）：
-     *   假旋转 PosRot 包发送 2~3 份（相同角度），即使某份因网络抖动延迟，
-     *   备份份仍能覆盖攻击包到达的时间窗口，提高击退方向控制成功率。
      */
     @Inject(
             method = "send(Lnet/minecraft/network/protocol/Packet;)V",
@@ -58,11 +56,10 @@ public abstract class MixinConnectionAttackInterceptor {
     )
     private void fku$onSendPacket(Packet<?> packet, CallbackInfo ci) {
         if (fku$sendingPending) return;
+
         if (!(packet instanceof ServerboundInteractPacket)) return;
 
         // ★ 区分攻击与右键交互：仅攻击类型才触发秒切和暴击，右键使用物品不触发
-        // ServerboundInteractPacket.Action 是包内可见类型，无法通过 @Accessor 直接访问，
-        // 故通过 PacketAttackDetector 的 dispatch(Handler) 回调检测动作类型。
         boolean isAttack = PacketAttackDetector.isAttack((ServerboundInteractPacket) packet);
 
         boolean hasRotation = FakeRotationManager.hasPending();
@@ -97,5 +94,27 @@ public abstract class MixinConnectionAttackInterceptor {
         } finally {
             fku$sendingPending = false;
         }
+    }
+
+    /**
+     * 矛之冲锋：发包前把 Pos/PosRot 包的位置叠加 boostOffset（服务端侧位移突进，参考 Meteor SpearPacketMixin）。
+     * ★ x/z 为 final 字段，直接用 Accessor 写会抛 IllegalAccessError，故重建等价包。
+     * 与 NoFallPacketMixin 的 @ModifyVariable 叠加在同一 send 入参上，二者互相组合互不冲突。
+     */
+    @ModifyVariable(
+        method = "send(Lnet/minecraft/network/protocol/Packet;)V",
+        at = @At(value = "HEAD"),
+        index = 1,
+        argsOnly = true
+    )
+    private Packet<?> fku$modifySpearPacket(Packet<?> packet) {
+        Vec3 offset = SpearChargeFeature.getBoostOffset();
+        if (offset == null) return packet;
+        if (packet instanceof ServerboundMovePlayerPacket.Pos p) {
+            return new ServerboundMovePlayerPacket.Pos(p.getX(0.0) + offset.x, p.getY(0.0), p.getZ(0.0) + offset.z, p.isOnGround());
+        } else if (packet instanceof ServerboundMovePlayerPacket.PosRot pr) {
+            return new ServerboundMovePlayerPacket.PosRot(pr.getX(0.0) + offset.x, pr.getY(0.0), pr.getZ(0.0) + offset.z, pr.getYRot(0.0f), pr.getXRot(0.0f), pr.isOnGround());
+        }
+        return packet;
     }
 }

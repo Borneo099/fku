@@ -21,7 +21,7 @@ import java.util.function.Supplier;
  * 参考自 Lexis TaczBoltBypassMixin
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.entity.shooter.LivingEntityBolt"}, remap = false)
+@Mixin(value = com.tacz.guns.entity.shooter.LivingEntityBolt.class, remap = false)
 public class TaczBoltBypassMixin {
 
     @Shadow @Final private ShooterDataHolder data;

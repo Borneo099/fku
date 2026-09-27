@@ -89,11 +89,27 @@ dependencies {
 
     // TaCZ (Timeless and Classics Zero) — 编译依赖（用于 Mixin 注入无后座/无扩散/防抖等功能）
     implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:7745481")
+
+    // Skija（Skia 的 Java 绑定）— 已回退：渲染全部走原版，SkijaRenderer.isAvailable() 强制 false。
+    // 这里仅保留 compile 依赖，使 Skija* 源码可编译（运行时不会加载 Skija 类，故无需 jarJar 打包，
+    // 去掉 jarJar 也顺带修掉了「0.143.17 版本规范非法」导致的构建失败）；
+    // 若日后重新启用 Skija，请恢复下方 jarJar 并补齐跨平台平台模块。
+    implementation 'io.github.humbleui:skija-shared:0.143.17'
+    implementation 'io.github.humbleui:skija-windows-x64:0.143.17'
 }
 
 mixin {
     add sourceSets.main, 'fku.refmap.json'
     config 'fku.mixins.json'
+}
+
+// Skija 必须出现在 dev 运行 classpath 上：ForgeGradle 的运行 classpath 文件只含 Minecraft/Forge，
+// 不会自动加入普通/jarJar 依赖；fku 无 module-info（位于 unnamed module），把 jarJar 的 skija jar
+// 追加到所有 run 任务的 classpath，即可在 dev 运行期被 fku 模块加载（同时 jarJar 负责打进 release jar）。
+tasks.withType(JavaExec).configureEach { t ->
+    if (t.name.toLowerCase().contains('run')) {
+        t.classpath += configurations.jarJar
+    }
 }
 
 jar {

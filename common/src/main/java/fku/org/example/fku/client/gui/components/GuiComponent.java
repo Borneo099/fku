@@ -24,8 +24,8 @@ public class GuiComponent {
     protected boolean hovered = false;
     protected boolean pressed = false;
 
-    /** 当前鼠标坐标（由主界面渲染前设置，供 hover 判定复用，避免每个组件重复传参） */
-    public static int hoveredMouseX = -1, hoveredMouseY = -1;
+    /** 当前鼠标坐标（设计坐标系，浮点，由 ClickGuiScreen 每帧写入；使用浮点避免整型截断在 uiScale 放大时造成白框与光标错位） */
+    public static double hoveredMouseX = -1, hoveredMouseY = -1;
     /** ★ 当前渲染透明度（0~1），由 renderWithAlpha 设置，子类 render 中读取 */
     protected float currentAlpha = 1.0f;
 
@@ -106,8 +106,10 @@ public class GuiComponent {
     }
 
     protected boolean isHovered(double mouseX, double mouseY) {
-        return mouseX >= this.x && mouseX <= this.x + this.width &&
-                mouseY >= this.y && mouseY <= this.y + this.height;
+        // 使用全局浮点设计坐标（hoveredMouseX/Y）判定，避免 ClickGuiScreen 传入的整型截断
+        // 在 uiScale 放大（如全屏）时导致白框相对光标错位
+        return hoveredMouseX >= this.x && hoveredMouseX <= this.x + this.width &&
+                hoveredMouseY >= this.y && hoveredMouseY <= this.y + this.height;
     }
 
     public void updatePosition(int panelX, int panelY, int yOffset) {

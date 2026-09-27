@@ -14,7 +14,7 @@ import java.lang.reflect.Field;
  * 将 ShootKey.lastTimeShootSuccess 设为 false，使系统允许继续射击
  * 该 Mixin 由赛博教员实现
  */
-@Mixin(targets = {"com.tacz.guns.client.input.ShootKey"}, remap = false)
+@Mixin(value = com.tacz.guns.client.input.ShootKey.class, remap = false)
 public class TaczSniperFullAutoMixin {
 
     private static Field lastTimeShootSuccessField;

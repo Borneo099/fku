@@ -1,7 +1,9 @@
 package fku.org.example.fku.features.dynamicisland;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -14,12 +16,14 @@ import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.RecordItem;
 import net.minecraft.world.item.UseAnim;
 import fku.org.example.fku.features.displaymodel.DisplayModelManager;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class ProgressManager {
    private static final ProgressProvider[] ORDER = new ProgressProvider[]{new MiningProvider(), new EatingProvider(), new BowChargeProvider(), new ShieldProvider(), new FishingProvider(), new XpProvider(), new ModelPlaceProvider(), new MusicDiscProvider()};
    private static final Field PROG_FIELD;
    private static final Field POS_FIELD;
+   private static final Method IS_DESTROYING;
 
    public static ProgressProvider getActive(DynamicIslandConfig cfg) {
       if (!cfg.showProgressBars) {
@@ -133,19 +137,89 @@ public class ProgressManager {
       return Math.max(0.0F, Math.min(1.0F, v));
    }
 
+   private static Method findMethod(Class start, String name) {
+      try {
+         return start.getMethod(name);
+      } catch (NoSuchMethodException var6) {
+         Method[] var3 = start.getMethods();
+         int var4 = var3.length;
+
+         for(int var5 = 0; var5 < var4; ++var5) {
+            Method m = var3[var5];
+            if (m.getParameterCount() == 0 && m.getReturnType() == Boolean.TYPE && m.getName().toLowerCase().contains("destroy")) {
+               return m;
+            }
+         }
+
+         return null;
+      }
+   }
+
+   private static Boolean isDestroying(Minecraft mc) {
+      if (IS_DESTROYING != null && mc.gameMode != null) {
+         try {
+            return (Boolean)IS_DESTROYING.invoke(mc.gameMode);
+         } catch (Throwable var2) {
+            return null;
+         }
+      } else {
+         return null;
+      }
+   }
+
+   static boolean isAttackingBlock(Minecraft mc) {
+      if (mc.screen != null) {
+         return false;
+      } else if (mc.options.keyAttack.isDown() && mc.hitResult instanceof BlockHitResult bhr && mc.level != null) {
+         BlockState bs = mc.level.getBlockState(bhr.getBlockPos());
+         return !bs.isAir();
+      } else {
+         return false;
+      }
+   }
+
    static {
       PROG_FIELD = findField(MultiPlayerGameMode.class, "destroyProgress", Float.TYPE, "destroy", "progress");
       POS_FIELD = findField(MultiPlayerGameMode.class, "destroyBlockPos", BlockPos.class, "destroy", "blockpos");
+      IS_DESTROYING = findMethod(MultiPlayerGameMode.class, "isDestroying");
    }
 
    static class MiningProvider implements ProgressProvider {
+      // 真实破坏进度在最近 400ms 内是否可读到：用于决定显示精确条还是降级为「挖掘中」脉冲
+      private long lastValidProgressMs = 0L;
+      private float lastRatio = 0.0F;
+
       public boolean isActive(LocalPlayer p, Minecraft mc) {
-         return mc.gameMode != null && ProgressManager.getDestroyProgress(mc) > 0.001F;
+         float dp = ProgressManager.getDestroyProgress(mc);
+         if (dp > 0.001F) {
+            this.lastValidProgressMs = System.currentTimeMillis();
+            this.lastRatio = dp;
+            return true;
+         } else {
+            // 兜底1：游戏模式正处于破坏方块状态（抗 mod 篡改 destroyProgress 字段）
+            Boolean destroying = ProgressManager.isDestroying(mc);
+            if (destroying != null && destroying) {
+               return true;
+            }
+            // 兜底2：玩家按住攻击键且视线命中方块（完全独立于其它 mod）
+            return ProgressManager.isAttackingBlock(mc);
+         }
       }
 
       public float getRatio() {
-         Minecraft mc = Minecraft.getInstance();
-         return mc.gameMode != null ? ProgressManager.clamp(ProgressManager.getDestroyProgress(mc)) : 0.0F;
+         float dp = ProgressManager.getDestroyProgress(Minecraft.getInstance());
+         if (dp > 0.001F) {
+            this.lastValidProgressMs = System.currentTimeMillis();
+            this.lastRatio = dp;
+            return ProgressManager.clamp(dp);
+         } else {
+            return this.lastRatio;
+         }
+      }
+
+      // 读不到真实进度时降级为「无进度条」提示，避免整合包内被其它 mod 干扰后彻底不显示
+      public boolean hasBar() {
+         return System.currentTimeMillis() - this.lastValidProgressMs < 400L;
       }
 
       public ItemStack getIcon() {
@@ -167,7 +241,7 @@ public class ProgressManager {
             String tag = cap == 0 ? "徒手可挖" : (cap == 1 ? "可挖掘" : "工具不足");
             return name + " · " + tag;
          } else {
-            return "方块";
+            return "正在挖掘方块…";
          }
       }
 
@@ -219,7 +293,16 @@ public class ProgressManager {
       }
 
       public String getSubtitle() {
-         return Minecraft.getInstance().player.getUseItem().getHoverName().getString();
+         ItemStack use = Minecraft.getInstance().player.getUseItem();
+         String name = use.getHoverName().getString();
+         // 进食 HUD 额外提示：吃下该食物能加多少饥饿值(饱食度)与饱和度
+         FoodProperties fp = use.getItem().getFoodProperties();
+         if (fp != null && (fp.getNutrition() > 0 || fp.getSaturationModifier() > 0.0F)) {
+            int nutrition = fp.getNutrition();
+            float saturation = nutrition * fp.getSaturationModifier() * 2.0F;
+            name = name + " · 饥饿+" + nutrition + " 饱和+" + String.format("%.1f", saturation);
+         }
+         return name;
       }
 
       public int getColor() {

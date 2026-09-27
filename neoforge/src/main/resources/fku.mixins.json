@@ -16,7 +16,9 @@
     "ServerboundInteractPacketAccessor",
     "MixinEntityPush",
     "MixinLiquidBlockJesus",
-    "MixinCheatutilsChunk"
+    "MixinCheatutilsChunk",
+    "MixinGui",
+    "ServerboundMovePlayerPacketAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
