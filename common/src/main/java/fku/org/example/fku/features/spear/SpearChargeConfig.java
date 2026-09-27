@@ -26,8 +26,11 @@ public class SpearChargeConfig {
     public double boostDistance = 3.0;
     /** 发包模式：每 tick 发送的位移步数（力量放大；默认 1 = meteoruth 原值） */
     public int packets = 1;
-    /** 原版模式：突进速度（格/tick，可调）；近身自动停，避免飞出 */
+    /** 原版模式：突进速度（格/tick，可调） */
     public double vanillaSpeed = 1.2;
+    /** 原版模式：与目标距离 ≤ 此值(格)时暂停冲锋（不再向目标推速度），让矛在贴脸处自然戳中
+     *  并借击退/余速飞出一段，从而打出伤害；否则会紧贴目标原地反复冲刺、打不出伤害。0=不暂停。 */
+    public double vanillaStopDistance = 1.5;
 
     private static File getConfigFile() {
         File dir = new File(getGameDir(), "fku");

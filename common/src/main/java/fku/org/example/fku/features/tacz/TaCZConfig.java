@@ -21,6 +21,7 @@ public class TaCZConfig {
     // 功能开关
     public boolean aimbotEnabled = false;
     public boolean aimbotTriggerEnabled = false;  // 扳机：锁到敌人（自瞄框变绿）即自动左键开火
+    public int aimbotTriggerDelay = 0;             // 扳机开火前间隔(ms)：锁定后延迟再按左键，避免狙击枪首枪空枪（0=立即）
     public boolean autoReloadEnabled = false;
     public boolean bulletTracersEnabled = false;
     public boolean endlessAimbotEnabled = false;

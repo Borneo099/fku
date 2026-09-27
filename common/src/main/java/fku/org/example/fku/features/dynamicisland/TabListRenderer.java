@@ -116,7 +116,7 @@ public class TabListRenderer {
          String modeStr = "[" + modeName(r.mode) + "] ";
          g.drawString(font, modeStr, cx, y0, alpha << 24 | modeCol);
          cx += font.width(modeStr);
-         // 玩家名（含原版队伍颜色：displayName + 队伍前缀/后缀；无队伍用默认浅灰）
+         // 玩家名（常态纯白，有队伍随队伍色）
          g.drawString(font, r.name, cx, y0, alpha << 24 | 0xFFFFFF);
          // ping（低绿/中黄/高红，右对齐）
          String pingStr = r.ping + "ms";
@@ -125,21 +125,21 @@ public class TabListRenderer {
       }
    }
 
-   /** 取玩家在 Tab 列表应显示的名字：只把「队伍颜色」套到玩家 id 上，不拼接任何前缀/后缀文本
-    *  （避免和灵动岛自绘的延迟数重叠）；无队伍则用默认浅灰。 */
+   /** 取玩家在 Tab 列表应显示的名字：常态纯白；只有在队伍里才把「队伍颜色」套到玩家 id 上，
+    *  不拼接任何前缀/后缀文本（避免和灵动岛自绘的延迟数重叠）。 */
    private static Component nameComponent(PlayerInfo pi) {
       String id = pi.getProfile().getName();
       TextColor c = teamColor(pi);
       if (c != null) {
          return Component.literal(id).withStyle(style -> style.withColor(c));
       }
-      return Component.literal(id).withStyle(style -> style.withColor(TextColor.fromRgb(0xE8E8E8)));
+      return Component.literal(id).withStyle(style -> style.withColor(TextColor.fromRgb(0xFFFFFF)));
    }
 
-   /** 取玩家的队伍颜色（仅颜色，不取前缀/后缀文本）：优先队伍前缀色，其次后缀色，再次队伍色，
-    *  最后服务器下发的显示名颜色。无则回退默认浅灰。
-    *  ★ 兼容旧版 §/& 颜色码：很多服把队伍色写在 prefix 的 §c 里，getStyle().getColor() 取不到，
-    *    故 firstColor() 同时解析 legacy 码与子组件，避免「时而显示时而不显示」。 */
+   /** 取玩家的队伍颜色：★ 只认「队伍本身的颜色」（/team modify <队> color <色> 设置的那个）。
+    *  不再解析队伍前缀/后缀里塞的颜色 —— 很多服务器会自动把玩家塞进 scoreboard 队伍并把
+    *  Rank/名字色写进 prefix/suffix，那不是真正的队伍色，会把玩家 id 染得像跟着模式色走。
+    *  无队伍 / 队伍未设置颜色 → 返回 null，名字保持纯白。 */
    private static TextColor teamColor(PlayerInfo pi) {
       Minecraft mc = Minecraft.getInstance();
       // 取关卡计分板：mc.level 在刚进服/维度切换瞬间可能暂时为 null，但 mc.player 已就绪，
@@ -149,50 +149,12 @@ public class TabListRenderer {
       if (lvl != null) {
          PlayerTeam team = lvl.getScoreboard().getPlayersTeam(pi.getProfile().getName());
          if (team != null) {
-            TextColor c = firstColor(team.getPlayerPrefix());
-            if (c != null) return c;
-            c = firstColor(team.getPlayerSuffix());
-            if (c != null) return c;
             ChatFormatting cf = team.getColor();
             if (cf != null && cf != ChatFormatting.RESET) {
                Integer rgb = cf.getColor();
                if (rgb != null) return TextColor.fromRgb(rgb);
             }
          }
-      }
-      Component dn = pi.getTabListDisplayName();
-      if (dn != null) {
-         TextColor c = firstColor(dn);
-         if (c != null) return c;
-      }
-      return null;
-   }
-
-   /** 在组件（含子组件与旧版 §/& 颜色码）中找第一个颜色；找不到返回 null。 */
-   private static TextColor firstColor(Component c) {
-      if (c == null) return null;
-      TextColor col = c.getStyle().getColor();
-      if (col != null) return col;
-      String s = c.getString();
-      for (int i = 0; i < s.length() - 1; i++) {
-         char ch = s.charAt(i);
-         if (ch == '§' || ch == '&') {
-            TextColor lc = legacyColor(s.charAt(i + 1));
-            if (lc != null) return lc;
-         }
-      }
-      for (Component ch : c.getSiblings()) {
-         TextColor sc = firstColor(ch);
-         if (sc != null) return sc;
-      }
-      return null;
-   }
-
-   private static TextColor legacyColor(char code) {
-      ChatFormatting cf = ChatFormatting.getByCode(code);
-      if (cf != null && cf != ChatFormatting.RESET) {
-         Integer rgb = cf.getColor();
-         if (rgb != null) return TextColor.fromRgb(rgb);
       }
       return null;
    }

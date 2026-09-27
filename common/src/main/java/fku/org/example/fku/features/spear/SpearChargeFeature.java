@@ -150,11 +150,13 @@ public class SpearChargeFeature {
                 double dist3 = to.length();
                 if (dist3 > 1e-4) {
                     Vec3 dir3 = to.scale(1.0 / dist3); // 三维单位方向（含上下）
-                    // 撞墙才停，否则持续冲锋（疯狂冲锋，不留近身阈值）。
+                    // 撞墙才停，否则按距离判断：与目标距离 ≤ vanillaStopDistance 时暂停冲锋（只锁头不推速度），
+                    // 让矛在贴脸处自然戳中并借击退/余速飞出一段，避免紧贴目标原地反复冲刺、打不出伤害。
                     // 速度用 setDeltaMovement 设下；LocalPlayer 在地面时 travel() 会用输入加速度覆盖水平
                     // 分量，因此由 LivingEntityTravelMixin 在 travel() 头部强制 onGround=false，让 travel
                     // 走空中分支使用本速度（站地/蹲/飞/跳均可冲）。
-                    if (!blocked3d(dir3, cfg.vanillaSpeed)) {
+                    boolean paused = cfg.vanillaStopDistance > 0 && dist3 <= cfg.vanillaStopDistance;
+                    if (!paused && !blocked3d(dir3, cfg.vanillaSpeed)) {
                         double speed = cfg.vanillaSpeed;
                         // 空格由 onClientTick 顶部统一管理（仅原版+蓄力满/冲刺+非飞行才按住），此处不再碰
                         if (flight) {
@@ -241,9 +243,16 @@ public class SpearChargeFeature {
         return hit.getType() != HitResult.Type.MISS;
     }
 
-    /** 三维墙检（原版模式含上下方向，用真实冲锋方向做线段检测，避免穿墙/被天花板地面卡住） */
+    /** 三维墙检（原版模式）。★ 修“近距离不冲刺”：目标低于玩家时（近身同层最常见），向下分量不参与
+     *  墙检 —— 否则射线会从脚底扎进脚下地板，被误判“撞墙”导致不冲刺（远距离角度浅才正常）。
+     *  向下冲刺本来就允许落向目标，故只检水平方向的墙；向上/水平仍做完整三维检测防穿天花板。 */
     private static boolean blocked3d(Vec3 dir, double dist) {
         Vec3 from = mc.player.position();
+        if (dir.y < 0.0) {
+            double hl = Math.hypot(dir.x, dir.z);
+            if (hl < 1e-4) return false; // 纯垂直下冲（目标正下方），不做墙检
+            return blocked(new Vec3(dir.x / hl, 0.0, dir.z / hl), dist * hl);
+        }
         Vec3 to = from.add(dir.x * dist, dir.y * dist, dir.z * dist);
         BlockHitResult hit = mc.level.clip(new ClipContext(from, to, Block.COLLIDER, Fluid.NONE, mc.player));
         return hit.getType() != HitResult.Type.MISS;

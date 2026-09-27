@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 public class SpearChargeScreen extends Screen {
     private static final int W = 320, H = 150;
     private int cx, cy;
-    private EditBox boostIn, packetsIn, vanillaIn;
+    private EditBox boostIn, packetsIn, vanillaIn, stopIn;
     private Button modePacketBtn, modeVanillaBtn, closeBtn;
     private boolean pendingPacket = true;
 
@@ -31,6 +31,7 @@ public class SpearChargeScreen extends Screen {
         boostIn = mkEdit(cx + 170, cy + 25, 60, String.valueOf(c.boostDistance), "-?\\d*\\.?\\d*");
         packetsIn = mkEdit(cx + 170, cy + 45, 60, String.valueOf(c.packets), "\\d*");
         vanillaIn = mkEdit(cx + 170, cy + 25, 60, String.valueOf(c.vanillaSpeed), "-?\\d*\\.?\\d*");
+        stopIn = mkEdit(cx + 170, cy + 45, 60, String.valueOf(c.vanillaStopDistance), "-?\\d*\\.?\\d*");
 
         modePacketBtn = addRenderableWidget(Button.builder(Component.literal("§f发包模式"),
                 b -> setMode(true)).bounds(cx + 20, cy + 60, 130, 18).build());
@@ -56,6 +57,7 @@ public class SpearChargeScreen extends Screen {
         boostIn.setVisible(pendingPacket);
         packetsIn.setVisible(pendingPacket);
         vanillaIn.setVisible(!pendingPacket);
+        stopIn.setVisible(!pendingPacket);
     }
 
     private EditBox mkEdit(int x, int y, int w, String val, String filter) {
@@ -76,6 +78,7 @@ public class SpearChargeScreen extends Screen {
             g.drawString(font, "每tick发包数:", cx + 20, cy + 46, 0xAAAAAA);
         } else {
             g.drawString(font, "原版突进速度(格/tick):", cx + 20, cy + 26, 0xAAAAAA);
+            g.drawString(font, "近距暂停冲锋(格):", cx + 20, cy + 46, 0xAAAAAA);
         }
         g.drawString(font, "§7手持矛+按住右键蓄力；发包朝准星，原版锁定小范围目标并三维跟随", cx + 20, cy + 118, 0x888888);
         super.render(g, mx, my, pt); // EditBox / Button 由 Screen 自动路由与渲染
@@ -90,6 +93,7 @@ public class SpearChargeScreen extends Screen {
         try { c.boostDistance = Double.parseDouble(boostIn.getValue()); } catch (NumberFormatException ignored) {}
         try { c.packets = Integer.parseInt(packetsIn.getValue()); } catch (NumberFormatException ignored) {}
         try { c.vanillaSpeed = Double.parseDouble(vanillaIn.getValue()); } catch (NumberFormatException ignored) {}
+        try { c.vanillaStopDistance = Double.parseDouble(stopIn.getValue()); } catch (NumberFormatException ignored) {}
         c.mode = pendingPacket ? "packet" : "vanilla";
         SpearChargeConfig.save();
         super.onClose();

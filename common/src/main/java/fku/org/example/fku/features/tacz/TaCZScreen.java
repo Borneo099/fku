@@ -23,7 +23,7 @@ public class TaCZScreen extends Screen {
 
     private static final int W = 340, H = 388;
     private int bx, by;
-    private EditBox customEntitiesBox;
+    private EditBox customEntitiesBox, triggerDelayBox;
 
     public TaCZScreen() {
         super(Component.literal("TaCZ 配置"));
@@ -58,6 +58,13 @@ public class TaCZScreen extends Screen {
         cy += sp;
         // ★ 扳机：锁定敌人即自动左键开火（需自瞄已开启并产生锁定）
         addToggle(cx, cy, "扳机开火", () -> cfg.aimbotTriggerEnabled, v -> { cfg.aimbotTriggerEnabled = v; TaCZConfig.save(); });
+        addLabel(cx + 165, cy, "§7开火前间隔ms:");
+        triggerDelayBox = new EditBox(font, cx + 255, cy, 55, 16, Component.literal(""));
+        triggerDelayBox.setMaxLength(6);
+        triggerDelayBox.setValue(String.valueOf(cfg.aimbotTriggerDelay));
+        triggerDelayBox.setFilter(s -> s.matches("\\d*"));
+        triggerDelayBox.setResponder(s -> { try { cfg.aimbotTriggerDelay = Integer.parseInt(s); TaCZConfig.save(); } catch (NumberFormatException ignored) {} });
+        addRenderableWidget(triggerDelayBox);
         cy += sp + 2;
 
         // 参数行（自瞄圈大小：连续滑动调节）

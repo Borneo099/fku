@@ -29,14 +29,25 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Mod.EventBusSubscriber(modid = "fku", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ClientSetup {
+    private static final Logger LOGGER = LogManager.getLogger("FKU");
 
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         CrashMonitor.startPhase("客户端设置");
+
+        // Invmove 与 Baritone 对 ClientPlayerEntity 的同一方法各有一个 @Redirect，同时安装会让
+        // Baritone 注入失败（Critical injection failure）直接崩溃。Mixin 无法阻止其他模组加载，
+        // 这里仅做显式日志提示，建议直接删除 mods 目录下的 invmove-*.jar。
+        if (ModList.get().isLoaded("invmove")) {
+            LOGGER.warn("[FKU] 检测到 Invmove：与 Baritone 存在 @Redirect 注入冲突(isKeyDown)，同时安装会崩溃，请删除 mods 里的 invmove-*.jar");
+        }
 
         // 注册按键输入监听
         MinecraftForge.EVENT_BUS.register(KeyBindings.class);

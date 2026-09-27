@@ -52,6 +52,7 @@ public class AimbotFeature {
     private static LivingEntity currentTarget = null;
     private static boolean hasTarget = false;
     private static boolean attackDown = false;  // 扳机：当前是否已模拟按下左键
+    private static long triggerEngageTime = -1;   // 本次锁定起始时刻，用于「开火前间隔」计时
     private static long lastUpdateTime = 0L;
     // 自定义实体 id 解析缓存（配置变化或内容变化时刷新）
     private static long customEntitiesCacheKey = 0L;
@@ -132,8 +133,15 @@ public class AimbotFeature {
         boolean want = cfg.masterEnabled && cfg.aimbotEnabled && cfg.aimbotTriggerEnabled
                 && mc.player != null && isHoldingGunWeapon() && isLocked();
         if (want) {
-            pressAttack();   // 统一模拟真实左键长按；射速由武器自身决定，最可靠
+            long now = System.currentTimeMillis();
+            if (triggerEngageTime < 0) triggerEngageTime = now;
+            // 开火前间隔：锁定后延迟 aimbotTriggerDelay(ms) 再真正按左键，避免狙击枪在举枪/待机状态
+            // 第一下被判定为空枪（还没准备好就开火）。0=立即开火。
+            if (now - triggerEngageTime >= cfg.aimbotTriggerDelay) {
+                pressAttack();   // 统一模拟真实左键长按；射速由武器自身决定，最可靠
+            }
         } else {
+            triggerEngageTime = -1;
             releaseAttack();
         }
     }

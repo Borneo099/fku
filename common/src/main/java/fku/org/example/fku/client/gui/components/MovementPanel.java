@@ -4,6 +4,7 @@ import fku.org.example.fku.config.MovementConfig;
 import fku.org.example.fku.features.antiknockback.AntiKnockbackComponent;
 import fku.org.example.fku.features.antipush.AntiPushComponent;
 import fku.org.example.fku.features.flight.FlightComponent;
+import fku.org.example.fku.features.freecam.FreecamComponent;
 import fku.org.example.fku.features.nofall.NoFallComponent;
 import fku.org.example.fku.features.nojumpdelay.NoJumpDelayComponent;
 import fku.org.example.fku.features.sprint.SprintComponent;
@@ -28,6 +29,8 @@ public class MovementPanel extends GuiPanel {
         addComponent(new TpGotoComponent(0, 0, 110, 20));
         addComponent(new WaterWalkComponent(0, 0, 110, 20));
         addComponent(new AntiKnockbackComponent(0, 0, 110, 20));
+        // ★ 灵魂出窍（自由相机）功能开关（移入移动菜单）
+        addComponent(new FreecamComponent(0, 0, 110, 20));
     }
 
     @Override
