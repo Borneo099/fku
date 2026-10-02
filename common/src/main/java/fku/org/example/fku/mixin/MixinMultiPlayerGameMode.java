@@ -1,10 +1,13 @@
 package fku.org.example.fku.mixin; /* water */
 
 import fku.org.example.fku.features.arrowdmg.ArrowDmgFeature;
+import fku.org.example.fku.features.autoattack.AutoAttackFeature;
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.knockback.KnockbackConfig;
 import fku.org.example.fku.features.knockback.KnockbackDirectionCalculator;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -14,6 +17,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @OnlyIn(Dist.CLIENT)
 @Mixin(MultiPlayerGameMode.class)
@@ -39,6 +43,27 @@ public abstract class MixinMultiPlayerGameMode {
     public void onReleaseUsingItem(CallbackInfo ci) {
         if (ArrowDmgFeature.handleManualRelease()) {
             ci.cancel();
+        }
+    }
+
+    /**
+     * ★ 自动攻击优化：长按左键且有已选目标时，禁止破坏方块。
+     *   否则会顺带挖方块 → 自动切换工具/武器功能乱切、且武器攻击冷却被持续挖方块占用回不满。
+     *   没有选中目标时放行，原版挖掘照常（见 AutoAttackFeature#isAttackingWithTarget）。
+     */
+    @Inject(method = "startDestroyBlock", at = @At("HEAD"), cancellable = true)
+    private void fkuBlockBreakCancelStart(BlockPos pPos, Direction pDirection, CallbackInfoReturnable<Boolean> cir) {
+        if (AutoAttackFeature.isAttackingWithTarget()) {
+            cir.setReturnValue(false);
+            cir.cancel();
+        }
+    }
+
+    @Inject(method = "continueDestroyBlock", at = @At("HEAD"), cancellable = true)
+    private void fkuBlockBreakCancelContinue(BlockPos pPos, Direction pDirection, CallbackInfoReturnable<Boolean> cir) {
+        if (AutoAttackFeature.isAttackingWithTarget()) {
+            cir.setReturnValue(false);
+            cir.cancel();
         }
     }
 }

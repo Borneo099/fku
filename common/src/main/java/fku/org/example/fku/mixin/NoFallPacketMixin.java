@@ -2,6 +2,7 @@ package fku.org.example.fku.mixin; /* water */
 
 import fku.org.example.fku.features.flight.FlightFeature;
 import fku.org.example.fku.features.nofall.NoFallFeature;
+import fku.org.example.fku.features.tacz.GhostPeekFeature;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -42,6 +43,8 @@ public abstract class NoFallPacketMixin {
     private Packet<?> fku$modifyNoFallPacket(Packet<?> packet) {
         if (!NoFallFeature.isEnabled() || !NoFallFeature.isImmune()) return packet;
         if (!(packet instanceof ServerboundMovePlayerPacket movePkt)) return packet;
+        // 幽灵窥视（闪身）进行中：不伪造落地，否则会把 PosRot/Rot 的角度清零 → 子弹从窥视点打偏
+        if (GhostPeekFeature.isBusy()) return packet;
 
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;

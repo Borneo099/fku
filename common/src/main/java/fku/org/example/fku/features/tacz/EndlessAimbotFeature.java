@@ -8,6 +8,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.scores.Team;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -182,12 +183,26 @@ public class EndlessAimbotFeature {
     private static List<LivingEntity> getValidTargets() {
         List<LivingEntity> targets = new ArrayList<>();
         if (mc.player == null || mc.level == null) return targets;
+        TaCZConfig cfg = TaCZConfig.getInstance();
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity living)) continue;
             if (entity == mc.player || !living.isAlive()) continue;
+            if (cfg.dontHitTeammates && isTeammate(living)) continue;
             targets.add(living);
         }
         return targets;
+    }
+
+    /** 是否为“队友”：与自己同队伍、且队伍名字颜色相同的玩家。
+     *  用于“不打队友”开关 —— 颜色相同即视为友军，不进入自瞄目标。 */
+    private static boolean isTeammate(LivingEntity e) {
+        if (!(e instanceof Player)) return false;
+        LocalPlayer self = mc.player;
+        if (self == null) return false;
+        Team myTeam = self.getTeam();
+        Team otherTeam = ((Player) e).getTeam();
+        if (myTeam == null || otherTeam == null) return false;
+        return myTeam.getColor() == otherTeam.getColor();
     }
 
     private static Vec3 getAimPoint(LivingEntity e, String bodyPart) {

@@ -75,6 +75,9 @@ public class AutoAttackScreen extends Screen {
                 ly += sp;
 
                 addToggle(cx + 2, ly, "仅持武器生效", () -> cfg.onlyWhenHoldingWeapon, v -> cfg.onlyWhenHoldingWeapon = v);
+                ly += sp;
+
+                addToggle(cx + 2, ly, "攻击时禁挖方块", () -> cfg.noBlockBreakWhileAttacking, v -> cfg.noBlockBreakWhileAttacking = v);
             }
             case 1 -> { // 目标过滤
                 addToggle(cx + 2, ly, "忽略已命名", () -> cfg.ignoreNamed, v -> cfg.ignoreNamed = v);

@@ -377,6 +377,9 @@ public class DisplayModelScreen extends Screen {
         if (placeZInput != null) placeZInput.tick();
         if (viewRangeInput != null) viewRangeInput.tick();
 
+        // ★ 实时保存：输入框内容变化即写回 config，避免重新初始化时回退到旧坐标/旧参数
+        persistInputsRealtime();
+
         updateFromManager();
     }
 
@@ -413,6 +416,9 @@ public class DisplayModelScreen extends Screen {
             setStatusMessage("§e放置正在进行中...", 0xFFFF55);
             return;
         }
+
+        // ★ 召唤前先实时同步输入到 config（坐标/参数已是最新，确保即便有其它读取路径也用当前值）
+        persistInputsRealtime();
 
         List<String> cmds = new ArrayList<>();
         for (CommandRow row : commandRows) {
@@ -456,6 +462,35 @@ public class DisplayModelScreen extends Screen {
             summonButton.setMessage(Component.literal("放置中..."));
             summonButton.active = false;
         }
+    }
+
+    // ====================================================================
+    //  persistInputsRealtime — 实时写回 config（无需点“保存配置”）
+    // ====================================================================
+    /** 输入框内容变化即写回 config；避免屏幕重新初始化（开关网站/载入预设/窗口变化）时回退到旧坐标。
+     *  仅在确有变化时才 config.save()，避免每帧无谓写盘。 */
+    private void persistInputsRealtime() {
+        boolean changed = false;
+        double cx = parseDoubleOrDefault(placeXInput, 0);
+        if (Double.compare(cx, config.placeX) != 0) { config.setPlaceX(cx); changed = true; }
+        double cy = parseDoubleOrDefault(placeYInput, 0);
+        if (Double.compare(cy, config.placeY) != 0) { config.setPlaceY(cy); changed = true; }
+        double cz = parseDoubleOrDefault(placeZInput, 0);
+        if (Double.compare(cz, config.placeZ) != 0) { config.setPlaceZ(cz); changed = true; }
+        double vr = parseDoubleOrDefault(viewRangeInput, 0);
+        if (Double.compare(vr, config.viewRange) != 0) { config.setViewRange(vr); changed = true; }
+        double sp = parseDoubleOrDefault(entitySpacingInput, 0.5);
+        if (Double.compare(sp, config.entitySpacing) != 0) { config.setEntitySpacing(sp); changed = true; }
+        int pd = parseIntOrDefault(placeDelayInput, 50);
+        if (pd != config.placeDelay) { config.setPlaceDelay(pd); changed = true; }
+        int gd = parseIntOrDefault(generationDelayInput, 50);
+        if (gd != config.generationDelay) { config.setGenerationDelay(gd); changed = true; }
+        List<String> cmds = collectCommands();
+        if (!cmds.equals(config.commandLines != null ? config.commandLines : java.util.Collections.emptyList())) {
+            config.commandLines = new ArrayList<>(cmds);
+            changed = true;
+        }
+        if (changed) config.save();
     }
 
     // ====================================================================

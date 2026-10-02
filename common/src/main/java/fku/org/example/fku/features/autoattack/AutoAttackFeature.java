@@ -52,6 +52,9 @@ public class AutoAttackFeature {
     private static int ticksSinceAttack = 0;   // 距上次攻击的触发次数（≈tick）
     private static long lastAttackMs = 0;       // 上次攻击时间戳（用于每秒限速）
     private static Entity lockedTarget = null;   // 锁定的目标（lockTarget 开启时有效）
+    /** 选中目标：准星第一次压在合法实体上即“选中”，长按期间持续维持（即使准星移开/瞄到方块也保留），
+     *  用于禁止破坏方块。与 lockedTarget 解耦，专为“选中而非准星在目标”的语义服务。 */
+    private static Entity selectedTarget = null;
 
     public static boolean isEnabled() { return AutoAttackConfig.getInstance().enabled; }
 
@@ -71,18 +74,29 @@ public class AutoAttackFeature {
     public static void onInteraction(InputEvent.InteractionKeyMappingTriggered e) {
         if (!e.isAttack()) return;              // 只处理攻击键（左键）
         if (!isEnabled()) return;
-        // 接管时取消原版这次攻击/挖掘；实际攻击由 onClientTick 每 tick 驱动（避免事件不重复触发导致只打一次）
-        if (wantsTakeOver()) e.setCanceled(true);
+        // 接管时取消原版这次攻击/挖掘；实际攻击由 onClientTick 每 tick 驱动（避免事件不重复触发导致只打一次）。
+        // 已“选中”目标时也取消（事件层拦截，确保长按期间绝不会触发破坏方块/对方块的交互）。
+        if (wantsTakeOver() || isAttackingWithTarget()) e.setCanceled(true);
     }
 
     /** 主循环：每 tick 轮询左键长按状态驱动自动攻击；左键松开时清除锁定（锁敌只在按住期间维持）。
+     *  同时维护 selectedTarget：准星首次压在合法实体上即选中，长按期间持续，用于禁止破坏方块。
      *  采用与 EndlessAimbotFeature 一致的 ClientTickEvent 轮询范式，规避 InteractionKeyMappingTriggered
      *  在部分环境下长按不重复触发、导致只尝试一次并被间隔门控彻底挡掉的问题。 */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
-        if (mc.player == null || mc.level == null) { lockedTarget = null; ticksSinceAttack = 0; return; }
-        if (!mc.options.keyAttack.isDown()) { lockedTarget = null; return; }   // 松开左键 → 清锁
+        if (mc.player == null || mc.level == null) { lockedTarget = null; selectedTarget = null; ticksSinceAttack = 0; return; }
+        if (!mc.options.keyAttack.isDown()) { lockedTarget = null; selectedTarget = null; return; }   // 松开左键 → 清锁
+        AutoAttackConfig cfg = AutoAttackConfig.getInstance();
+        // 选中逻辑：准星压在合法实体上即“选中”；之后即使准星移开/瞄到方块也持续（长按期间维持）
+        if (mc.hitResult instanceof EntityHitResult eh) {
+            Entity te = eh.getEntity();
+            if (entityFilter(te, cfg)) selectedTarget = te;
+        }
+        if (selectedTarget != null && (!selectedTarget.isAlive() || mc.player.distanceTo(selectedTarget) > cfg.maxRange)) {
+            selectedTarget = null;
+        }
         if (isEnabled() && wantsTakeOver()) tryAttack();
     }
 
@@ -212,11 +226,38 @@ public class AutoAttackFeature {
         return true;
     }
 
-    /** 清状态用（功能关闭时由组件调用，避免残留计数） */
+    /** 是否正在持左键攻击一个已“选中”的目标（selectedTarget 非空且存活且在范围内）：用于禁止破坏方块。
+     *  条件：启用 + 左键按住 + 未因潜行/水中禁用 + 未与 TpAura 互斥 + 开关开启 + 存在选中目标。
+     *  ★ selectedTarget 是“选中”概念：准星第一次压在合法实体上即选中，之后长按期间持续（不要求准星仍在目标上）。
+     *  返回 true 时：事件层取消交互 + MixinMultiPlayerGameMode 取消 start/continueDestroyBlock：
+     *    - 不再误破坏/选中方块；
+     *    - 自动切换工具/武器因不再触发“对方块攻击”而不会乱切；
+     *    - 武器攻击冷却能正常回满。
+     *  没有选中目标时返回 false → 原版挖掘照常。 */
+    public static boolean isAttackingWithTarget() {
+        if (!isEnabled()) return false;
+        if (mc.player == null || mc.level == null) return false;
+        if (mc.screen != null) return false;
+        if (!mc.options.keyAttack.isDown()) return false;
+        AutoAttackConfig cfg = AutoAttackConfig.getInstance();
+        if (cfg.disableOnSneak && mc.player.isShiftKeyDown()) return false;
+        if (cfg.disableInLiquid && mc.player.isInWater()) return false;
+        if (TpAuraFeature.isEnabled()) return false;
+        if (!cfg.noBlockBreakWhileAttacking) return false;
+        return selectedTarget != null && selectedTarget.isAlive()
+                && mc.player.distanceTo(selectedTarget) <= cfg.maxRange;
+    }
+
+    /** 供 MixinGameRendererPick 读取当前选中目标（用于把方块命中改写为实体命中） */
+    public static Entity getSelectedTarget() {
+        return selectedTarget;
+    }
+
     /** 清状态用（功能关闭时由组件调用，避免残留计数/锁定） */
     public static void resetState() {
         ticksSinceAttack = 0;
         lastAttackMs = 0;
         lockedTarget = null;
+        selectedTarget = null;
     }
 }

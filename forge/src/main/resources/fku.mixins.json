@@ -37,6 +37,7 @@
     "KeyboardInputFreecamMixin",
     "MouseHandlerMixin",
     "MinecraftFreecamPickMixin",
+    "MixinGameRendererPick",
     "MixinCheatutilsChunk",
     "MixinPacketSendHwid",
     "MixinOpmodDosLoop",

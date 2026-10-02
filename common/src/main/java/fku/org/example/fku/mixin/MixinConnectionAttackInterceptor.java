@@ -4,6 +4,7 @@ import fku.org.example.fku.features.criticals.CriticalsFeature;
 import fku.org.example.fku.features.knockback.FakeRotationManager;
 import fku.org.example.fku.features.quickswitch.QuickSwitchFeature;
 import fku.org.example.fku.features.spear.SpearChargeFeature;
+import fku.org.example.fku.features.tacz.GhostPeekFeature;
 import fku.org.example.fku.util.PacketAttackDetector;
 import io.netty.channel.Channel;
 import net.minecraft.network.Connection;
@@ -108,6 +109,8 @@ public abstract class MixinConnectionAttackInterceptor {
         argsOnly = true
     )
     private Packet<?> fku$modifySpearPacket(Packet<?> packet) {
+        // 幽灵窥视（闪身）进行中：跳过矛冲锋位移，否则会把窥视点位置叠偏移 → 子弹从错处出
+        if (GhostPeekFeature.isBusy()) return packet;
         Vec3 offset = SpearChargeFeature.getBoostOffset();
         if (offset == null) return packet;
         if (packet instanceof ServerboundMovePlayerPacket.Pos p) {

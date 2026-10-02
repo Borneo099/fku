@@ -206,7 +206,8 @@ public class SpearChargeFeature {
         double bestDist = Double.MAX_VALUE;
         for (Entity e : mc.level.entitiesForRendering()) {
             if (!(e instanceof LivingEntity) || !e.isAlive() || e == mc.player) continue;
-            if (e instanceof Player p && (p.isCreative() || p.isSpectator())) continue;
+            // 旁观者无实体体、不可被戳中，排除；创造模式玩家仍可被锁定突进（仅不掉血），不再排除
+            if (e instanceof Player p && p.isSpectator()) continue;
             Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
             double len = to.length();
             if (len < 1e-3) continue;

@@ -40,6 +40,9 @@ public class AutoAttackConfig {
     public boolean swingHand = true;
     /** 仅手持武器（剑/斧/三叉戟）时生效 */
     public boolean onlyWhenHoldingWeapon = false;
+    /** 攻击已选目标期间禁止破坏方块（默认开）：避免误挖方块导致自动切工具乱切、武器冷却回不满；
+     *  关掉则回归原版（攻击与挖掘并存）。无选中目标时始终可正常挖掘。 */
+    public boolean noBlockBreakWhileAttacking = true;
 
     // ════════ 分组2：目标过滤（复用 TpAura 结构） ════════
     /** 目标实体类型（逗号分隔，如 PLAYER,ZOMBIE）。为空（默认）表示攻击所有类型 */

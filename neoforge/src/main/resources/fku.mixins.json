@@ -18,7 +18,8 @@
     "MixinLiquidBlockJesus",
     "MixinCheatutilsChunk",
     "MixinGui",
-    "ServerboundMovePlayerPacketAccessor"
+    "ServerboundMovePlayerPacketAccessor",
+    "MixinGameRendererPick"
   ],
   "injectors": {
     "defaultRequire": 1

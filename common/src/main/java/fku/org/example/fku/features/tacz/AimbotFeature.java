@@ -20,6 +20,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.scores.Team;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -75,6 +76,8 @@ public class AimbotFeature {
         if (event.phase != TickEvent.Phase.END) return;
         TaCZConfig cfg = TaCZConfig.getInstance();
         if (!cfg.masterEnabled || !cfg.aimbotEnabled || mc.player == null || mc.level == null) return;
+        // ★ 幽灵窥视（闪身）进行中：抑制自瞄旋转/发包，避免用“本体坐标”覆盖窥视开火角度
+        if (GhostPeekFeature.isBusy()) return;
 
         // ★ 排除弓箭：仅手持枪械（TaCZ / SuperbWarfare）时生效
         if (!isHoldingGunWeapon()) {
@@ -130,13 +133,13 @@ public class AimbotFeature {
     public static void onTriggerTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         TaCZConfig cfg = TaCZConfig.getInstance();
+        // ★ 扳机：自瞄框变绿（已锁定敌人）即自动左键开火（依赖自瞄锁定，与瞄准框一致）
         boolean want = cfg.masterEnabled && cfg.aimbotEnabled && cfg.aimbotTriggerEnabled
                 && mc.player != null && isHoldingGunWeapon() && isLocked();
         if (want) {
             long now = System.currentTimeMillis();
             if (triggerEngageTime < 0) triggerEngageTime = now;
-            // 开火前间隔：锁定后延迟 aimbotTriggerDelay(ms) 再真正按左键，避免狙击枪在举枪/待机状态
-            // 第一下被判定为空枪（还没准备好就开火）。0=立即开火。
+            // 开火前间隔：锁定后延迟 aimbotTriggerDelay(ms) 再真正按左键，避免狙击枪首枪空枪（0=立即）
             if (now - triggerEngageTime >= cfg.aimbotTriggerDelay) {
                 pressAttack();   // 统一模拟真实左键长按；射速由武器自身决定，最可靠
             }
@@ -327,17 +330,25 @@ public class AimbotFeature {
         List<LivingEntity> targets = new ArrayList<>();
         if (mc.player == null || mc.level == null) return targets;
         TaCZConfig cfg = TaCZConfig.getInstance();
-        String mode = cfg.aimbotTargetMode;
-        boolean isCustom = "自定义".equals(mode);
-        if (isCustom) refreshCustomEntities();
+        if ("自定义".equals(cfg.aimbotTargetMode)) refreshCustomEntities();
         // 遍历所有世界中的实体
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity living)) continue;
-            if (entity == mc.player || !living.isAlive()) continue;
-            if (!matchTarget(living, mode, isCustom)) continue;
+            if (!isValidAimTarget(living)) continue;
             targets.add(living);
         }
         return targets;
+    }
+
+    /** 是否为“有效瞄准目标”：排除自己/死亡，排除队友（若开启不打队友），并匹配对象选择器。
+     *  自瞄索敌与扳机射线命中判定共用此过滤，保证两处对“队友”的处理一致。 */
+    static boolean isValidAimTarget(LivingEntity e) {
+        if (e == mc.player || !e.isAlive()) return false;
+        TaCZConfig cfg = TaCZConfig.getInstance();
+        if (cfg.dontHitTeammates && isTeammate(e)) return false;
+        String mode = cfg.aimbotTargetMode;
+        boolean isCustom = "自定义".equals(mode);
+        return matchTarget(e, mode, isCustom);
     }
 
     /** 根据对象选择器过滤目标 */
@@ -352,6 +363,18 @@ public class AimbotFeature {
         }
         // 全部实体：任意活着的 LivingEntity
         return true;
+    }
+
+    /** 是否为“队友”：与自己同队伍、且队伍名字颜色相同的玩家。
+     *  用于“不打队友”开关 —— 颜色相同即视为友军，不进入自瞄目标。 */
+    private static boolean isTeammate(LivingEntity e) {
+        if (!(e instanceof Player)) return false;
+        LocalPlayer self = mc.player;
+        if (self == null) return false;
+        Team myTeam = self.getTeam();
+        Team otherTeam = ((Player) e).getTeam();
+        if (myTeam == null || otherTeam == null) return false;
+        return myTeam.getColor() == otherTeam.getColor();
     }
 
     /** 解析自定义实体 id（逗号分隔），配置变化时刷新缓存 */
@@ -453,7 +476,7 @@ public class AimbotFeature {
     }
 
     /** 检测玩家是否手持 TaCZ 或 SuperbWarfare 枪械 */
-    private static boolean isHoldingGunWeapon() {
+    public static boolean isHoldingGunWeapon() {
         if (mc.player == null) return false;
         // TaCZ 检测
         try {
