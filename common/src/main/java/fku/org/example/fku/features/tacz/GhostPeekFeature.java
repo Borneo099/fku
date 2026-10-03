@@ -1,12 +1,14 @@
 package fku.org.example.fku.features.tacz; /* water */
 
 import fku.org.example.fku.Fku;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.level.ClipContext;
@@ -39,11 +41,10 @@ import java.util.List;
  * Ghost Peek（幽灵窥视）— 移植自 02の日常 NoSpread 的 ghostpeek
  * 按住激活键：在身侧计算四个窥视点——左右（水平垂直视线，优先）、上下（垂直 y±，次优先），
  * 选中最优点后于本 tick 内：把【服务端】瞬移到窥视点（Pos/Rot 包）→ 锁头/锁身瞄准目标模型点
- * → 直接发武器模组的开火包（TaCZ: ClientMessagePlayerShoot；卓越前线: ClientEventHandler.shootClient）
- * → 立即把服务端拉回本体。因服务端位置已在开火那一瞬位于窥视点，子弹从窥视点发出，
- * 做到“从墙后/矮墙上/地缝里偷射”。客户端位置不移动（仅卓越前线开火瞬间短暂借位视角），
- * 所以本地镜头不闪跳。本方案用射击包而非模拟左键——避免左键开火被延迟到下一 tick 输入阶段、
- * 导致实际出弹点落在回位后的本体。
+ * → TaCZ 直接调用真实左键开火入口 IClientPlayerGunOperator.shoot()（手动栓动枪会在膛空时自动 bolt() 上膛，连发正常）；
+ *   卓越前线仍走 ClientEventHandler.shootClient；→ 立即把服务端拉回本体。因服务端位置已在开火那一瞬位于窥视点，
+ * 子弹从窥视点发出，做到“从墙后/矮墙上/地缝里偷射”。客户端位置不移动（仅卓越前线开火瞬间短暂借位视角），
+ * 所以本地镜头不闪跳。注意：这里是在本 tick 直接调用 shoot()（非模拟按键），故不存在“左键被推到下一 tick 输入阶段”的延迟。
  * 该功能由赛博教员移植到 fku
  */
 @Mod.EventBusSubscriber(modid = Fku.MOD_ID, value = {Dist.CLIENT})
@@ -63,7 +64,10 @@ public class GhostPeekFeature {
     private static Vec3 ghostPeekSelectedPos = null;
     private static Vec3 ghostPeekAimPos = null;
     private static LivingEntity ghostPeekTarget = null;
-    private static int ghostPeekCooldown = 0;
+    private static long ghostPeekCooldownUntil = 0;   // 武器冷却闸门(ms)：System.currentTimeMillis() 小于它时不可开下一轮
+    private static long ghostPeekKeyDownAt = 0;       // 热键按下时刻(ms)：用于“按下→触发”延迟，等武器开镜/稳定再开火
+    private static boolean ghostPeekHoldingFire = false; // 幽灵窥视是否正“长按”左键（卓越前线等按住才开火的枪）：stage1 按下，stage2/松键 释放
+    private static final long GHOST_PEEK_CD_MARGIN_MS = 120;   // 网络延迟余量，确保等服务端冷却/栓动真正结束再开下一轮
     // 分 tick 模式：客户端“站到窥视点”所需的回位/角度备份
     private static Vec3 ghostPeekReturnPos = null;
     private static float ghostPeekOldYaw = 0.0F;
@@ -76,17 +80,9 @@ public class GhostPeekFeature {
     private static Class<?> taczOperatorClass;        // com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator
     private static Method taczFromLocalPlayer;
     private static Method taczGetDataHolder;
-    private static Method taczShoot;
-    private static Field taczClientBaseTimestamp;
-    private static Class<?> taczShootMsgClass;         // com.tacz.guns.network.message.ClientMessagePlayerShoot
-    private static Constructor<?> taczShootMsgCtor;
-    private static Field taczChannelField;             // com.tacz.guns.network.NetworkHandler.CHANNEL
-    private static Method taczSendToServer;
-
-    private static boolean swAvailable = false;
-    private static Class<?> swClientEventHandler;      // com.atsuishio.superbwarfare.event.ClientEventHandler
-    private static Method swShootClient;               // shootClient(Lnet/minecraft/world/entity/player/Player;)V
-    private static Field swHoldingFireKey;             // holdingFireKey:Z
+    private static Method taczShoot;                     // IClientPlayerGunOperator.shoot()：真实左键开火入口（手动栓动枪膛空时内部自动 bolt() 上膛，连发正常）
+    private static Method taczGetClientShootCoolDown;    // IClientPlayerGunOperator.getClientShootCoolDown()J：剩余射击冷却(ms)，用于驱动下一轮间隔
+    private static Class<?> taczIGunClass;               // com.tacz.guns.api.item.IGun：判别手持枪是否为 TaCZ（开火路径分流）
 
     public static void init() {
         if (initialized) return;
@@ -94,7 +90,7 @@ public class GhostPeekFeature {
         initShootReflection();
         // 注意：本类已由 @Mod.EventBusSubscriber 自动注册，不要再用 EVENT_BUS.register 重复注册，
         // 否则 onClientTick / onRenderLevel 会跑两遍，渲染 PoseStack 易失衡。
-        Fku.LOGGER.info("[GhostPeekFeature] 幽灵窥视已初始化 (TaCZ=" + taczAvailable + ", 卓越前线=" + swAvailable + ")");
+        Fku.LOGGER.info("[GhostPeekFeature] 幽灵窥视已初始化 (TaCZ=" + taczAvailable + ")");
     }
 
     public static boolean isEnabled() {
@@ -130,6 +126,14 @@ public class GhostPeekFeature {
             resetState();
             return;
         }
+        // 记录热键按下时刻；延迟 ghostPeekTriggerDelay(ms) 后再真正触发窥视/开火，
+        // 给武器开镜（如右键腰射→开镜）留出时间，避免还没完全开镜就腰射打不中。
+        if (ghostPeekKeyDownAt == 0) ghostPeekKeyDownAt = System.currentTimeMillis();
+        // 延迟内仍实时计算窥视点预览（圈随视角更新），仅不触发实际开火
+        if (System.currentTimeMillis() - ghostPeekKeyDownAt < cfg.ghostPeekTriggerDelay) {
+            if (isHoldingGun(mc)) calculateGhostPeekPositions(mc);
+            return;
+        }
         // 持续计算左右闪身点，便于渲染预览（圈随视角实时更新）；只在松键时清除
         if (isHoldingGun(mc)) {
             calculateGhostPeekPositions(mc);
@@ -149,9 +153,8 @@ public class GhostPeekFeature {
             fireGhostPeek(mc);
             return;
         }
-        if (ghostPeekCooldown > 0) {
-            --ghostPeekCooldown;
-            return;
+        if (System.currentTimeMillis() < ghostPeekCooldownUntil) {
+            return;   // 武器冷却中：等待（服务端冷却包 / 客户端冷却）真正结束再开下一轮，避免慢射速武器卡死
         }
         if (!isHoldingGun(mc)) return;
         LivingEntity target = getTarget(mc.player, true);
@@ -164,7 +167,8 @@ public class GhostPeekFeature {
                 // 始终走“先瞬移(server)→下一 tick 开火”的两拍流程（与 NoSpread 默认一致，最稳）：
                 // 服务端有整整一 tick 把玩家位置结算到窥视点，开火包处理时玩家已在 peek，子弹从 peek 出。
                 armGhostPeek(mc, best[0], best[1], target);
-                ghostPeekCooldown = Math.max(1, cfg.ghostPeekFrequency);
+                // 基础最小间隔（兜底）；真正开火后会被武器实际冷却覆盖
+                ghostPeekCooldownUntil = System.currentTimeMillis() + Math.max(60, (long) cfg.ghostPeekFrequency * 50L);
             }
         }
     }
@@ -184,7 +188,12 @@ public class GhostPeekFeature {
         ghostPeekAimPos = null;
         ghostPeekTarget = null;
         ghostPeekStage = 0;
-        ghostPeekCooldown = 0;
+        ghostPeekCooldownUntil = 0;
+        ghostPeekKeyDownAt = 0;
+        if (ghostPeekHoldingFire) { // 松键时确保松开模拟左键，避免卡住“按住”
+            AimbotFeature.postMouseButton(0, 0);
+            ghostPeekHoldingFire = false;
+        }
         ghostPeekReturnPos = null;
         ghostPeekOldYaw = 0.0F;
         ghostPeekOldPitch = 0.0F;
@@ -283,6 +292,26 @@ public class GhostPeekFeature {
         ghostPeekReturnPos = null;
         ghostPeekOldYaw = 0.0F;
         ghostPeekOldPitch = 0.0F;
+        if (ghostPeekHoldingFire) { // 回本体那一拍松开模拟左键（长按结束）：下一轮窥视前左键已释放，避免连发卡死
+            AimbotFeature.postMouseButton(0, 0);
+            ghostPeekHoldingFire = false;
+        }
+    }
+
+    /** 把窥视点 y 抬到“站在方块顶面”的高度。
+     *  站在地面上时 playerPos.y 常略低于整数（如 63.99），floor 后落到脚下的实心方块里，
+     *  导致空位校验失败（超平坦地图左右窥视点不显示）。若脚嵌在实心方块里、而上方是空气，
+     *  则把 y 抬到该方块顶（fy+1），避免落点判定失败 / 渲染卡进地下。 */
+    private static Vec3 alignPeekYToGround(Minecraft mc, Vec3 peekPos) {
+        if (mc.level == null) return peekPos;
+        int fx = (int) Math.floor(peekPos.x);
+        int fy = (int) Math.floor(peekPos.y);
+        int fz = (int) Math.floor(peekPos.z);
+        BlockPos foot = new BlockPos(fx, fy, fz);
+        if (!mc.level.isEmptyBlock(foot) && mc.level.isEmptyBlock(foot.above())) {
+            return new Vec3(peekPos.x, fy + 1.0, peekPos.z);
+        }
+        return peekPos;
     }
 
     private static void calculateGhostPeekPositions(Minecraft mc) {
@@ -296,15 +325,17 @@ public class GhostPeekFeature {
         double upDist = cfg.ghostPeekUpBlocks;
         double downDist = cfg.ghostPeekDownBlocks;
         // 左右（优先）：垂直于视线方向
-        Vec3 leftPos = playerPos.add(leftDir.scale(distance));
-        Vec3 rightPos = playerPos.add(rightDir.scale(distance));
+        Vec3 leftPos = alignPeekYToGround(mc, playerPos.add(leftDir.scale(distance)));
+        Vec3 rightPos = alignPeekYToGround(mc, playerPos.add(rightDir.scale(distance)));
         // 上下（次优先）：纯垂直方向（翻越矮墙 y+ / 钻地缝 y−），水平位置不变；上/下距离独立配置
-        Vec3 upPos = new Vec3(playerPos.x, playerPos.y + upDist, playerPos.z);
-        Vec3 downPos = new Vec3(playerPos.x, playerPos.y - downDist, playerPos.z);
+        Vec3 upPos = alignPeekYToGround(mc, new Vec3(playerPos.x, playerPos.y + upDist, playerPos.z));
+        Vec3 downPos = alignPeekYToGround(mc, new Vec3(playerPos.x, playerPos.y - downDist, playerPos.z));
+        // 左右窥视点：不允许穿过方块，必须落在空位且玩家与窥视点间无墙阻挡
         ghostPeekLeftPos = isValidGhostPeekPosition(mc, playerPos, leftPos) ? leftPos : null;
         ghostPeekRightPos = isValidGhostPeekPosition(mc, playerPos, rightPos) ? rightPos : null;
-        ghostPeekUpPos = isValidGhostPeekPosition(mc, playerPos, upPos) ? upPos : null;
-        ghostPeekDownPos = isValidGhostPeekPosition(mc, playerPos, downPos) ? downPos : null;
+        // 上下窥视点：落点仍需是空位，但跳过“玩家↔窥视点”之间的阻挡校验（允许穿墙瞬移过去）
+        ghostPeekUpPos = isGhostPeekEmpty(mc, upPos) ? upPos : null;
+        ghostPeekDownPos = isGhostPeekEmpty(mc, downPos) ? downPos : null;
         // 原点（玩家原地）：无需位移即可命中则最优先；开启后恒为候选
         ghostPeekOriginPos = cfg.ghostPeekOriginEnabled ? playerPos : null;
     }
@@ -320,6 +351,26 @@ public class GhostPeekFeature {
             return mc.level.clip(context).getType() == HitResult.Type.MISS;
         }
         return false;
+    }
+
+    /** 仅校验窥视点本身是否为空位（双脚与头顶方块均为空气），不校验玩家↔窥视点之间的阻挡。
+     *  用于上下窥视点：允许穿过墙瞬移过去，但落点仍需是空位（不能是实心方块）。 */
+    private static boolean isGhostPeekEmpty(Minecraft mc, Vec3 peekPos) {
+        if (mc.level == null) return false;
+        BlockPos pos1 = new BlockPos((int) Math.floor(peekPos.x), (int) Math.floor(peekPos.y), (int) Math.floor(peekPos.z));
+        BlockPos pos2 = pos1.above();
+        return mc.level.isEmptyBlock(pos1) && mc.level.isEmptyBlock(pos2);
+    }
+
+    /** 若起点嵌在方块内（如上下窥视点穿过方块），沿“起点→目标”方向外移使其脱离方块，
+     * 以便射线能抵达目标、判定可见；左右/原点起点本就在空位，原样返回（不影响）。 */
+    private static Vec3 nudgeOutOfBlock(Vec3 start, Vec3 end) {
+        if (mc.level == null) return start;
+        BlockPos bp = new BlockPos((int) Math.floor(start.x), (int) Math.floor(start.y), (int) Math.floor(start.z));
+        if (mc.level.isEmptyBlock(bp)) return start;
+        Vec3 dir = end.subtract(start);
+        if (dir.lengthSqr() < 1.0E-6) return start;
+        return start.add(dir.normalize().scale(0.8));
     }
 
     private static Vec3[] selectBestGhostPeekPoint(Minecraft mc, LivingEntity target) {
@@ -470,7 +521,9 @@ public class GhostPeekFeature {
             if (distance <= cfg.ghostPeekWallBangRange) return true;
         }
         if (mc.level == null) return false;
-        ClipContext context = new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
+        // 上下窥视点可能嵌在方块内（穿过方块）：先把起点外移出方块，否则会误判为不可见
+        Vec3 s = nudgeOutOfBlock(start, end);
+        ClipContext context = new ClipContext(s, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
         return mc.level.clip(context).getType() == HitResult.Type.MISS;
     }
 
@@ -578,58 +631,45 @@ public class GhostPeekFeature {
 
     /** 初始化两个武器模组的开火反射；未安装则对应 available=false（不报错）。 */
     private static void initShootReflection() {
-        // TaCZ：IClientPlayerGunOperator.fromLocalPlayer(player).getDataHolder().clientBaseTimestamp
-        //       >0 时发 ClientMessagePlayerShoot(timestamp)；否则直接 .shoot()
+        // TaCZ：直接调用 IClientPlayerGunOperator.fromLocalPlayer(player).shoot()（真实左键开火入口，
+        // 手动栓动枪膛空时会自动 bolt() 上膛并随手持物品同步服务端，连发正常，无需手动发包/切副手）。
         try {
             taczOperatorClass = Class.forName("com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator");
             taczFromLocalPlayer = taczOperatorClass.getMethod("fromLocalPlayer", LocalPlayer.class);
             taczGetDataHolder = taczOperatorClass.getMethod("getDataHolder");
             taczShoot = taczOperatorClass.getMethod("shoot");
-            taczClientBaseTimestamp = taczGetDataHolder.getReturnType().getDeclaredField("clientBaseTimestamp");
-            taczClientBaseTimestamp.setAccessible(true);
-            taczShootMsgClass = Class.forName("com.tacz.guns.network.message.ClientMessagePlayerShoot");
-            taczShootMsgCtor = taczShootMsgClass.getConstructor(long.class);
-            taczChannelField = Class.forName("com.tacz.guns.network.NetworkHandler").getDeclaredField("CHANNEL");
-            taczChannelField.setAccessible(true);
-            taczSendToServer = taczChannelField.getType().getMethod("sendToServer", Object.class);
+            taczGetClientShootCoolDown = taczOperatorClass.getMethod("getClientShootCoolDown");
+            taczIGunClass = Class.forName("com.tacz.guns.api.item.IGun");
             taczAvailable = true;
         } catch (Throwable t) {
             taczAvailable = false;
-            Fku.LOGGER.warn("[GhostPeekFeature] 未检测到 TaCZ，开火包走卓越前线/兜底: " + t);
-        }
-        // 卓越前线：ClientEventHandler.shootClient(player)；需先置 holdingFireKey=true 才能强制开火
-        try {
-            swClientEventHandler = Class.forName("com.atsuishio.superbwarfare.event.ClientEventHandler");
-            swShootClient = swClientEventHandler.getMethod("shootClient", net.minecraft.world.entity.player.Player.class);
-            swHoldingFireKey = swClientEventHandler.getField("holdingFireKey");
-            swHoldingFireKey.setAccessible(true);
-            swAvailable = true;
-        } catch (Throwable t) {
-            swAvailable = false;
-            Fku.LOGGER.warn("[GhostPeekFeature] 未检测到卓越前线，开火包走 TaCZ/兜底: " + t);
+            Fku.LOGGER.warn("[GhostPeekFeature] 未检测到 TaCZ，非 TaCZ 枪走模拟左键开火: " + t);
         }
     }
 
-    /** 发开火包：优先 TaCZ（服务端包最稳），其次卓越前线；都不可用返回 false。 */
+    /** 开火：按手持枪分流——
+     *  TaCZ 枪走真实左键入口 IClientPlayerGunOperator.shoot()（自动处理拉栓，已验证可连发）；
+     *  非 TaCZ 枪（卓越前线/原版/其他）统一模拟真实左键（AimbotFeature.postMouseButton），
+     *  由 MouseHandler.onPress 把左键事件派发给各枪械模组，射速完全由武器自身决定，最稳。
+     *  此前直接调 卓越前线 shootClient 不生效，根因是 taczAvailable 为真时 tryTaczFire 对非 TaCZ 枪也返回 true，
+     *  导致 卓越前线 分支永不被执行；现在按枪型分流即可。 */
     private static boolean fireCurrentWeapon(Minecraft mc) {
-        if (taczAvailable && tryTaczFire(mc)) return true;
-        if (swAvailable && trySuperbWarfareFire(mc)) return true;
-        return false;
+        if (taczAvailable && isTaczGun(mc) && tryTaczFire(mc)) return true;
+        return trySuperbWarfareFire(mc);
     }
 
     private static boolean tryTaczFire(Minecraft mc) {
         try {
             Object operator = taczFromLocalPlayer.invoke(null, mc.player);
             if (operator == null) return false;
-            Object holder = taczGetDataHolder.invoke(operator);
-            long base = (long) taczClientBaseTimestamp.get(holder);
-            if (base > 0L) {
-                Object msg = taczShootMsgCtor.newInstance(System.currentTimeMillis() - base);
-                Object channel = taczChannelField.get(null);
-                taczSendToServer.invoke(channel, msg);
-            } else {
-                taczShoot.invoke(operator);
-            }
+            // 直接调用真实左键开火入口 IClientPlayerGunOperator.shoot()：
+            // 手动栓动枪（MANUAL_ACTION）膛空时，shoot() 内部会自动调 bolt() 把膛内上弹并随手持物品同步到服务端，
+            // 因此下一轮 shoot() 即可正常出弹——狙击枪连发问题由此解决，无需手动构造开火包或切副手。
+            // 它在同一 tick 直接发包（非模拟按键），且会回写 clientShootTimestamp，故冷却与出弹精度与原左键一致。
+            taczShoot.invoke(operator);
+            long cd = (long) taczGetClientShootCoolDown.invoke(operator);
+            if (cd < 0) cd = 0;
+            ghostPeekCooldownUntil = System.currentTimeMillis() + cd + GHOST_PEEK_CD_MARGIN_MS;
             return true;
         } catch (Throwable t) {
             Fku.LOGGER.warn("[GhostPeekFeature] TaCZ 开火异常: " + t);
@@ -637,18 +677,30 @@ public class GhostPeekFeature {
         }
     }
 
+    /** 非 TaCZ 枪（卓越前线 / 原版 / 其他）：模拟真实鼠标左键“长按”开火。
+     *  直接调 MouseHandler.onPress（AimbotFeature.postMouseButton），即 OS 真实鼠标事件入口，
+     *  完整执行 KeyMapping 点击登记 / isDown 置位 / 派发 Forge 鼠标事件，任何监听左键开火的枪型都能原生收到。
+     *  关键：卓越前线这类枪是“轮询 isDown 按住才出弹”，所以不能像之前那样按下后立刻释放（瞬间点击
+     *  isDown 已被置回 false，枪收不到）；要像自瞄·扳机那样“按下并保持”，在回位阶段(returnGhostPeek)
+     *  或松键(resetState)时再松开。射速由武器自身决定。 */
     private static boolean trySuperbWarfareFire(Minecraft mc) {
         try {
-            boolean old = swHoldingFireKey.getBoolean(null);
-            swHoldingFireKey.setBoolean(null, true);
-            try {
-                swShootClient.invoke(null, mc.player);
-            } finally {
-                swHoldingFireKey.setBoolean(null, old);
-            }
+            AimbotFeature.postMouseButton(0, 1); // 左键按下（长按开始，保持到回位/松键才释放）
+            ghostPeekHoldingFire = true;
             return true;
         } catch (Throwable t) {
-            Fku.LOGGER.warn("[GhostPeekFeature] 卓越前线开火异常: " + t);
+            Fku.LOGGER.warn("[GhostPeekFeature] 模拟左键开火异常: " + t);
+            return false;
+        }
+    }
+
+    /** 手持主手物品是否为 TaCZ 枪（com.tacz.guns.api.item.IGun），用于开火路径分流。 */
+    private static boolean isTaczGun(Minecraft mc) {
+        try {
+            if (mc.player == null) return false;
+            ItemStack item = mc.player.getMainHandItem();
+            return item != null && taczIGunClass != null && taczIGunClass.isInstance(item.getItem());
+        } catch (Throwable t) {
             return false;
         }
     }

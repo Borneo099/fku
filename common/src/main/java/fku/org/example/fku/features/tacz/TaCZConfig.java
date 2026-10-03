@@ -63,6 +63,7 @@ public class TaCZConfig {
     public boolean ghostPeekNoSpread = true;       // 开火时多发 PosRot 包抵消扩散/防回弹
     public int ghostPeekNoSpreadPackets = 6;
     public int ghostPeekFrequency = 2;             // 每轮“瞬移→开火→回位”之间的间隔刻数（越小越快，1=最快）；控制窥视/开火频率
+    public int ghostPeekTriggerDelay = 0;           // 热键按下到触发窥视的延迟(ms)：等武器开镜/稳定后再开火，避免腰射打不中（0=立即）
     public boolean ghostPeekWallBang = false;      // 开启则近距离穿墙也能瞄准
     public double ghostPeekWallBangRange = 3.0;
 

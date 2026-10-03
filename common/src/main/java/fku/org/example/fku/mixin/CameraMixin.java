@@ -3,6 +3,7 @@ package fku.org.example.fku.mixin; /* water */
 import fku.org.example.fku.features.freecam.FreecamManager;
 import net.minecraft.client.Camera;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.BlockGetter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -27,8 +28,8 @@ public class CameraMixin {
     @Shadow private float eyeHeightOld;
     @Shadow protected float xRot;
     @Shadow protected float yRot;
+    @Shadow protected Vec3 position;
 
-    @Shadow protected void setPosition(double x, double y, double z) {}
     @Shadow protected void setRotation(float yRot, float xRot) {}
 
     @Inject(method = "setup", at = @At("HEAD"), cancellable = true)
@@ -42,7 +43,7 @@ public class CameraMixin {
             // ★ 使用插值位置/旋转，实现60fps平滑移动
             //   参考 Wurst FreecamHack.getCamPos(partialTicks)
             var pos = FreecamManager.getInterpolatedPosition(tickDelta);
-            this.setPosition(pos.x, pos.y, pos.z);
+            this.position = pos;
             this.setRotation(FreecamManager.getInterpolatedYRot(tickDelta), FreecamManager.getInterpolatedXRot(tickDelta));
 
             // ★ 取消默认setup方法，彻底避免玩家位置干扰

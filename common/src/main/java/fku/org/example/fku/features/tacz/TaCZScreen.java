@@ -191,6 +191,10 @@ public class TaCZScreen extends Screen {
             addSlider(cx + 100, cy, 100, 1, 30, cfg.ghostPeekFrequency,
                 v -> { cfg.ghostPeekFrequency = v; TaCZConfig.save(); });
             cy += sp;
+            addDynamicLabel(cx, cy, () -> "§7触发延迟: §b" + cfg.ghostPeekTriggerDelay + " ms");
+            addSlider(cx + 100, cy, 100, 0, 1000, cfg.ghostPeekTriggerDelay,
+                v -> { cfg.ghostPeekTriggerDelay = v; TaCZConfig.save(); });
+            cy += sp;
             addToggle(cx, cy, "仅玩家", () -> cfg.ghostPeekPlayersOnly, v -> { cfg.ghostPeekPlayersOnly = v; TaCZConfig.save(); });
             addToggle(cx + 165, cy, "原地原点优先", () -> cfg.ghostPeekOriginEnabled, v -> { cfg.ghostPeekOriginEnabled = v; TaCZConfig.save(); });
             cy += sp;

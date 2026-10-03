@@ -176,7 +176,7 @@ public class AimbotFeature {
      *  完整处理 KeyMapping 点击与 Forge 鼠标事件）；失败回退到 GLFW 当前注册的鼠标回调；
      *  再失败才退化成仅置 KeyMapping.isDown（兼容只按 isDown 轮询开火的枪型）。
      *  action：1=按下，0=释放。 */
-    private static void postMouseButton(int button, int action) {
+    public static void postMouseButton(int button, int action) {
         // 1) 直接走 MouseHandler.onPress —— 真实鼠标事件入口
         Method onPress = findOnPressMethod(mc.mouseHandler.getClass());
         if (onPress != null) {

@@ -16,6 +16,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -85,6 +87,44 @@ public class ClickGuiScreen extends Screen {
         // 按添加顺序渲染（后面板在上面，但鼠标点击反向遍历）
         for (GuiPanel panel : panels) {
             panel.render(g, (int) sx, (int) sy, pt);
+        }
+
+        // ★ 左上角模组信息徽标（橙色加粗渐变斜体）
+        {
+            String title = "FKU";
+            String author = "作者 Borneo099 / 水是什么味道的";
+            int startColor = 0xFF7A1A; // 深橙
+            int endColor = 0xFFD24A;   // 金橙
+            int pad = 8;
+            int titleScale = 2;
+            int lineH = 11;
+
+            Component titleComp = Component.literal(title).withStyle(Style.EMPTY.withBold(true).withItalic(true));
+            int titleW = (int) (this.font.width(titleComp) * titleScale);
+            int authorW = this.font.width(author);
+            int badgeW = Math.max(titleW, authorW) + pad * 2;
+            int badgeH = (int) (this.font.lineHeight * titleScale) + lineH + pad * 2 - 3;
+
+            int bx = 10, by = 8;
+            GuiRenderHelper.drawRoundedRect(g, bx, by, badgeW, badgeH, (185 << 24) | 0x121418, 8);
+
+            // 标题（放大 + 渐变加粗斜体）
+            g.pose().pushPose();
+            g.pose().translate(bx + pad, by + pad, 0);
+            g.pose().scale(titleScale, titleScale, 1f);
+            drawGradientText(g, title, 0, 0, startColor, endColor, false);
+            g.pose().popPose();
+
+            // 标题下渐变装饰线
+            int lineY = by + pad + (int) (this.font.lineHeight * titleScale) - 2;
+            for (int i = 0; i < titleW; i++) {
+                int c = lerpColor(startColor, endColor, (float) i / Math.max(1, titleW - 1));
+                g.fill(bx + pad + i, lineY, bx + pad + i + 1, lineY + 1, c);
+            }
+
+            // 作者行（渐变加粗斜体）
+            int authorY = by + pad + (int) (this.font.lineHeight * titleScale) + 2;
+            drawGradientText(g, author, bx + pad, authorY, startColor, endColor, false);
         }
 
         // ★ 顶部提示：中键绑定热键（置于缩放坐标系内，随 GUI 一起缩放并居中）
@@ -161,4 +201,28 @@ public class ClickGuiScreen extends Screen {
     public void onClose() { this.minecraft.setScreen(null); }
     @Override
     public boolean isPauseScreen() { return false; }
+
+    /** 逐字符绘制渐变文字（加粗 + 斜体），颜色沿文字方向由 colorStart 渐变到 colorEnd。 */
+    private void drawGradientText(GuiGraphics g, String text, int x, int y, int colorStart, int colorEnd, boolean shadow) {
+        int n = text.length();
+        int cx = x;
+        for (int i = 0; i < n; i++) {
+            float t = n > 1 ? (float) i / (n - 1) : 0f;
+            int color = lerpColor(colorStart, colorEnd, t);
+            Component comp = Component.literal(String.valueOf(text.charAt(i)))
+                    .withStyle(Style.EMPTY.withBold(true).withItalic(true).withColor(TextColor.fromRgb(color)));
+            g.drawString(this.font, comp, cx, y, color, shadow);
+            cx += this.font.width(comp);
+        }
+    }
+
+    /** 两个 RGB 颜色按 t∈[0,1] 线性插值。 */
+    private static int lerpColor(int a, int b, float t) {
+        int ar = (a >> 16) & 0xFF, ag = (a >> 8) & 0xFF, ab = a & 0xFF;
+        int br = (b >> 16) & 0xFF, bg = (b >> 8) & 0xFF, bb = b & 0xFF;
+        int r = (int) (ar + (br - ar) * t);
+        int gg = (int) (ag + (bg - ag) * t);
+        int bl = (int) (ab + (bb - ab) * t);
+        return (r << 16) | (gg << 8) | bl;
+    }
 }
